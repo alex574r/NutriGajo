@@ -21,7 +21,8 @@ val Inter = FontFamily(
             Font(
                 R.font.inter,
                 weight = peso,
-                variationSettings = FontVariation.Settings(peso, FontStyle.Normal, FontVariation.weight(peso.weight)),
+                // Settings(peso, estilo) ya fija el eje wght; agregarlo a mano lo duplica y crashea
+                variationSettings = FontVariation.Settings(peso, FontStyle.Normal),
             )
         },
 )
