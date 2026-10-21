@@ -1,0 +1,886 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 1,
+    "identityHash": "d0359018a45112fdd06a95129c2281f1",
+    "entities": [
+      {
+        "tableName": "usuario",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`uid` TEXT NOT NULL, `nombre` TEXT NOT NULL, `correo` TEXT NOT NULL, `rol` TEXT NOT NULL, `cedulaProfesional` TEXT, `verificado` INTEGER NOT NULL, `activo` INTEGER NOT NULL, `avisoPrivacidadAceptadoEn` INTEGER NOT NULL, `fechaAlta` INTEGER NOT NULL, `ultimaModificacion` INTEGER NOT NULL, `estadoSync` TEXT NOT NULL, PRIMARY KEY(`uid`))",
+        "fields": [
+          {
+            "fieldPath": "uid",
+            "columnName": "uid",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "nombre",
+            "columnName": "nombre",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "correo",
+            "columnName": "correo",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "rol",
+            "columnName": "rol",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "cedulaProfesional",
+            "columnName": "cedulaProfesional",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "verificado",
+            "columnName": "verificado",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "activo",
+            "columnName": "activo",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "avisoPrivacidadAceptadoEn",
+            "columnName": "avisoPrivacidadAceptadoEn",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fechaAlta",
+            "columnName": "fechaAlta",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "ultimaModificacion",
+            "columnName": "ultimaModificacion",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "estadoSync",
+            "columnName": "estadoSync",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "uid"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_usuario_rol",
+            "unique": false,
+            "columnNames": [
+              "rol"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_usuario_rol` ON `${TABLE_NAME}` (`rol`)"
+          }
+        ]
+      },
+      {
+        "tableName": "paciente",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `nutriologoId` TEXT NOT NULL, `usuarioId` TEXT, `nombre` TEXT NOT NULL, `fechaNacimiento` TEXT NOT NULL, `sexo` TEXT NOT NULL, `estaturaCm` REAL NOT NULL, `telefono` TEXT, `correoVinculacion` TEXT NOT NULL, `alergias` TEXT, `objetivo` TEXT NOT NULL, `pesoMetaKg` REAL, `proximaCita` INTEGER, `fotoPerfilKey` TEXT, `activo` INTEGER NOT NULL, `ultimaModificacion` INTEGER NOT NULL, `estadoSync` TEXT NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "nutriologoId",
+            "columnName": "nutriologoId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "usuarioId",
+            "columnName": "usuarioId",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "nombre",
+            "columnName": "nombre",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fechaNacimiento",
+            "columnName": "fechaNacimiento",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sexo",
+            "columnName": "sexo",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "estaturaCm",
+            "columnName": "estaturaCm",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "telefono",
+            "columnName": "telefono",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "correoVinculacion",
+            "columnName": "correoVinculacion",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "alergias",
+            "columnName": "alergias",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "objetivo",
+            "columnName": "objetivo",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "pesoMetaKg",
+            "columnName": "pesoMetaKg",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "proximaCita",
+            "columnName": "proximaCita",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "fotoPerfilKey",
+            "columnName": "fotoPerfilKey",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "activo",
+            "columnName": "activo",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "ultimaModificacion",
+            "columnName": "ultimaModificacion",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "estadoSync",
+            "columnName": "estadoSync",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_paciente_nutriologoId_correoVinculacion",
+            "unique": true,
+            "columnNames": [
+              "nutriologoId",
+              "correoVinculacion"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_paciente_nutriologoId_correoVinculacion` ON `${TABLE_NAME}` (`nutriologoId`, `correoVinculacion`)"
+          },
+          {
+            "name": "index_paciente_usuarioId",
+            "unique": false,
+            "columnNames": [
+              "usuarioId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_paciente_usuarioId` ON `${TABLE_NAME}` (`usuarioId`)"
+          }
+        ]
+      },
+      {
+        "tableName": "medicion",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `pacienteId` TEXT NOT NULL, `fecha` TEXT NOT NULL, `pesoKg` REAL NOT NULL, `cinturaCm` REAL, `caderaCm` REAL, `grasaPct` REAL, `notas` TEXT, `registradaPor` TEXT NOT NULL, `ultimaModificacion` INTEGER NOT NULL, `estadoSync` TEXT NOT NULL, PRIMARY KEY(`id`), FOREIGN KEY(`pacienteId`) REFERENCES `paciente`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "pacienteId",
+            "columnName": "pacienteId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fecha",
+            "columnName": "fecha",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "pesoKg",
+            "columnName": "pesoKg",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "cinturaCm",
+            "columnName": "cinturaCm",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "caderaCm",
+            "columnName": "caderaCm",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "grasaPct",
+            "columnName": "grasaPct",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "notas",
+            "columnName": "notas",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "registradaPor",
+            "columnName": "registradaPor",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "ultimaModificacion",
+            "columnName": "ultimaModificacion",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "estadoSync",
+            "columnName": "estadoSync",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_medicion_pacienteId_fecha",
+            "unique": false,
+            "columnNames": [
+              "pacienteId",
+              "fecha"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_medicion_pacienteId_fecha` ON `${TABLE_NAME}` (`pacienteId`, `fecha`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "paciente",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "pacienteId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "plan_dieta",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `pacienteId` TEXT NOT NULL, `titulo` TEXT NOT NULL, `caloriasObjetivo` INTEGER NOT NULL, `proteinasPct` INTEGER NOT NULL, `carbohidratosPct` INTEGER NOT NULL, `grasasPct` INTEGER NOT NULL, `version` INTEGER NOT NULL, `enviadoPor` TEXT NOT NULL, `fechaEnvio` INTEGER NOT NULL, `ultimaModificacion` INTEGER NOT NULL, `estadoSync` TEXT NOT NULL, PRIMARY KEY(`id`), FOREIGN KEY(`pacienteId`) REFERENCES `paciente`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "pacienteId",
+            "columnName": "pacienteId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "titulo",
+            "columnName": "titulo",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "caloriasObjetivo",
+            "columnName": "caloriasObjetivo",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "proteinasPct",
+            "columnName": "proteinasPct",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "carbohidratosPct",
+            "columnName": "carbohidratosPct",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "grasasPct",
+            "columnName": "grasasPct",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "version",
+            "columnName": "version",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "enviadoPor",
+            "columnName": "enviadoPor",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fechaEnvio",
+            "columnName": "fechaEnvio",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "ultimaModificacion",
+            "columnName": "ultimaModificacion",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "estadoSync",
+            "columnName": "estadoSync",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_plan_dieta_pacienteId_version",
+            "unique": true,
+            "columnNames": [
+              "pacienteId",
+              "version"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_plan_dieta_pacienteId_version` ON `${TABLE_NAME}` (`pacienteId`, `version`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "paciente",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "pacienteId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "comida",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `planId` TEXT NOT NULL, `tipo` TEXT NOT NULL, `horario` TEXT NOT NULL, `nombre` TEXT NOT NULL, `descripcion` TEXT, `ingredientes` TEXT, `kcal` INTEGER NOT NULL, `orden` INTEGER NOT NULL, PRIMARY KEY(`id`), FOREIGN KEY(`planId`) REFERENCES `plan_dieta`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "planId",
+            "columnName": "planId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "tipo",
+            "columnName": "tipo",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "horario",
+            "columnName": "horario",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "nombre",
+            "columnName": "nombre",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "descripcion",
+            "columnName": "descripcion",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "ingredientes",
+            "columnName": "ingredientes",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "kcal",
+            "columnName": "kcal",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "orden",
+            "columnName": "orden",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_comida_planId",
+            "unique": false,
+            "columnNames": [
+              "planId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_comida_planId` ON `${TABLE_NAME}` (`planId`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "plan_dieta",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "planId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "rutina",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `pacienteId` TEXT NOT NULL, `nombre` TEXT NOT NULL, `version` INTEGER NOT NULL, `enviadoPor` TEXT NOT NULL, `fechaEnvio` INTEGER NOT NULL, `ultimaModificacion` INTEGER NOT NULL, `estadoSync` TEXT NOT NULL, PRIMARY KEY(`id`), FOREIGN KEY(`pacienteId`) REFERENCES `paciente`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "pacienteId",
+            "columnName": "pacienteId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "nombre",
+            "columnName": "nombre",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "version",
+            "columnName": "version",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "enviadoPor",
+            "columnName": "enviadoPor",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fechaEnvio",
+            "columnName": "fechaEnvio",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "ultimaModificacion",
+            "columnName": "ultimaModificacion",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "estadoSync",
+            "columnName": "estadoSync",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_rutina_pacienteId_version",
+            "unique": true,
+            "columnNames": [
+              "pacienteId",
+              "version"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_rutina_pacienteId_version` ON `${TABLE_NAME}` (`pacienteId`, `version`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "paciente",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "pacienteId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "ejercicio",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `rutinaId` TEXT NOT NULL, `dia` INTEGER NOT NULL, `nombre` TEXT NOT NULL, `series` INTEGER NOT NULL, `repeticiones` INTEGER, `duracionSeg` INTEGER, `descansoSeg` INTEGER NOT NULL, `orden` INTEGER NOT NULL, PRIMARY KEY(`id`), FOREIGN KEY(`rutinaId`) REFERENCES `rutina`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "rutinaId",
+            "columnName": "rutinaId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "dia",
+            "columnName": "dia",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "nombre",
+            "columnName": "nombre",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "series",
+            "columnName": "series",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "repeticiones",
+            "columnName": "repeticiones",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "duracionSeg",
+            "columnName": "duracionSeg",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "descansoSeg",
+            "columnName": "descansoSeg",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "orden",
+            "columnName": "orden",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_ejercicio_rutinaId",
+            "unique": false,
+            "columnNames": [
+              "rutinaId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_ejercicio_rutinaId` ON `${TABLE_NAME}` (`rutinaId`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "rutina",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "rutinaId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "foto_progreso",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `pacienteId` TEXT NOT NULL, `medicionId` TEXT, `fecha` TEXT NOT NULL, `rutaStorage` TEXT, `rutaLocal` TEXT, `nota` TEXT, `subidaPor` TEXT NOT NULL, `ultimaModificacion` INTEGER NOT NULL, `estadoSync` TEXT NOT NULL, PRIMARY KEY(`id`), FOREIGN KEY(`pacienteId`) REFERENCES `paciente`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "pacienteId",
+            "columnName": "pacienteId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "medicionId",
+            "columnName": "medicionId",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "fecha",
+            "columnName": "fecha",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "rutaStorage",
+            "columnName": "rutaStorage",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "rutaLocal",
+            "columnName": "rutaLocal",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "nota",
+            "columnName": "nota",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "subidaPor",
+            "columnName": "subidaPor",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "ultimaModificacion",
+            "columnName": "ultimaModificacion",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "estadoSync",
+            "columnName": "estadoSync",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_foto_progreso_pacienteId_fecha",
+            "unique": false,
+            "columnNames": [
+              "pacienteId",
+              "fecha"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_foto_progreso_pacienteId_fecha` ON `${TABLE_NAME}` (`pacienteId`, `fecha`)"
+          },
+          {
+            "name": "index_foto_progreso_medicionId",
+            "unique": false,
+            "columnNames": [
+              "medicionId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_foto_progreso_medicionId` ON `${TABLE_NAME}` (`medicionId`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "paciente",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "pacienteId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "cumplimiento",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `pacienteId` TEXT NOT NULL, `fecha` TEXT NOT NULL, `tipo` TEXT NOT NULL, `refId` TEXT NOT NULL, `cumplido` INTEGER NOT NULL, `ultimaModificacion` INTEGER NOT NULL, `estadoSync` TEXT NOT NULL, PRIMARY KEY(`id`), FOREIGN KEY(`pacienteId`) REFERENCES `paciente`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "pacienteId",
+            "columnName": "pacienteId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fecha",
+            "columnName": "fecha",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "tipo",
+            "columnName": "tipo",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "refId",
+            "columnName": "refId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "cumplido",
+            "columnName": "cumplido",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "ultimaModificacion",
+            "columnName": "ultimaModificacion",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "estadoSync",
+            "columnName": "estadoSync",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_cumplimiento_pacienteId_fecha",
+            "unique": false,
+            "columnNames": [
+              "pacienteId",
+              "fecha"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_cumplimiento_pacienteId_fecha` ON `${TABLE_NAME}` (`pacienteId`, `fecha`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "paciente",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "pacienteId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'd0359018a45112fdd06a95129c2281f1')"
+    ]
+  }
+}
