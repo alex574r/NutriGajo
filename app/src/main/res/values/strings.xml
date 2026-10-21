@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">nutriGajo</string>
+    <string name="splash_tagline">Tu seguimiento nutricional, siempre contigo.</string>
 </resources>

@@ -2,4 +2,11 @@
 <resources>
 
     <style name="Theme.NutriGajo" parent="android:Theme.Material.Light.NoActionBar" />
+
+    <!-- Splash del sistema: naranja con el logo; la pantalla de Compose toma el relevo con nombre y eslogan -->
+    <style name="Theme.NutriGajo.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/pulse_orange_50</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+        <item name="postSplashScreenTheme">@style/Theme.NutriGajo</item>
+    </style>
 </resources>
