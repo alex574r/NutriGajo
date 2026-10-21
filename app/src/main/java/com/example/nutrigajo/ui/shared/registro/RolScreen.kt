@@ -32,6 +32,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -47,14 +49,15 @@ import com.example.nutrigajo.ui.theme.NutriGajoTheme
 private class OpcionRol(
     val rol: Rol,
     @param:StringRes val titulo: Int,
-    @param:DrawableRes val imagen: Int?,
+    @param:DrawableRes val imagen: Int,
 )
 
-// ponytail: sin fotografías todavía; al tener los recursos se asigna `imagen` (PNG recortado, se alinea abajo a la derecha).
+// Fotos (Pexels, licencia Pexels: uso libre, sin atribución obligatoria):
+// nutriólogo: RedWolf, /photo/12889997 · paciente: Madethese, /photo/7952236
 // ADMIN no se ofrece: se da de alta a mano, nadie se asigna ese rol.
 private val opciones = listOf(
-    OpcionRol(Rol.NUTRIOLOGO, R.string.rol_nutriologo, imagen = null),
-    OpcionRol(Rol.PACIENTE, R.string.rol_paciente, imagen = null),
+    OpcionRol(Rol.NUTRIOLOGO, R.string.rol_nutriologo, R.drawable.rol_nutriologo),
+    OpcionRol(Rol.PACIENTE, R.string.rol_paciente, R.drawable.rol_paciente),
 )
 
 private val MARGEN = 16.dp
@@ -148,15 +151,21 @@ private fun TarjetaRol(
                 .border(1.dp, if (seleccionada) colores.primary else colores.surfaceVariant, forma)
                 .selectable(selected = seleccionada, onClick = onClick, role = Role.RadioButton),
         ) {
-            opcion.imagen?.let {
-                Image(
-                    painter = painterResource(it),
-                    contentDescription = null,
-                    modifier = Modifier.align(Alignment.BottomEnd).fillMaxHeight(),
-                    contentScale = ContentScale.FillHeight,
-                    alignment = Alignment.BottomEnd,
-                )
-            }
+            // foto en la mitad derecha, recortada a cabeza y torso; el degradado la funde con el gris de la tarjeta
+            Image(
+                painter = painterResource(opcion.imagen),
+                contentDescription = null,
+                modifier = Modifier.align(Alignment.CenterEnd).fillMaxWidth(0.5f).fillMaxHeight(),
+                contentScale = ContentScale.Crop,
+                alignment = Alignment.TopCenter,
+            )
+            Box(
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .fillMaxWidth(0.5f)
+                    .fillMaxHeight()
+                    .background(Brush.horizontalGradient(0f to colores.surfaceVariant, 0.5f to Color.Transparent)),
+            )
             Text(
                 text = stringResource(opcion.titulo),
                 modifier = Modifier.align(Alignment.TopStart).padding(16.dp),
