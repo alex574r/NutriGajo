@@ -1,4 +1,28 @@
 <resources>
     <string name="app_name">nutriGajo</string>
-    <string name="splash_tagline">Tu seguimiento nutricional, siempre contigo.</string>
+    <string name="app_tagline">Tu seguimiento nutricional, siempre contigo.</string>
+    <string name="motivacion_frase">“Recuerda: la condición física no se adquiere con buenos deseos ni se compra.”</string>
+    <string name="motivacion_autor">— JOSEPH PILATES</string>
+
+    <string name="bienvenida_titulo">Te damos la bienvenida</string>
+    <string name="bienvenida_comenzar">comenzar</string>
+    <string name="bienvenida_ya_tienes_cuenta">¿Ya tienes una cuenta?</string>
+    <string name="bienvenida_ingresar">ingresar</string>
+
+    <string name="onboarding_anterior">Anterior</string>
+    <string name="onboarding_siguiente">Siguiente</string>
+    <string name="onboarding_planes_titulo">Planes a tu medida</string>
+    <string name="onboarding_planes_desc">Tu nutriólogo te envía dieta y rutina directo a la app.</string>
+    <string name="onboarding_medidas_titulo">Mide tu evolución</string>
+    <string name="onboarding_medidas_desc">Peso, cintura y grasa en gráficas para ver tu avance.</string>
+    <string name="onboarding_fotos_titulo">Fotos de progreso</string>
+    <string name="onboarding_fotos_desc">Compara tus fotos semana a semana y mira el cambio.</string>
+    <string name="onboarding_alimentacion_titulo">Tu plan, siempre a la mano</string>
+    <string name="onboarding_alimentacion_desc">Consulta tus comidas del día, incluso sin conexión.</string>
+
+    <string name="rol_registro">Registro</string>
+    <string name="rol_titulo">¿Cuál es tu rol?</string>
+    <string name="rol_nutriologo">Nutriólogo</string>
+    <string name="rol_paciente">Paciente</string>
+    <string name="rol_continuar">continuar</string>
 </resources>

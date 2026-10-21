@@ -16,22 +16,57 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import com.example.nutrigajo.ui.shared.motivacion.MotivacionScreen
+import com.example.nutrigajo.ui.shared.onboarding.BienvenidaScreen
+import com.example.nutrigajo.ui.shared.onboarding.OnboardingScreen
+import com.example.nutrigajo.ui.shared.registro.RolScreen
 import com.example.nutrigajo.ui.shared.splash.SplashScreen
 import com.example.nutrigajo.ui.theme.NutriGajoTheme
 
+private const val CLAVE_ONBOARDING_VISTO = "onboarding_visto"
+
+private enum class Paso { SPLASH, MOTIVACION, BIENVENIDA, ONBOARDING, ROL, INICIO }
+
 class MainActivity : ComponentActivity() {
+    // ponytail: bandera en SharedPreferences; pasa a DataStore/repositorio de sesión cuando exista el login
+    private val prefs by lazy { getSharedPreferences("nutrigajo", MODE_PRIVATE) }
+    private val onboardingVisto get() = prefs.getBoolean(CLAVE_ONBOARDING_VISTO, false)
+
+    private fun marcarOnboardingVisto() = prefs.edit().putBoolean(CLAVE_ONBOARDING_VISTO, true).apply()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
             NutriGajoTheme {
-                // ponytail: bandera local; el NavHost (sesión y rol) la reemplaza cuando exista el login
-                var mostrarSplash by rememberSaveable { mutableStateOf(true) }
-                if (mostrarSplash) {
-                    SplashScreen(onTerminar = { mostrarSplash = false })
-                } else {
-                    Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
+                // ponytail: pasos locales; el NavHost (sesión y rol) los reemplaza cuando exista el login
+                var paso by rememberSaveable { mutableStateOf(Paso.SPLASH) }
+                when (paso) {
+                    Paso.SPLASH -> SplashScreen(onTerminar = { paso = Paso.MOTIVACION })
+                    Paso.MOTIVACION -> MotivacionScreen(
+                        onContinuar = { paso = if (onboardingVisto) Paso.INICIO else Paso.BIENVENIDA },
+                    )
+                    Paso.BIENVENIDA -> BienvenidaScreen(
+                        onComenzar = { paso = Paso.ONBOARDING },
+                        onIngresar = {
+                            marcarOnboardingVisto()
+                            paso = Paso.INICIO
+                        },
+                    )
+                    Paso.ONBOARDING -> OnboardingScreen(
+                        onVolver = { paso = Paso.BIENVENIDA },
+                        onTerminar = { paso = Paso.ROL },
+                    )
+                    // ponytail: el rol elegido se descarta; pasa a la pantalla de registro cuando exista
+                    Paso.ROL -> RolScreen(
+                        onVolver = { paso = Paso.ONBOARDING },
+                        onContinuar = {
+                            marcarOnboardingVisto()
+                            paso = Paso.INICIO
+                        },
+                    )
+                    Paso.INICIO -> Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                         Greeting(
                             name = "Android",
                             modifier = Modifier.padding(innerPadding)

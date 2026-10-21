@@ -54,7 +54,7 @@ fun SplashScreen(onTerminar: () -> Unit, modifier: Modifier = Modifier) {
         )
         Spacer(Modifier.height(8.dp))
         Text(
-            text = stringResource(R.string.splash_tagline),
+            text = stringResource(R.string.app_tagline),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onPrimary,
             textAlign = TextAlign.Center,
