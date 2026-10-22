@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- La naranja ocupa 72dp del lienzo de 108dp: cabe en la máscara circular del ícono adaptativo -->
+<inset xmlns:android="http://schemas.android.com/apk/res/android"
+    android:drawable="@drawable/ic_naranja"
+    android:inset="16.67%" />

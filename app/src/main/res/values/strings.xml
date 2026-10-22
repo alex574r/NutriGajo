@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">nutriGajo</string>
+    <string name="app_name">Nutri Gajo</string>
     <string name="app_tagline">Tu seguimiento nutricional, siempre contigo.</string>
     <string name="motivacion_frase">“Recuerda: la condición física no se adquiere con buenos deseos ni se compra.”</string>
     <string name="motivacion_autor">— JOSEPH PILATES</string>
@@ -105,7 +105,7 @@
     <string name="pacientes_generar">Generar código</string>
     <string name="pacientes_generar_nuevo">Generar nuevo</string>
     <string name="pacientes_compartir">Compartir</string>
-    <string name="pacientes_compartir_texto">Únete a mi consulta en nutriGajo. Regístrate como paciente y escribe este código para vincularte conmigo: %1$s</string>
+    <string name="pacientes_compartir_texto">Únete a mi consulta en Nutri Gajo. Regístrate como paciente y escribe este código para vincularte conmigo: %1$s</string>
     <string name="pacientes_lista_titulo">Tus pacientes (%1$d)</string>
     <string name="pacientes_vacio">Aún no tienes pacientes vinculados.</string>
     <string name="pacientes_actualizar">Actualizar</string>
