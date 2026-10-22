@@ -1,9 +1,7 @@
 package com.example.nutrigajo.ui.shared.onboarding
 
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -18,13 +16,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.nutrigajo.R
 import com.example.nutrigajo.ui.components.BarraEstadoClara
 import com.example.nutrigajo.ui.components.BotonPrimario
 import com.example.nutrigajo.ui.components.FondoFoto
+import com.example.nutrigajo.ui.components.PreguntaConEnlace
 import com.example.nutrigajo.ui.theme.NutriGajoTheme
 
 // Foto: "Grayscale Photo of a Woman Wearing a Boxing Gloves", Наталья Водопад, Pexels (licencia Pexels).
@@ -73,20 +71,11 @@ fun BienvenidaScreen(
                     altura = 64.dp,
                 )
                 Spacer(Modifier.height(16.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = stringResource(R.string.bienvenida_ya_tienes_cuenta) + " ",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = colores.onBackground,
-                    )
-                    Text(
-                        text = stringResource(R.string.bienvenida_ingresar),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = colores.primary,
-                        textDecoration = TextDecoration.Underline,
-                        modifier = Modifier.clickable(onClick = onIngresar).padding(vertical = 8.dp),
-                    )
-                }
+                PreguntaConEnlace(
+                    pregunta = stringResource(R.string.bienvenida_ya_tienes_cuenta),
+                    enlace = stringResource(R.string.bienvenida_ingresar),
+                    onClick = onIngresar,
+                )
             }
         }
     }

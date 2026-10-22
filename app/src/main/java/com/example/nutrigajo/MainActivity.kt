@@ -16,6 +16,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import com.example.nutrigajo.ui.shared.login.LoginScreen
 import com.example.nutrigajo.ui.shared.motivacion.MotivacionScreen
 import com.example.nutrigajo.ui.shared.onboarding.BienvenidaScreen
 import com.example.nutrigajo.ui.shared.onboarding.OnboardingScreen
@@ -25,7 +26,7 @@ import com.example.nutrigajo.ui.theme.NutriGajoTheme
 
 private const val CLAVE_ONBOARDING_VISTO = "onboarding_visto"
 
-private enum class Paso { SPLASH, MOTIVACION, BIENVENIDA, ONBOARDING, ROL, INICIO }
+private enum class Paso { SPLASH, MOTIVACION, BIENVENIDA, ONBOARDING, ROL, LOGIN, INICIO }
 
 class MainActivity : ComponentActivity() {
     // ponytail: bandera en SharedPreferences; pasa a DataStore/repositorio de sesión cuando exista el login
@@ -45,13 +46,13 @@ class MainActivity : ComponentActivity() {
                 when (paso) {
                     Paso.SPLASH -> SplashScreen(onTerminar = { paso = Paso.MOTIVACION })
                     Paso.MOTIVACION -> MotivacionScreen(
-                        onContinuar = { paso = if (onboardingVisto) Paso.INICIO else Paso.BIENVENIDA },
+                        onContinuar = { paso = if (onboardingVisto) Paso.LOGIN else Paso.BIENVENIDA },
                     )
                     Paso.BIENVENIDA -> BienvenidaScreen(
                         onComenzar = { paso = Paso.ONBOARDING },
                         onIngresar = {
                             marcarOnboardingVisto()
-                            paso = Paso.INICIO
+                            paso = Paso.LOGIN
                         },
                     )
                     Paso.ONBOARDING -> OnboardingScreen(
@@ -60,11 +61,17 @@ class MainActivity : ComponentActivity() {
                     )
                     // ponytail: el rol elegido se descarta; pasa a la pantalla de registro cuando exista
                     Paso.ROL -> RolScreen(
-                        onVolver = { paso = Paso.ONBOARDING },
+                        // quien ya vio el onboarding llegó desde "Regístrate" del login
+                        onVolver = { paso = if (onboardingVisto) Paso.LOGIN else Paso.ONBOARDING },
                         onContinuar = {
                             marcarOnboardingVisto()
                             paso = Paso.INICIO
                         },
+                    )
+                    // ponytail: ingresar no autentica todavía; entra al inicio cuando exista Firebase Auth
+                    Paso.LOGIN -> LoginScreen(
+                        onIngresar = { paso = Paso.INICIO },
+                        onRegistrar = { paso = Paso.ROL },
                     )
                     Paso.INICIO -> Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                         Greeting(

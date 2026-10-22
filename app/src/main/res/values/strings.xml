@@ -25,4 +25,13 @@
     <string name="rol_nutriologo">Nutriólogo</string>
     <string name="rol_paciente">Paciente</string>
     <string name="rol_continuar">continuar</string>
+
+    <string name="login_titulo">Inicia sesión</string>
+    <string name="login_correo">Correo electrónico</string>
+    <string name="login_contrasena">Contraseña</string>
+    <string name="login_mostrar_contrasena">Mostrar contraseña</string>
+    <string name="login_ocultar_contrasena">Ocultar contraseña</string>
+    <string name="login_ingresar">ingresar</string>
+    <string name="login_sin_cuenta">¿No tienes una cuenta?</string>
+    <string name="login_registrate">Regístrate</string>
 </resources>

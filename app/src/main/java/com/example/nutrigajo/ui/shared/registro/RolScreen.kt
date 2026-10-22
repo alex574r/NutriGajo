@@ -43,6 +43,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.nutrigajo.R
 import com.example.nutrigajo.domain.model.Rol
+import com.example.nutrigajo.ui.components.ANILLO_FOCO
+import com.example.nutrigajo.ui.components.AnilloFoco
 import com.example.nutrigajo.ui.components.BotonPrimario
 import com.example.nutrigajo.ui.theme.NutriGajoTheme
 
@@ -63,7 +65,6 @@ private val opciones = listOf(
 private val MARGEN = 16.dp
 private val RADIO_TARJETA = 34.dp
 private val ALTO_TARJETA = 136.dp
-private val ANILLO = 4.dp
 
 // Primer paso del registro (tema claro). El rol elegido llega al formulario de registro cuando exista.
 @Composable
@@ -106,7 +107,7 @@ fun RolScreen(
         )
         Spacer(Modifier.height(48.dp))
         // el anillo de foco de cada tarjeta ocupa 4dp: se descuenta del margen para que el borde quede a 16dp
-        Column(modifier = Modifier.selectableGroup().padding(horizontal = MARGEN - ANILLO)) {
+        Column(modifier = Modifier.selectableGroup().padding(horizontal = MARGEN - ANILLO_FOCO)) {
             opciones.forEach { opcion ->
                 TarjetaRol(
                     opcion = opcion,
@@ -134,14 +135,7 @@ private fun TarjetaRol(
 ) {
     val colores = MaterialTheme.colorScheme
     val forma = RoundedCornerShape(RADIO_TARJETA)
-    // el anillo (naranja al 25%) siempre ocupa su espacio para que las tarjetas no se muevan al elegir
-    val anillo = if (seleccionada) colores.primary.copy(alpha = 0.25f) else colores.background
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .border(ANILLO, anillo, RoundedCornerShape(RADIO_TARJETA + ANILLO))
-            .padding(ANILLO),
-    ) {
+    AnilloFoco(activo = seleccionada, radio = RADIO_TARJETA, modifier = Modifier.fillMaxWidth()) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
