@@ -45,6 +45,8 @@ import com.example.nutrigajo.domain.model.PacienteResumen
 import com.example.nutrigajo.domain.model.Perfil
 import com.example.nutrigajo.ui.components.AlertaError
 import com.example.nutrigajo.ui.components.PantallaCarga
+import com.example.nutrigajo.ui.nutriologo.ubicacion.TarjetaUbicacion
+import com.example.nutrigajo.ui.nutriologo.ubicacion.UbicacionScreen
 import com.example.nutrigajo.ui.nutriologo.verificacion.TarjetaVerificacion
 import com.example.nutrigajo.ui.nutriologo.verificacion.VerificacionEstado
 import com.example.nutrigajo.ui.nutriologo.verificacion.VerificacionScreen
@@ -67,6 +69,7 @@ fun PacientesScreen(
     val estado by vm.estado.collectAsState()
     val verificacion by verificacionVm.estado.collectAsState()
     var enFormulario by rememberSaveable { mutableStateOf(false) }
+    var enMapa by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(Unit) {
         vm.cargar()
         verificacionVm.cargar()
@@ -77,6 +80,7 @@ fun PacientesScreen(
     }
 
     when {
+        enMapa -> UbicacionScreen(perfil = perfil, onVolver = { enMapa = false })
         enFormulario -> {
             BackHandler { enFormulario = false }
             VerificacionScreen(
@@ -97,6 +101,7 @@ fun PacientesScreen(
                 verificacionVm.limpiarError()
                 enFormulario = true
             },
+            onUbicar = { enMapa = true },
             onActualizar = {
                 vm.cargar()
                 verificacionVm.cargar()
@@ -113,6 +118,7 @@ private fun PacientesContenido(
     verificacion: VerificacionEstado,
     onGenerarCodigo: () -> Unit,
     onVerificar: () -> Unit,
+    onUbicar: () -> Unit,
     onActualizar: () -> Unit,
     onCerrarSesion: () -> Unit,
 ) {
@@ -143,6 +149,8 @@ private fun PacientesContenido(
             }
         }
         if (!verificacion.cargando) item { TarjetaVerificacion(verificacion, onVerificar) }
+        // el mapa es de nutriólogos verificados: las reglas también lo exigen
+        if (verificacion.verificacion?.estado == EstadoVerificacion.APROBADA) item { TarjetaUbicacion(onUbicar) }
         item { TarjetaCodigo(estado.codigo, estado.generando, onGenerarCodigo) }
         estado.error?.let { item { AlertaError(stringResource(it)) } }
         item {

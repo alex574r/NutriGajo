@@ -115,6 +115,27 @@ service cloud.firestore {
         && getAfter(verificacionRef(resource.data.nutriologoId)).data.cedula == cedula;
     }
 
+    // Consultorio de un nutriólogo verificado en el mapa (el id es su uid). Lo ve cualquier sesión;
+    // solo él lo publica, y solo mientras su cuenta esté verificada.
+    match /directorio/{uid} {
+      allow read: if request.auth != null;
+
+      allow create, update: if request.auth != null
+        && request.auth.uid == uid
+        && get(/databases/$(database)/documents/usuarios/$(uid)).data.rol == 'NUTRIOLOGO'
+        && get(/databases/$(database)/documents/usuarios/$(uid)).data.verificado == true
+        && request.resource.data.keys().hasOnly(['nutriologoId', 'nombre', 'lat', 'lng', 'actualizadoEn'])
+        && request.resource.data.keys().hasAll(['nutriologoId', 'nombre', 'lat', 'lng', 'actualizadoEn'])
+        && request.resource.data.nutriologoId == uid
+        && request.resource.data.nombre == get(/databases/$(database)/documents/usuarios/$(uid)).data.nombre
+        && request.resource.data.lat is number && request.resource.data.lat >= -90 && request.resource.data.lat <= 90
+        && request.resource.data.lng is number && request.resource.data.lng >= -180 && request.resource.data.lng <= 180
+        && request.resource.data.actualizadoEn is int;
+
+      // quitarse del mapa
+      allow delete: if request.auth != null && request.auth.uid == uid;
+    }
+
     // Códigos con los que un nutriólogo invita a un paciente. El id del documento es el código.
     match /codigosVinculacion/{codigo} {
       // Validar un código concreto lo puede hacer cualquier sesión; listarlos, solo su dueño.

@@ -100,6 +100,19 @@
     <string name="error_nombre_distinto">El nombre de la cédula debe incluir el nombre de tu cuenta.</string>
     <string name="error_cedula_en_uso">Esa cédula ya está registrada en otra cuenta o tu solicitud ya fue enviada.</string>
 
+    <string name="mapa_volver">Volver</string>
+    <string name="mapa_titulo">Nutriólogos cerca de ti</string>
+    <string name="mapa_buscar">Buscar nutriólogos en el mapa</string>
+    <string name="mapa_verificado">Nutriólogo verificado</string>
+    <string name="mapa_ayuda">Toca un marcador para ver al nutriólogo. Para vincularte, pídele su código de vinculación.</string>
+    <string name="mapa_vacio">Aún no hay nutriólogos verificados en el mapa.</string>
+    <string name="ubicacion_titulo">Tu consultorio en el mapa</string>
+    <string name="ubicacion_tarjeta_ayuda">Marca dónde atiendes para que los pacientes te encuentren.</string>
+    <string name="ubicacion_tarjeta_boton">Ubicar en el mapa</string>
+    <string name="ubicacion_ayuda">Toca el mapa para marcar tu consultorio. Los pacientes verán este punto junto a tu nombre.</string>
+    <string name="ubicacion_guardar">Guardar ubicación</string>
+    <string name="ubicacion_quitar">Quitar del mapa</string>
+
     <string name="admin_titulo">Verificaciones pendientes (%1$d)</string>
     <string name="admin_vacio">No hay verificaciones pendientes.</string>
     <string name="admin_cedula">Cédula %1$s</string>

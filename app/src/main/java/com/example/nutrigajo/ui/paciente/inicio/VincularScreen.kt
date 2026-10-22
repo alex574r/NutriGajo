@@ -46,6 +46,7 @@ fun VincularScreen(
     estado: VinculoEstado,
     onCanjear: (codigo: String) -> Unit,
     onEditar: () -> Unit,
+    onMapa: () -> Unit,
     onCerrarSesion: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -103,6 +104,7 @@ fun VincularScreen(
             cargando = estado.canjeando,
         )
         Spacer(Modifier.height(8.dp))
+        TextButton(onClick = onMapa) { Text(stringResource(R.string.mapa_buscar)) }
         TextButton(onClick = onCerrarSesion) { Text(stringResource(R.string.inicio_cerrar_sesion)) }
         Spacer(Modifier.navigationBarsPadding().height(16.dp))
     }
@@ -112,6 +114,6 @@ fun VincularScreen(
 @Composable
 private fun VincularScreenPreview() {
     NutriGajoTheme {
-        VincularScreen(estado = VinculoEstado(cargando = false), onCanjear = {}, onEditar = {}, onCerrarSesion = {})
+        VincularScreen(estado = VinculoEstado(cargando = false), onCanjear = {}, onEditar = {}, onMapa = {}, onCerrarSesion = {})
     }
 }
