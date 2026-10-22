@@ -45,7 +45,8 @@ import java.util.Locale
 private val CRISTAL = Color(0xFFBDBDBD).copy(alpha = 0.21f)
 
 // Cabecera del inicio: foto con la fecha, la campana, el avatar (abre el menú de cuenta) y el saludo.
-// Mide 171 dp bajo la barra de estado; la foto llega hasta el borde superior de la pantalla.
+// Mide 215 dp bajo la barra de estado (44 más que en el diseño, que se veía pequeño en el teléfono);
+// la foto llega hasta el borde superior de la pantalla.
 @Composable
 fun CabeceraInicio(
     nombre: String,
@@ -68,13 +69,13 @@ fun CabeceraInicio(
         )
         // la foto es clara en algunas zonas: el velo mantiene el contraste del texto blanco
         Box(Modifier.matchParentSize().background(Color.Black.copy(alpha = 0.25f)))
-        Column(Modifier.statusBarsPadding().height(171.dp).padding(horizontal = 21.dp)) {
-            Spacer(Modifier.height(39.dp))
+        Column(Modifier.statusBarsPadding().height(215.dp).padding(horizontal = 21.dp)) {
+            Spacer(Modifier.height(62.dp))
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
                 Icon(painterResource(R.drawable.ic_calendario), contentDescription = null, tint = colores.outline)
                 Text(fecha, style = MaterialTheme.typography.labelLarge.copy(fontSize = 12.sp), color = colores.outline)
             }
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(20.dp))
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Avatar(nombre, onExpediente, onCerrarSesion)
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {

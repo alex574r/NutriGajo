@@ -1,6 +1,7 @@
 package com.example.nutrigajo.ui.paciente.inicio
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -134,12 +135,7 @@ fun ActividadReciente(modifier: Modifier = Modifier) {
                         Text(stringResource(R.string.actividad_sugerencias), style = tipos.bodyMedium, color = colores.outline, maxLines = 1)
                     }
                 }
-                Box(
-                    modifier = Modifier.size(55.dp, 56.dp).clip(RoundedCornerShape(17.dp)).background(colores.onBackground),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(painterResource(R.drawable.ic_actividad), contentDescription = null, tint = Color.White)
-                }
+                Image(painterResource(R.drawable.ic_naranja), contentDescription = null, modifier = Modifier.size(56.dp))
             }
         }
     }
