@@ -9,7 +9,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -28,9 +30,11 @@ fun BotonPrimario(
     altura: Dp = 56.dp,
     enabled: Boolean = true,
     colors: ButtonColors = ButtonDefaults.buttonColors(),
+    // cambia la flecha por un indicador de progreso; los toques se ignoran mientras dura
+    cargando: Boolean = false,
 ) {
     Button(
-        onClick = onClick,
+        onClick = { if (!cargando) onClick() },
         modifier = modifier.height(altura),
         enabled = enabled,
         colors = colors,
@@ -39,10 +43,14 @@ fun BotonPrimario(
     ) {
         Text(text = texto, style = MaterialTheme.typography.titleLarge)
         Spacer(Modifier.width(16.dp))
-        Icon(
-            painter = painterResource(R.drawable.ic_arrow_forward),
-            contentDescription = null,
-            modifier = Modifier.size(24.dp),
-        )
+        if (cargando) {
+            CircularProgressIndicator(modifier = Modifier.size(24.dp), color = LocalContentColor.current, strokeWidth = 2.dp)
+        } else {
+            Icon(
+                painter = painterResource(R.drawable.ic_arrow_forward),
+                contentDescription = null,
+                modifier = Modifier.size(24.dp),
+            )
+        }
     }
 }

@@ -60,7 +60,8 @@ fun CampoTexto(
                 modifier = Modifier
                     .fillMaxWidth()
                     .border(1.dp, if (enfocado) colores.primary else Color.Transparent, forma),
-                textStyle = MaterialTheme.typography.bodyMedium,
+                // sin alternativas contextuales: Inter dibuja "7x4" como "7×4" y una contraseña debe verse tal cual
+                textStyle = MaterialTheme.typography.bodyMedium.copy(fontFeatureSettings = "calt 0"),
                 leadingIcon = {
                     Icon(painterResource(icono), contentDescription = null, modifier = Modifier.size(24.dp), tint = colores.onBackground)
                 },

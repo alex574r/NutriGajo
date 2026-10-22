@@ -29,9 +29,31 @@
     <string name="login_titulo">Inicia sesión</string>
     <string name="login_correo">Correo electrónico</string>
     <string name="login_contrasena">Contraseña</string>
-    <string name="login_mostrar_contrasena">Mostrar contraseña</string>
-    <string name="login_ocultar_contrasena">Ocultar contraseña</string>
     <string name="login_ingresar">ingresar</string>
     <string name="login_sin_cuenta">¿No tienes una cuenta?</string>
     <string name="login_registrate">Regístrate</string>
+
+    <string name="contrasena_mostrar">Mostrar contraseña</string>
+    <string name="contrasena_ocultar">Ocultar contraseña</string>
+
+    <string name="registro_titulo">Crea tu cuenta</string>
+    <string name="registro_subtitulo">Te registras como %1$s.</string>
+    <string name="registro_nombre">Nombre completo</string>
+    <string name="registro_confirmar">Confirmar contraseña</string>
+    <string name="registro_aviso">Acepto el aviso de privacidad</string>
+    <string name="registro_registrarme">registrarme</string>
+    <string name="registro_con_cuenta">¿Ya tienes una cuenta?</string>
+    <string name="registro_inicia_sesion">Inicia sesión</string>
+
+    <string name="error_credenciales">Correo o contraseña incorrectos.</string>
+    <string name="error_correo_en_uso">Ya existe una cuenta con ese correo.</string>
+    <string name="error_contrasena_debil">La contraseña debe tener al menos 6 caracteres.</string>
+    <string name="error_contrasenas_distintas">Las contraseñas no coinciden.</string>
+    <string name="error_red">Sin conexión. Revisa tu internet e inténtalo de nuevo.</string>
+    <string name="error_demasiados_intentos">Demasiados intentos. Espera un momento e inténtalo de nuevo.</string>
+    <string name="error_generico">Algo salió mal. Inténtalo de nuevo.</string>
+
+    <string name="inicio_hola">Hola, %1$s</string>
+    <string name="inicio_rol">Rol: %1$s</string>
+    <string name="inicio_cerrar_sesion">Cerrar sesión</string>
 </resources>

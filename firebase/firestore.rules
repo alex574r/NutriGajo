@@ -1,0 +1,33 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Perfil de cuenta. ADMIN se da de alta a mano en la consola: nadie puede asignárselo al registrarse.
+    match /usuarios/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+
+      // Solo el propio usuario crea su perfil, como NUTRIOLOGO o PACIENTE y sin verificar.
+      allow create: if request.auth != null
+        && request.auth.uid == uid
+        && request.resource.data.rol in ['NUTRIOLOGO', 'PACIENTE']
+        && request.resource.data.verificado == false
+        && request.resource.data.activo == true
+        && request.resource.data.correo == request.auth.token.email;
+
+      // El usuario edita sus datos, pero no su rol ni su verificación ni su estado.
+      allow update: if request.auth != null
+        && request.auth.uid == uid
+        && request.resource.data.rol == resource.data.rol
+        && request.resource.data.verificado == resource.data.verificado
+        && request.resource.data.activo == resource.data.activo;
+
+      allow delete: if false;
+    }
+
+    // Todo lo demás, denegado hasta definir sus reglas (pacientes, mediciones, planes…).
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

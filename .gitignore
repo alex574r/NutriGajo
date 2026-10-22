@@ -13,3 +13,9 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Firebase / backend: configuración y secretos locales (cada quien descarga el suyo de la consola)
+app/google-services.json
+.dev.vars
+*.jks
+*.keystore
