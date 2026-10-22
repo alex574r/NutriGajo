@@ -54,7 +54,7 @@ fun InicioPacienteScreen(
 
     val vinculo = estado.vinculo
     when {
-        estado.cargando -> PantallaCarga()
+        estado.cargando -> PantallaCarga(conCabecera = true)
         vinculo == null && enMapa -> {
             BackHandler { enMapa = false }
             MapaScreen(estado = mapa, onActualizar = mapaVm::cargar, onVolver = { enMapa = false })
@@ -105,7 +105,7 @@ private fun InicioPaciente(
     ) {
         item { CabeceraInicio(perfil.nombre, resumenDia, onExpediente, onCerrarSesion) }
         // una vez completo, el expediente se consulta desde el menú de la cuenta
-        if (!expediente.cargando && !expediente.expediente.completo) {
+        if (expediente.cargando || !expediente.expediente.completo) {
             item { TarjetaExpediente(expediente, onExpediente, Modifier.padding(horizontal = 16.dp)) }
         }
         item { MetricasFitness(resumenDia) }

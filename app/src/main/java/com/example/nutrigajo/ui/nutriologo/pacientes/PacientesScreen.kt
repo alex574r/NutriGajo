@@ -162,7 +162,7 @@ private fun PacientesContenido(
                 TextButton(onClick = onCerrarSesion) { Text(stringResource(R.string.inicio_cerrar_sesion)) }
             }
         }
-        if (!verificacion.cargando) item { TarjetaVerificacion(verificacion, onVerificar) }
+        item { TarjetaVerificacion(verificacion, onVerificar) }
         // el mapa es de nutriólogos verificados: las reglas también lo exigen
         if (verificacion.verificacion?.estado == EstadoVerificacion.APROBADA) item { TarjetaUbicacion(onUbicar) }
         item { TarjetaCodigo(estado.codigo, estado.generando, onGenerarCodigo) }

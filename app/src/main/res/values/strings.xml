@@ -3,6 +3,7 @@
     <string name="app_tagline">Tu seguimiento nutricional, siempre contigo.</string>
     <string name="motivacion_frase">“Recuerda: la condición física no se adquiere con buenos deseos ni se compra.”</string>
     <string name="motivacion_autor">— JOSEPH PILATES</string>
+    <string name="motivacion_siguiente">siguiente</string>
 
     <string name="bienvenida_titulo">Te damos la bienvenida</string>
     <string name="bienvenida_comenzar">comenzar</string>
@@ -60,6 +61,7 @@
     <string name="inicio_hola">¡Hola, %1$s!</string>
     <string name="inicio_rol">Rol: %1$s</string>
     <string name="inicio_cerrar_sesion">Cerrar sesión</string>
+    <string name="cargando">Cargando</string>
     <string name="inicio_score">%1$d%% Score</string>
     <string name="inicio_avance">Avance %1$d%%</string>
     <string name="inicio_plan">Pro</string>

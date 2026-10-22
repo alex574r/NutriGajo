@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -26,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import com.example.nutrigajo.R
 import com.example.nutrigajo.ui.components.AlertaError
 import com.example.nutrigajo.ui.components.CENTRO_POR_DEFECTO
+import com.example.nutrigajo.ui.components.Esqueleto
 import com.example.nutrigajo.ui.components.ZOOM_CIUDAD
 import com.example.nutrigajo.ui.components.rememberUbicacionConcedida
 import com.example.nutrigajo.ui.components.ultimaUbicacion
@@ -120,11 +122,15 @@ fun MapaScreen(
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             estado.error?.let { AlertaError(stringResource(it)) }
-            Text(
-                text = stringResource(if (!estado.cargando && estado.nutriologos.isEmpty()) R.string.mapa_vacio else R.string.mapa_ayuda),
-                style = MaterialTheme.typography.bodySmall,
-                color = colores.onSurfaceVariant,
-            )
+            if (estado.cargando) {
+                Esqueleto(Modifier.fillMaxWidth(0.7f).height(14.dp))
+            } else {
+                Text(
+                    text = stringResource(if (estado.nutriologos.isEmpty()) R.string.mapa_vacio else R.string.mapa_ayuda),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = colores.onSurfaceVariant,
+                )
+            }
         }
     }
 }

@@ -6,6 +6,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -15,7 +16,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -27,22 +27,16 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import com.example.nutrigajo.R
 import com.example.nutrigajo.ui.components.BarraEstadoClara
+import com.example.nutrigajo.ui.components.BotonPrimario
 import com.example.nutrigajo.ui.components.FondoFoto
 import com.example.nutrigajo.ui.theme.NutriGajoTheme
 import com.example.nutrigajo.ui.theme.TextLgMedium
-import kotlinx.coroutines.delay
-
-private const val DURACION_MS = 4_000L
 
 // Foto: "Side View of a Man", Thomas Ronveaux, Pexels (licencia Pexels: uso libre, sin atribución obligatoria).
 // https://www.pexels.com/photo/side-view-of-a-man-13951188/
-// Pantalla de bienvenida: siempre en tema oscuro. Avanza sola o con un toque.
+// Pantalla de bienvenida: siempre en tema oscuro. Avanza con el botón "siguiente" o con un toque; no se cierra sola.
 @Composable
 fun MotivacionScreen(onContinuar: () -> Unit, modifier: Modifier = Modifier) {
-    LaunchedEffect(Unit) {
-        delay(DURACION_MS)
-        onContinuar()
-    }
     BarraEstadoClara()
     NutriGajoTheme(darkTheme = true) {
         val colores = MaterialTheme.colorScheme
@@ -60,7 +54,7 @@ fun MotivacionScreen(onContinuar: () -> Unit, modifier: Modifier = Modifier) {
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .navigationBarsPadding()
-                    .padding(start = 24.dp, end = 24.dp, bottom = 56.dp),
+                    .padding(start = 24.dp, end = 24.dp, bottom = 24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Box(
@@ -89,6 +83,13 @@ fun MotivacionScreen(onContinuar: () -> Unit, modifier: Modifier = Modifier) {
                     text = stringResource(R.string.motivacion_autor),
                     style = MaterialTheme.typography.labelMedium,
                     color = colores.onBackground,
+                )
+                Spacer(Modifier.height(40.dp))
+                BotonPrimario(
+                    texto = stringResource(R.string.motivacion_siguiente),
+                    onClick = onContinuar,
+                    modifier = Modifier.fillMaxWidth(),
+                    altura = 64.dp,
                 )
             }
         }

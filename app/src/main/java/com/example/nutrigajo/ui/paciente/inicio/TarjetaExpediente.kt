@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
@@ -16,6 +17,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.example.nutrigajo.R
 import com.example.nutrigajo.ui.components.AlertaError
+import com.example.nutrigajo.ui.components.Esqueleto
 import com.example.nutrigajo.ui.shared.expediente.ExpedienteEstado
 
 // Invita al paciente a generar su expediente (opcional), lo retoma si lo dejó a medias o lo deja consultar si ya está.
@@ -23,7 +25,7 @@ import com.example.nutrigajo.ui.shared.expediente.ExpedienteEstado
 fun TarjetaExpediente(estado: ExpedienteEstado, onAbrir: () -> Unit, modifier: Modifier = Modifier) {
     val colores = MaterialTheme.colorScheme
     when {
-        estado.cargando -> Unit
+        estado.cargando -> Esqueleto(modifier.fillMaxWidth().height(142.dp), RoundedCornerShape(24.dp))
         estado.error != null -> AlertaError(stringResource(estado.error), modifier)
         else -> {
             val expediente = estado.expediente
