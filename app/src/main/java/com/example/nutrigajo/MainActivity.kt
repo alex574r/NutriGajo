@@ -28,7 +28,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.nutrigajo.domain.model.Rol
 import com.example.nutrigajo.ui.admin.verificaciones.VerificacionesScreen
 import com.example.nutrigajo.ui.components.PantallaCarga
-import com.example.nutrigajo.ui.nutriologo.pacientes.PacientesScreen
+import com.example.nutrigajo.ui.nutriologo.inicio.InicioNutriologoScreen
 import com.example.nutrigajo.ui.paciente.inicio.InicioPacienteScreen
 import com.example.nutrigajo.ui.shared.auth.AuthViewModel
 import com.example.nutrigajo.ui.shared.login.LoginScreen
@@ -135,7 +135,7 @@ class MainActivity : ComponentActivity() {
                         when {
                             perfil == null && estado.perfilFallo -> PerfilNoDisponible(auth::cargarPerfil, cerrarSesion)
                             perfil == null -> PantallaCarga()
-                            perfil.rol == Rol.NUTRIOLOGO -> PacientesScreen(perfil, cerrarSesion)
+                            perfil.rol == Rol.NUTRIOLOGO -> InicioNutriologoScreen(perfil, cerrarSesion)
                             perfil.rol == Rol.PACIENTE -> InicioPacienteScreen(perfil, cerrarSesion)
                             // ADMIN
                             else -> VerificacionesScreen(perfil, cerrarSesion)

@@ -88,10 +88,10 @@ fun TarjetaCoach(nutriologo: String, modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun Etiqueta(texto: String) {
+internal fun Etiqueta(texto: String, modifier: Modifier = Modifier) {
     Text(
         text = texto,
-        modifier = Modifier.background(Color(0xFFBDBDBD).copy(alpha = 0.35f), RoundedCornerShape(7.dp)).padding(horizontal = 10.dp, vertical = 3.dp),
+        modifier = modifier.background(Color(0xFFBDBDBD).copy(alpha = 0.35f), RoundedCornerShape(7.dp)).padding(horizontal = 10.dp, vertical = 3.dp),
         style = MaterialTheme.typography.labelLarge.copy(fontSize = 12.sp),
         color = Color.White,
     )

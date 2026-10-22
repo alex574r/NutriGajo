@@ -111,6 +111,35 @@
     <string name="pacientes_lista_titulo">Tus pacientes (%1$d)</string>
     <string name="pacientes_vacio">Aún no tienes pacientes vinculados.</string>
     <string name="pacientes_actualizar">Actualizar</string>
+    <string name="nutri_listo">Listo para atender</string>
+    <string name="nutri_buscar">Buscar paciente</string>
+    <string name="nutri_abrir_perfil">Abrir mi perfil</string>
+    <string name="nutri_verificado">Cuenta verificada</string>
+    <string name="nutri_atajo_pacientes">Pacientes</string>
+    <string name="nutri_atajo_codigo">Código</string>
+    <string name="nutri_atajo_mapa">Mapa</string>
+    <plurals name="nutri_aviso_pacientes">
+        <item quantity="one">Tienes %d paciente vinculado.</item>
+        <item quantity="other">Tienes %d pacientes vinculados.</item>
+    </plurals>
+    <string name="nutri_aviso_vacio">Aún no tienes pacientes. Comparte tu código para vincularlos.</string>
+    <string name="nutri_codigo_titulo">Código de vinculación</string>
+    <string name="nutri_codigo_vigente">Vigente</string>
+    <string name="nutri_codigo_sin">Sin código</string>
+    <string name="nutri_codigo_vacio_titulo">Crea tu código</string>
+    <string name="nutri_codigo_vacio_ayuda">Para invitar a un paciente</string>
+    <string name="nutri_pacientes_titulo">Pacientes</string>
+    <string name="nutri_ver_todos">Ver todos</string>
+    <string name="nutri_mapa_titulo">Mapa</string>
+    <string name="nutri_abrir_expediente">Abrir el expediente de %1$s</string>
+    <string name="nutri_etiqueta_paciente">Paciente</string>
+    <string name="nutri_alta">Alta: %1$s</string>
+    <string name="nutri_invitar">Invitar con mi código</string>
+    <string name="nutri_nav_inicio">Inicio</string>
+    <string name="nutri_nav_pacientes">Pacientes</string>
+    <string name="nutri_nav_mapa">Mapa</string>
+    <string name="nutri_nav_perfil">Perfil</string>
+    <string name="nutri_nav_nuevo">Código de vinculación</string>
 
     <string name="vincular_barra">Vincular</string>
     <string name="vincular_titulo">Ingresa el código de tu nutriólogo</string>
