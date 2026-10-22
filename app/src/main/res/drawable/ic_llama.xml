@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Diseño de inicio del paciente (Comprehensive Fitness Assessment.svg) -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="11dp"
+    android:height="14.5dp"
+    android:viewportWidth="11"
+    android:viewportHeight="14.5">
+    <group android:translateX="-99.5" android:translateY="-149">
+        <path
+            android:strokeColor="#FFFFFF"
+            android:strokeWidth="1.33333"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round"
+            android:pathData="M105.001 150C105.445 151.778 106.334 153.222 107.667 154.333C109.001 155.444 109.667 156.667 109.667 158C109.667 159.238 109.176 160.425 108.3 161.3C107.425 162.175 106.238 162.667 105.001 162.667C103.763 162.667 102.576 162.175 101.701 161.3C100.826 160.425 100.334 159.238 100.334 158C100.334 157.279 100.568 156.577 101.001 156C101.001 156.442 101.176 156.866 101.489 157.179C101.801 157.491 102.225 157.667 102.667 157.667C103.109 157.667 103.533 157.491 103.846 157.179C104.158 156.866 104.334 156.442 104.334 156C104.334 154.667 103.334 154 103.334 152.667C103.334 151.778 103.89 150.889 105.001 150Z" />
+    </group>
+</vector>

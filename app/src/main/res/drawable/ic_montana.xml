@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Diseño de inicio del paciente (Comprehensive Fitness Assessment.svg) -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="14dp"
+    android:height="13dp"
+    android:viewportWidth="14"
+    android:viewportHeight="13">
+    <group android:translateX="-163" android:translateY="-150">
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M163.25 163V153.25L166.25 155.5L170 150.25L173.75 153.25H176.75V163H163.25ZM167 160.75L170 156.625L175.25 160.712V154.75H173.225L170.3 152.406L166.588 157.619L164.75 156.25V158.95L167 160.75Z" />
+    </group>
+</vector>

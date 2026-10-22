@@ -3,33 +3,31 @@ package com.example.nutrigajo.ui.paciente.inicio
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.em
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.nutrigajo.R
 import com.example.nutrigajo.domain.model.Perfil
 import com.example.nutrigajo.domain.model.Rol
 import com.example.nutrigajo.domain.model.Vinculo
+import com.example.nutrigajo.ui.components.BarraEstadoClara
 import com.example.nutrigajo.ui.components.PantallaCarga
 import com.example.nutrigajo.ui.paciente.mapa.MapaScreen
 import com.example.nutrigajo.ui.paciente.mapa.MapaViewModel
@@ -38,7 +36,7 @@ import com.example.nutrigajo.ui.shared.expediente.ExpedienteFlujo
 import com.example.nutrigajo.ui.shared.expediente.ExpedienteViewModel
 
 // Entrada del paciente: sin nutriólogo pide el código (o deja buscarlo en el mapa); con uno, abre su inicio.
-// ponytail: el inicio del paciente es provisional; planes, mediciones y citas llegan después.
+// ponytail: las secciones del inicio salvo el expediente y el coach usan datos de muestra (DatosMuestra.kt).
 @Composable
 fun InicioPacienteScreen(
     perfil: Perfil,
@@ -91,38 +89,30 @@ private fun InicioPaciente(
     val expediente: ExpedienteEstado by expedienteVm.estado.collectAsState()
     LaunchedEffect(vinculo.pacienteId) { expedienteVm.cargar(vinculo.pacienteId) }
 
+    val lista = rememberLazyListState()
+    val densidad = LocalDensity.current
+    // ponytail: umbral fijo; con la cabecera ya fuera de la pantalla los íconos de la barra vuelven a ser oscuros
+    val sobreFoto by remember {
+        derivedStateOf { lista.firstVisibleItemIndex == 0 && lista.firstVisibleItemScrollOffset < with(densidad) { 150.dp.toPx() } }
+    }
+    BarraEstadoClara(sobreFoto)
+
     LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(colores.background)
-            .statusBarsPadding()
-            .navigationBarsPadding(),
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        modifier = Modifier.fillMaxSize().background(colores.background),
+        state = lista,
+        contentPadding = WindowInsets.navigationBars.asPaddingValues(),
+        verticalArrangement = Arrangement.spacedBy(24.dp),
     ) {
-        item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = stringResource(R.string.inicio_hola, perfil.nombre),
-                    modifier = Modifier.weight(1f),
-                    // el 100% de la escala no sirve para texto de varias líneas
-                    style = MaterialTheme.typography.headlineMedium.copy(lineHeight = 1.2.em),
-                    color = colores.onBackground,
-                )
-                TextButton(onClick = onCerrarSesion) { Text(stringResource(R.string.inicio_cerrar_sesion)) }
-            }
+        item { CabeceraInicio(perfil.nombre, resumenDia, onExpediente, onCerrarSesion) }
+        // una vez completo, el expediente se consulta desde el menú de la cuenta
+        if (!expediente.cargando && !expediente.expediente.completo) {
+            item { TarjetaExpediente(expediente, onExpediente, Modifier.padding(horizontal = 16.dp)) }
         }
-        item {
-            Text(
-                text = stringResource(R.string.inicio_nutriologo, vinculo.nutriologoNombre),
-                style = MaterialTheme.typography.bodyLarge,
-                color = colores.onSurfaceVariant,
-            )
-        }
-        if (!expediente.cargando) item { TarjetaExpediente(expediente, onExpediente) }
+        item { MetricasFitness(resumenDia) }
+        item { RutinaDeHoy(rutinaDeHoy) }
+        item { DietaNutricion(comidas) }
+        item { ActividadReciente() }
+        item { TarjetaCoach(vinculo.nutriologoNombre) }
+        item { EjerciciosExtra(ejerciciosExtra) }
     }
 }

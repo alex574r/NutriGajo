@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Diseño de inicio del paciente (Comprehensive Fitness Assessment.svg) -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="7dp"
+    android:height="11dp"
+    android:viewportWidth="7"
+    android:viewportHeight="11">
+    <group android:translateX="-269.5" android:translateY="-290.5">
+        <path
+            android:strokeColor="#FFFFFF"
+            android:strokeWidth="0.75"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round"
+            android:pathData="M276 298.75C274 299.417 272 299.417 270 298.75M276 295.25C274 294.583 272 294.583 270 295.25" />
+        <path
+            android:strokeColor="#FFFFFF"
+            android:strokeWidth="0.75"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round"
+            android:pathData="M275 293.25L273.747 291.841C273.399 291.449 273.225 291.253 273 291.253C272.775 291.253 272.601 291.449 272.253 291.841L271 293.25" />
+        <path
+            android:strokeColor="#FFFFFF"
+            android:strokeWidth="0.75"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round"
+            android:pathData="M276 291H270" />
+        <path
+            android:strokeColor="#FFFFFF"
+            android:strokeWidth="0.75"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round"
+            android:pathData="M274.444 300.884C273.481 301.039 272.519 301.039 271.556 300.884C270.242 300.673 270 300.234 270 299.146V294.854C270 293.766 270.242 293.327 271.556 293.116C272.519 292.961 273.481 292.961 274.444 293.116C275.758 293.327 276 293.766 276 294.854V299.146C276 300.234 275.758 300.673 274.444 300.884Z" />
+    </group>
+</vector>
