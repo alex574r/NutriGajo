@@ -5,6 +5,8 @@ package com.example.nutrigajo.data.remote.firebase.firestore
  *
  * usuarios/{uid}                      rol, verificado, activo… (ADMIN se crea a mano en la consola)
  * codigosVinculacion/{codigo}         nutriologoId, expiraEn, usado, canjeadoPor… (el id es el código)
+ * verificaciones/{uid}                solicitud de verificación del nutriólogo (cédula, estado PENDIENTE|APROBADA|RECHAZADA)
+ * cedulas/{numero}                    reserva de una cédula por un nutriólogo (una cédula, una cuenta)
  * pacientes/{pacienteId}              nutriologoId, usuarioId, correoVinculacion…
  *   ├─ mediciones/{id}
  *   ├─ planes/{id}                    comidas[] embebidas
@@ -18,6 +20,8 @@ package com.example.nutrigajo.data.remote.firebase.firestore
 object FirestorePaths {
     const val USUARIOS = "usuarios"
     const val CODIGOS_VINCULACION = "codigosVinculacion"
+    const val VERIFICACIONES = "verificaciones"
+    const val CEDULAS = "cedulas"
     const val PACIENTES = "pacientes"
     const val MEDICIONES = "mediciones"
     const val PLANES = "planes"

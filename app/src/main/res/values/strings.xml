@@ -80,4 +80,35 @@
     <string name="vincular_ayuda">Pídele su código de vinculación y escríbelo aquí.</string>
     <string name="vincular_codigo">Código de vinculación</string>
     <string name="vincular_boton">vincularme</string>
+
+    <string name="verificacion_titulo">Verifica tu cuenta</string>
+    <string name="verificacion_tarjeta_ayuda">Envía tu cédula profesional para que te reconozcan como nutriólogo verificado.</string>
+    <string name="verificacion_boton">Verificar mi cuenta</string>
+    <string name="verificacion_pendiente_titulo">Verificación en revisión</string>
+    <string name="verificacion_pendiente_ayuda">Un administrador revisará tu cédula. Toca Actualizar para ver el resultado.</string>
+    <string name="verificacion_rechazada_titulo">Verificación rechazada</string>
+    <string name="verificacion_rechazada_motivo">Motivo: %1$s</string>
+    <string name="verificacion_reenviar">Enviar de nuevo</string>
+    <string name="verificacion_aprobada_titulo">Cuenta verificada ✓</string>
+    <string name="verificacion_aprobada_ayuda">Tu cédula fue revisada y aprobada.</string>
+    <string name="verificacion_form_ayuda">Escribe tu número de cédula profesional y tu nombre como aparece en ella. Un administrador lo revisará en el registro de la SEP.</string>
+    <string name="verificacion_cedula">Cédula profesional</string>
+    <string name="verificacion_nombre">Nombre en la cédula</string>
+    <string name="verificacion_enviar">enviar</string>
+    <string name="verificacion_cancelar">Cancelar</string>
+    <string name="error_cedula_invalida">La cédula debe tener entre 6 y 8 dígitos.</string>
+    <string name="error_nombre_distinto">El nombre de la cédula debe incluir el nombre de tu cuenta.</string>
+    <string name="error_cedula_en_uso">Esa cédula ya está registrada en otra cuenta o tu solicitud ya fue enviada.</string>
+
+    <string name="admin_titulo">Verificaciones pendientes (%1$d)</string>
+    <string name="admin_vacio">No hay verificaciones pendientes.</string>
+    <string name="admin_cedula">Cédula %1$s</string>
+    <string name="admin_nombre_cedula">Nombre en la cédula: %1$s</string>
+    <string name="admin_nombre_coincide">El nombre coincide con el de la cuenta</string>
+    <string name="admin_nombre_distinto">El nombre no coincide con el de la cuenta</string>
+    <string name="admin_abrir_sep">Abrir consulta de la SEP</string>
+    <string name="admin_aprobar">Aprobar</string>
+    <string name="admin_rechazar">Rechazar</string>
+    <string name="admin_rechazar_titulo">Rechazar verificación</string>
+    <string name="admin_motivo">Motivo del rechazo</string>
 </resources>

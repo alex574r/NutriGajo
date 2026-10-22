@@ -13,6 +13,35 @@ service cloud.firestore {
     function codigoDespues(c) {
       return getAfter(/databases/$(database)/documents/codigosVinculacion/$(c)).data;
     }
+    function esAdmin() {
+      return request.auth != null && rolDe(request.auth.uid) == 'ADMIN';
+    }
+    function verificacionRef(uid) {
+      return /databases/$(database)/documents/verificaciones/$(uid);
+    }
+    function cedulaRef(cedula) {
+      return /databases/$(database)/documents/cedulas/$(cedula);
+    }
+    // Solicitud de verificación que el propio nutriólogo envía (o reenvía tras un rechazo). Reserva su cédula
+    // en el mismo lote (cedulas/{numero}), así una cédula no sirve en dos cuentas.
+    function envioValido(uid) {
+      let d = request.resource.data;
+      let u = get(/databases/$(database)/documents/usuarios/$(uid)).data;
+      return request.auth != null
+        && request.auth.uid == uid
+        && u.rol == 'NUTRIOLOGO'
+        && u.verificado == false
+        && d.keys().hasOnly(['nutriologoId', 'nombreCuenta', 'correo', 'nombreCedula', 'cedula', 'estado', 'enviadoEn'])
+        && d.keys().hasAll(['nutriologoId', 'nombreCuenta', 'correo', 'nombreCedula', 'cedula', 'estado', 'enviadoEn'])
+        && d.nutriologoId == uid
+        && d.nombreCuenta == u.nombre
+        && d.correo.lower() == request.auth.token.email.lower()
+        && d.nombreCedula is string && d.nombreCedula.size() >= 3 && d.nombreCedula.size() <= 120
+        && d.cedula is string && d.cedula.matches('[0-9]{6,8}')
+        && d.estado == 'PENDIENTE'
+        && d.enviadoEn is int
+        && getAfter(cedulaRef(d.cedula)).data.nutriologoId == uid;
+    }
 
     // Perfil de cuenta. ADMIN se da de alta a mano en la consola: nadie puede asignárselo al registrarse.
     match /usuarios/{uid} {
@@ -33,7 +62,57 @@ service cloud.firestore {
         && request.resource.data.verificado == resource.data.verificado
         && request.resource.data.activo == resource.data.activo;
 
+      // El ADMIN marca verificado a un nutriólogo solo al aprobar su solicitud, en el mismo lote.
+      allow update: if esAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['verificado', 'ultimaModificacion'])
+        && request.resource.data.verificado == true
+        && get(verificacionRef(uid)).data.estado == 'PENDIENTE'
+        && getAfter(verificacionRef(uid)).data.estado == 'APROBADA';
+
       allow delete: if false;
+    }
+
+    // Solicitud de verificación del nutriólogo (el id es su uid). La ven él y el ADMIN.
+    match /verificaciones/{uid} {
+      allow read: if request.auth != null && (request.auth.uid == uid || rolDe(request.auth.uid) == 'ADMIN');
+
+      allow create: if envioValido(uid);
+      // reenvío: solo después de un rechazo
+      allow update: if (resource.data.estado == 'RECHAZADA' && envioValido(uid))
+        // revisión del ADMIN: una sola vez, de PENDIENTE a APROBADA o RECHAZADA (el rechazo lleva motivo)
+        || (esAdmin()
+            && resource.data.estado == 'PENDIENTE'
+            && request.resource.data.estado in ['APROBADA', 'RECHAZADA']
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['estado', 'motivo', 'revisadoPor', 'revisadoEn', 'metodo'])
+            && request.resource.data.revisadoPor == request.auth.uid
+            && request.resource.data.revisadoEn is int
+            && request.resource.data.metodo == 'MANUAL'
+            && (request.resource.data.estado == 'APROBADA'
+                || (request.resource.data.motivo is string
+                    && request.resource.data.motivo.size() > 0
+                    && request.resource.data.motivo.size() <= 200)));
+
+      allow delete: if false;
+    }
+
+    // Reserva de cédula (el id es el número). Cualquier sesión puede consultar si está libre;
+    // se crea con la solicitud y el ADMIN la libera al rechazarla.
+    match /cedulas/{cedula} {
+      allow get: if request.auth != null;
+
+      allow create: if request.auth != null
+        && rolDe(request.auth.uid) == 'NUTRIOLOGO'
+        && request.resource.data.keys().hasOnly(['nutriologoId', 'creadoEn'])
+        && request.resource.data.keys().hasAll(['nutriologoId', 'creadoEn'])
+        && request.resource.data.nutriologoId == request.auth.uid
+        && cedula.matches('[0-9]{6,8}')
+        && getAfter(verificacionRef(request.auth.uid)).data.cedula == cedula;
+
+      allow update: if false;
+
+      allow delete: if esAdmin()
+        && getAfter(verificacionRef(resource.data.nutriologoId)).data.estado == 'RECHAZADA'
+        && getAfter(verificacionRef(resource.data.nutriologoId)).data.cedula == cedula;
     }
 
     // Códigos con los que un nutriólogo invita a un paciente. El id del documento es el código.

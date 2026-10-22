@@ -26,10 +26,10 @@ import androidx.compose.ui.unit.dp
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.nutrigajo.domain.model.Rol
+import com.example.nutrigajo.ui.admin.verificaciones.VerificacionesScreen
 import com.example.nutrigajo.ui.components.PantallaCarga
 import com.example.nutrigajo.ui.nutriologo.pacientes.PacientesScreen
 import com.example.nutrigajo.ui.paciente.inicio.InicioPacienteScreen
-import com.example.nutrigajo.ui.shared.InicioProvisional
 import com.example.nutrigajo.ui.shared.auth.AuthViewModel
 import com.example.nutrigajo.ui.shared.login.LoginScreen
 import com.example.nutrigajo.ui.shared.motivacion.MotivacionScreen
@@ -142,7 +142,8 @@ class MainActivity : ComponentActivity() {
                             perfil == null -> PantallaCarga()
                             perfil.rol == Rol.NUTRIOLOGO -> PacientesScreen(perfil, cerrarSesion)
                             perfil.rol == Rol.PACIENTE -> InicioPacienteScreen(perfil, cerrarSesion)
-                            else -> InicioProvisional(perfil, detalle = null, onCerrarSesion = cerrarSesion)
+                            // ADMIN
+                            else -> VerificacionesScreen(perfil, cerrarSesion)
                         }
                     }
                 }

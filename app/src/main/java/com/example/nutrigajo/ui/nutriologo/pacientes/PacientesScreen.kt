@@ -1,6 +1,7 @@
 package com.example.nutrigajo.ui.nutriologo.pacientes
 
 import android.content.Intent
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -24,7 +25,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -36,34 +40,67 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.nutrigajo.R
 import com.example.nutrigajo.domain.model.CodigoVinculacion
+import com.example.nutrigajo.domain.model.EstadoVerificacion
 import com.example.nutrigajo.domain.model.PacienteResumen
 import com.example.nutrigajo.domain.model.Perfil
 import com.example.nutrigajo.ui.components.AlertaError
 import com.example.nutrigajo.ui.components.PantallaCarga
+import com.example.nutrigajo.ui.nutriologo.verificacion.TarjetaVerificacion
+import com.example.nutrigajo.ui.nutriologo.verificacion.VerificacionEstado
+import com.example.nutrigajo.ui.nutriologo.verificacion.VerificacionScreen
+import com.example.nutrigajo.ui.nutriologo.verificacion.VerificacionViewModel
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 
-// Inicio provisional del nutriólogo: su código de vinculación y los pacientes que ya lo canjearon.
+// Inicio provisional del nutriólogo: su verificación, su código de vinculación y los pacientes que ya lo canjearon.
 // ponytail: se carga al abrir y con "Actualizar"; un listener en tiempo real cuando el expediente lo pida.
 @Composable
 fun PacientesScreen(
     perfil: Perfil,
     onCerrarSesion: () -> Unit,
     vm: PacientesViewModel = viewModel(key = perfil.uid),
+    // clave propia: dos ViewModels con la misma clave se pisarían
+    verificacionVm: VerificacionViewModel = viewModel(key = "verificacion-${perfil.uid}"),
 ) {
     val estado by vm.estado.collectAsState()
-    LaunchedEffect(Unit) { vm.cargar() }
+    val verificacion by verificacionVm.estado.collectAsState()
+    var enFormulario by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        vm.cargar()
+        verificacionVm.cargar()
+    }
+    // al enviar la cédula la solicitud queda pendiente: se vuelve al inicio
+    LaunchedEffect(verificacion.verificacion?.estado) {
+        if (verificacion.verificacion?.estado == EstadoVerificacion.PENDIENTE) enFormulario = false
+    }
 
-    if (estado.cargando && estado.codigo == null && estado.pacientes.isEmpty() && estado.error == null) {
-        PantallaCarga()
-    } else {
-        PacientesContenido(
+    when {
+        enFormulario -> {
+            BackHandler { enFormulario = false }
+            VerificacionScreen(
+                nombreCuenta = perfil.nombre,
+                estado = verificacion,
+                onEnviar = { nombreCedula, cedula -> verificacionVm.enviar(perfil, nombreCedula, cedula) },
+                onEditar = verificacionVm::limpiarError,
+                onVolver = { enFormulario = false },
+            )
+        }
+        estado.cargando && estado.codigo == null && estado.pacientes.isEmpty() && estado.error == null -> PantallaCarga()
+        else -> PacientesContenido(
             perfil = perfil,
             estado = estado,
+            verificacion = verificacion,
             onGenerarCodigo = { vm.generarCodigo(perfil.nombre) },
-            onActualizar = vm::cargar,
+            onVerificar = {
+                verificacionVm.limpiarError()
+                enFormulario = true
+            },
+            onActualizar = {
+                vm.cargar()
+                verificacionVm.cargar()
+            },
             onCerrarSesion = onCerrarSesion,
         )
     }
@@ -73,7 +110,9 @@ fun PacientesScreen(
 private fun PacientesContenido(
     perfil: Perfil,
     estado: PacientesEstado,
+    verificacion: VerificacionEstado,
     onGenerarCodigo: () -> Unit,
+    onVerificar: () -> Unit,
     onActualizar: () -> Unit,
     onCerrarSesion: () -> Unit,
 ) {
@@ -103,6 +142,7 @@ private fun PacientesContenido(
                 TextButton(onClick = onCerrarSesion) { Text(stringResource(R.string.inicio_cerrar_sesion)) }
             }
         }
+        if (!verificacion.cargando) item { TarjetaVerificacion(verificacion, onVerificar) }
         item { TarjetaCodigo(estado.codigo, estado.generando, onGenerarCodigo) }
         estado.error?.let { item { AlertaError(stringResource(it)) } }
         item {
