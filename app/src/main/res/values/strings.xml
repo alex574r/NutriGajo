@@ -112,8 +112,11 @@
     <string name="pacientes_vacio">Aún no tienes pacientes vinculados.</string>
     <string name="pacientes_actualizar">Actualizar</string>
 
-    <string name="vincular_titulo">Vincúlate con tu nutriólogo</string>
-    <string name="vincular_ayuda">Pídele su código de vinculación y escríbelo aquí.</string>
+    <string name="vincular_barra">Vincular</string>
+    <string name="vincular_titulo">Ingresa el código de tu nutriólogo</string>
+    <string name="vincular_ayuda">Escribe los ocho caracteres que te dio tu nutriólogo para vincularte con él.</string>
+    <string name="vincular_sin_codigo">¿Aún no tienes un código?</string>
+    <string name="vincular_buscar">Buscar nutriólogo</string>
     <string name="vincular_codigo">Código de vinculación</string>
     <string name="vincular_boton">vincularme</string>
 
@@ -280,7 +283,6 @@
 
     <string name="mapa_volver">Volver</string>
     <string name="mapa_titulo">Nutriólogos cerca de ti</string>
-    <string name="mapa_buscar">Buscar nutriólogos en el mapa</string>
     <string name="mapa_verificado">Nutriólogo verificado</string>
     <string name="mapa_ayuda">Toca un marcador para ver al nutriólogo. Para vincularte, pídele su código de vinculación.</string>
     <string name="mapa_vacio">Aún no hay nutriólogos verificados en el mapa.</string>
