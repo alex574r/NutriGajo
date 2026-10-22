@@ -1,5 +1,7 @@
 package com.example.nutrigajo.ui.components
 
+import androidx.annotation.DrawableRes
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -21,6 +23,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 
@@ -61,7 +67,8 @@ fun OpcionLista(
     }
 }
 
-// Tarjeta de rejilla (dieta, ejercicio): título arriba, casilla abajo.
+// Tarjeta de rejilla (dieta, ejercicio): título arriba, casilla abajo. Con `imagen`, la foto llena la tarjeta,
+// el texto va en blanco sobre un degradado oscuro y, al elegirla, se tiñe de naranja.
 @Composable
 fun OpcionTarjeta(
     titulo: String,
@@ -70,27 +77,48 @@ fun OpcionTarjeta(
     modifier: Modifier = Modifier,
     subtitulo: String? = null,
     multiple: Boolean = false,
+    @DrawableRes imagen: Int? = null,
 ) {
     val colores = MaterialTheme.colorScheme
-    val contenido = if (seleccionada) colores.onPrimary else colores.onBackground
+    val conFoto = imagen != null
+    val contenido = if (seleccionada || conFoto) Color.White else colores.onBackground
+    val secundario = if (seleccionada || conFoto) Color.White.copy(alpha = 0.85f) else colores.onSurfaceVariant
     AnilloFoco(activo = seleccionada, radio = RADIO_OPCION, modifier = modifier) {
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .defaultMinSize(minHeight = 104.dp)
+                .defaultMinSize(minHeight = if (conFoto) 136.dp else 104.dp)
                 .clip(RoundedCornerShape(RADIO_OPCION))
-                .background(if (seleccionada) colores.primary else colores.surfaceVariant)
-                .elegible(seleccionada, onClick, multiple)
-                .padding(14.dp),
-            verticalArrangement = Arrangement.SpaceBetween,
+                .background(if (seleccionada && !conFoto) colores.primary else colores.surfaceVariant)
+                .elegible(seleccionada, onClick, multiple),
         ) {
-            Column {
-                Text(titulo, style = MaterialTheme.typography.titleSmall, color = contenido)
-                subtitulo?.let {
-                    Text(it, style = MaterialTheme.typography.bodySmall, color = if (seleccionada) colores.onPrimary else colores.onSurfaceVariant)
-                }
+            if (imagen != null) {
+                Image(
+                    painter = painterResource(imagen),
+                    contentDescription = null,
+                    modifier = Modifier.matchParentSize(),
+                    contentScale = ContentScale.Crop,
+                )
+                // degradado para que el texto y la casilla se lean sobre cualquier foto
+                Box(
+                    Modifier.matchParentSize().background(
+                        Brush.verticalGradient(0f to Color.Black.copy(alpha = 0.55f), 0.5f to Color.Black.copy(alpha = 0.1f), 1f to Color.Black.copy(alpha = 0.55f)),
+                    ),
+                )
+                if (seleccionada) Box(Modifier.matchParentSize().background(colores.primary.copy(alpha = 0.78f)))
             }
-            Casilla(seleccionada, contenido)
+            Column(
+                modifier = Modifier
+                    .matchParentSize()
+                    .padding(14.dp),
+                verticalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Column {
+                    Text(titulo, style = MaterialTheme.typography.titleSmall, color = contenido)
+                    subtitulo?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = secundario) }
+                }
+                Casilla(seleccionada, contenido)
+            }
         }
     }
 }
@@ -104,7 +132,7 @@ private fun Modifier.elegible(seleccionada: Boolean, onClick: () -> Unit, multip
 
 // Casilla cuadrada con punto, como en la selección de rol.
 @Composable
-private fun Casilla(seleccionada: Boolean, color: androidx.compose.ui.graphics.Color) {
+private fun Casilla(seleccionada: Boolean, color: Color) {
     Box(
         modifier = Modifier.size(24.dp).border(2.dp, color, RoundedCornerShape(8.dp)),
         contentAlignment = Alignment.Center,

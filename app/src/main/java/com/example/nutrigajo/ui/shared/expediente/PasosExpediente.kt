@@ -317,6 +317,7 @@ private fun PasoEjercicios(expediente: Expediente, cambiar: Cambiar) {
                     val elegido = ejercicio in expediente.ejercicios
                     OpcionTarjeta(
                         titulo = stringResource(ejercicio.etiqueta()),
+                        imagen = ejercicio.foto(),
                         seleccionada = elegido,
                         multiple = true,
                         onClick = {

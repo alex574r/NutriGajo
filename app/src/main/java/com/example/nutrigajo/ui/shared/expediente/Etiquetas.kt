@@ -1,5 +1,6 @@
 package com.example.nutrigajo.ui.shared.expediente
 
+import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import com.example.nutrigajo.R
 import com.example.nutrigajo.domain.model.CalidadSueno
@@ -53,6 +54,22 @@ fun EjercicioPreferido.etiqueta(): Int = when (this) {
     EjercicioPreferido.CARDIO -> R.string.ejercicio_cardio
     EjercicioPreferido.YOGA -> R.string.ejercicio_yoga
     EjercicioPreferido.OTRO -> R.string.ejercicio_otro
+}
+
+// Fotos de Pexels (licencia Pexels: uso libre, sin atribución obligatoria), recortadas a 640 px de ancho.
+// photo ids: correr 20033330 · caminar 9652359 · senderismo 38246300 · patinar 36678661 · ciclismo 32877415
+//            pesas 4720793 · cardio 4945527 · yoga 8534435 · otro 6012286 (nadadora; "Otro" no tiene foto propia)
+@DrawableRes
+fun EjercicioPreferido.foto(): Int = when (this) {
+    EjercicioPreferido.CORRER -> R.drawable.ej_correr
+    EjercicioPreferido.CAMINAR -> R.drawable.ej_caminar
+    EjercicioPreferido.SENDERISMO -> R.drawable.ej_senderismo
+    EjercicioPreferido.PATINAR -> R.drawable.ej_patinar
+    EjercicioPreferido.CICLISMO -> R.drawable.ej_ciclismo
+    EjercicioPreferido.PESAS -> R.drawable.ej_pesas
+    EjercicioPreferido.CARDIO -> R.drawable.ej_cardio
+    EjercicioPreferido.YOGA -> R.drawable.ej_yoga
+    EjercicioPreferido.OTRO -> R.drawable.ej_otro
 }
 
 @StringRes
