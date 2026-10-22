@@ -21,9 +21,9 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.nutrigajo.R
 
-// Foto: "Modern Pilates Studio with Reformers", Paulina Vargas, Pexels (licencia Pexels: uso libre, sin atribución obligatoria).
-// https://www.pexels.com/photo/modern-pilates-studio-with-reformers-36833353/
-// Encabezado de login y registro: foto clara que se funde con el fondo y el logo sobre el borde inferior.
+// Foto: "Oranges on White Surface", Gustavo Fring, Pexels (licencia Pexels: uso libre, sin atribución obligatoria).
+// https://www.pexels.com/photo/oranges-on-white-surface-7156062/
+// Encabezado de login, registro y vincular: foto clara que se funde con el fondo y el logo sobre el borde inferior.
 @Composable
 fun EncabezadoAuth(modifier: Modifier = Modifier, alto: Dp = 260.dp) {
     val colores = MaterialTheme.colorScheme
