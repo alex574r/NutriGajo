@@ -43,6 +43,26 @@ service cloud.firestore {
         && getAfter(cedulaRef(d.cedula)).data.nutriologoId == uid;
     }
 
+    // Expediente del paciente (mapa dentro de pacientes/{id}): todo opcional, con tipos y rangos razonables.
+    function expedienteValido(e) {
+      return e.keys().hasOnly(['objetivo', 'sexo', 'fechaNacimiento', 'pesoKg', 'estaturaCm', 'nivelActividad',
+                               'condiciones', 'alergias', 'dieta', 'diasEjercicio', 'ejercicios', 'suplementos',
+                               'caloriasObjetivo', 'calidadSueno', 'paso', 'completo', 'actualizadoPor', 'actualizadoEn'])
+        && e.get('paso', 0) is int && e.get('paso', 0) >= 0 && e.get('paso', 0) <= 30
+        && e.get('completo', false) is bool
+        && e.actualizadoEn is int
+        && e.get('pesoKg', 70) is number && e.get('pesoKg', 70) >= 20 && e.get('pesoKg', 70) <= 500
+        && e.get('estaturaCm', 170) is number && e.get('estaturaCm', 170) >= 50 && e.get('estaturaCm', 170) <= 260
+        && e.get('nivelActividad', 1) is int && e.get('nivelActividad', 1) >= 1 && e.get('nivelActividad', 1) <= 5
+        && e.get('diasEjercicio', 0) is int && e.get('diasEjercicio', 0) >= 0 && e.get('diasEjercicio', 0) <= 7
+        && e.get('caloriasObjetivo', 2000) is int && e.get('caloriasObjetivo', 2000) >= 500 && e.get('caloriasObjetivo', 2000) <= 10000
+        && e.get('fechaNacimiento', '2000-01-01') is string && e.get('fechaNacimiento', '2000-01-01').size() == 10
+        && e.get('condiciones', []) is list && e.get('condiciones', []).size() <= 30
+        && e.get('alergias', []) is list && e.get('alergias', []).size() <= 30
+        && e.get('ejercicios', []) is list && e.get('ejercicios', []).size() <= 20
+        && e.get('suplementos', []) is list && e.get('suplementos', []).size() <= 30;
+    }
+
     // Perfil de cuenta. ADMIN se da de alta a mano en la consola: nadie puede asignárselo al registrarse.
     match /usuarios/{uid} {
       allow read: if request.auth != null && request.auth.uid == uid;
@@ -183,8 +203,15 @@ service cloud.firestore {
         && codigoDespues(request.resource.data.codigoVinculacion).usado == true
         && codigoDespues(request.resource.data.codigoVinculacion).canjeadoPor == request.auth.uid;
 
-      // Sin edición ni baja por ahora (llegan con el cuestionario y el archivado).
-      allow update, delete: if false;
+      // Expediente: lo escriben el paciente y su nutriólogo, cada uno firmando con su rol; no se toca nada más del registro.
+      allow update: if request.auth != null
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['expediente', 'ultimaModificacion'])
+        && expedienteValido(request.resource.data.expediente)
+        && ((resource.data.usuarioId == request.auth.uid && request.resource.data.expediente.actualizadoPor == 'PACIENTE')
+            || (resource.data.nutriologoId == request.auth.uid && request.resource.data.expediente.actualizadoPor == 'NUTRIOLOGO'));
+
+      // Sin baja por ahora (llega con el archivado).
+      allow delete: if false;
     }
 
     // Todo lo demás, denegado hasta definir sus reglas (mediciones, planes…).

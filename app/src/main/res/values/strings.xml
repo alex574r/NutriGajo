@@ -100,6 +100,148 @@
     <string name="error_nombre_distinto">El nombre de la cédula debe incluir el nombre de tu cuenta.</string>
     <string name="error_cedula_en_uso">Esa cédula ya está registrada en otra cuenta o tu solicitud ya fue enviada.</string>
 
+    <string name="expediente_titulo">Expediente</string>
+    <string name="expediente_avance">%1$d de %2$d</string>
+    <string name="expediente_regresar">Regresar</string>
+    <string name="expediente_continuar">continuar</string>
+    <string name="expediente_terminar">terminar</string>
+    <string name="expediente_omitir">Prefiero omitir esta pregunta</string>
+    <string name="expediente_aceptar">Aceptar</string>
+    <string name="expediente_fecha_elegir">Elegir fecha</string>
+    <string name="expediente_edad_anios">años</string>
+    <string name="expediente_calorias_dia">calorías al día</string>
+    <string name="expediente_calorias_ayuda">Tu nutriólogo puede ajustarla después.</string>
+    <string name="expediente_dias_ayuda">Me comprometo a ejercitarme %1$d días por semana.</string>
+    <string name="expediente_sin_responder">Sin responder</string>
+    <string name="expediente_editar">Editar expediente</string>
+    <string name="expediente_completar">Completar expediente</string>
+    <string name="expediente_resumen_titulo">Expediente de %1$s</string>
+    <string name="expediente_editado_paciente">Última edición: el paciente, %1$s</string>
+    <string name="expediente_editado_nutriologo">Última edición: el nutriólogo, %1$s</string>
+    <string name="expediente_vacio">Aún no hay datos en este expediente.</string>
+    <string name="expediente_tarjeta_titulo">Tu expediente</string>
+    <string name="expediente_tarjeta_ayuda">Cuéntanos de ti para que tu nutriólogo te conozca. Es opcional: él también puede completarlo.</string>
+    <string name="expediente_tarjeta_en_curso">Dejaste tu expediente a medias. Puedes retomarlo cuando quieras.</string>
+    <string name="expediente_tarjeta_completo">Tu expediente está completo. Tu nutriólogo puede verlo y ajustarlo.</string>
+    <string name="expediente_generar">Generar expediente</string>
+    <string name="expediente_retomar">Continuar expediente</string>
+    <string name="expediente_ver">Ver expediente</string>
+    <string name="expediente_pacientes_ayuda">Toca un paciente para ver o completar su expediente.</string>
+
+    <string name="paso_objetivo">¿Cuál es tu objetivo?</string>
+    <string name="paso_sexo">¿Cuál es tu sexo?</string>
+    <string name="paso_fecha">¿Cuál es tu fecha de nacimiento?</string>
+    <string name="paso_peso">¿Cuánto pesas?</string>
+    <string name="paso_estatura">¿Cuánto mides?</string>
+    <string name="paso_actividad">¿Qué tan activo eres?</string>
+    <string name="paso_condiciones">¿Tienes alguna condición de salud o limitación?</string>
+    <string name="paso_alergias">¿Tienes alergias o intolerancias?</string>
+    <string name="paso_dieta">¿Sigues alguna dieta?</string>
+    <string name="paso_dias">¿Cuántos días a la semana te ejercitarás?</string>
+    <string name="paso_ejercicios">¿Qué ejercicio prefieres?</string>
+    <string name="paso_suplementos">¿Tomas suplementos?</string>
+    <string name="paso_calorias">¿Cuántas calorías al día quieres consumir?</string>
+    <string name="paso_sueno">¿Cómo duermes?</string>
+
+    <string name="dato_objetivo">Objetivo</string>
+    <string name="dato_sexo">Sexo</string>
+    <string name="dato_edad">Edad</string>
+    <string name="dato_peso">Peso</string>
+    <string name="dato_estatura">Estatura</string>
+    <string name="dato_actividad">Actividad</string>
+    <string name="dato_condiciones">Condiciones de salud</string>
+    <string name="dato_alergias">Alergias</string>
+    <string name="dato_dieta">Dieta</string>
+    <string name="dato_dias">Ejercicio por semana</string>
+    <string name="dato_ejercicios">Ejercicios</string>
+    <string name="dato_suplementos">Suplementos</string>
+    <string name="dato_calorias">Calorías al día</string>
+    <string name="dato_sueno">Sueño</string>
+
+    <string name="objetivo_bajar_peso">Quiero bajar de peso</string>
+    <string name="objetivo_ganar_musculo">Quiero ganar masa muscular</string>
+    <string name="objetivo_mejorar_alimentacion">Quiero mejorar mi alimentación</string>
+    <string name="objetivo_mejorar_resistencia">Quiero mejorar mi resistencia</string>
+    <string name="objetivo_condicion_salud">Quiero controlar una condición de salud</string>
+
+    <string name="sexo_femenino">Femenino</string>
+    <string name="sexo_masculino">Masculino</string>
+    <string name="sexo_otro">Otro / prefiero no decirlo</string>
+
+    <string name="actividad_1">Sedentario</string>
+    <string name="actividad_2">Ligeramente activo</string>
+    <string name="actividad_3">Moderadamente activo</string>
+    <string name="actividad_4">Muy activo</string>
+    <string name="actividad_5">Atleta</string>
+
+    <string name="dieta_plantas">Basada en plantas</string>
+    <string name="dieta_plantas_ej">Vegana, vegetariana</string>
+    <string name="dieta_baja_carbohidratos">Baja en carbohidratos</string>
+    <string name="dieta_baja_carbohidratos_ej">Keto, low carb</string>
+    <string name="dieta_especializada">Especializada</string>
+    <string name="dieta_especializada_ej">Paleo, sin gluten, etc.</string>
+    <string name="dieta_tradicional">Tradicional</string>
+    <string name="dieta_tradicional_ej">Sin restricciones</string>
+
+    <string name="ejercicio_correr">Correr</string>
+    <string name="ejercicio_caminar">Caminar</string>
+    <string name="ejercicio_senderismo">Senderismo</string>
+    <string name="ejercicio_patinar">Patinar</string>
+    <string name="ejercicio_ciclismo">Ciclismo</string>
+    <string name="ejercicio_pesas">Pesas</string>
+    <string name="ejercicio_cardio">Cardio</string>
+    <string name="ejercicio_yoga">Yoga</string>
+    <string name="ejercicio_otro">Otro</string>
+
+    <string name="sueno_excelente">Excelente</string>
+    <string name="sueno_excelente_horas">Más de 8 h</string>
+    <string name="sueno_buena">Buena</string>
+    <string name="sueno_buena_horas">7 a 8 h</string>
+    <string name="sueno_normal">Normal</string>
+    <string name="sueno_normal_horas">6 a 7 h</string>
+    <string name="sueno_mala">Mala</string>
+    <string name="sueno_mala_horas">4 a 5 h</string>
+    <string name="sueno_insomnio">Insomnio</string>
+    <string name="sueno_insomnio_horas">Menos de 4 h</string>
+
+    <string name="etiquetas_agregar">Agregar</string>
+    <string name="etiquetas_comunes">Más comunes</string>
+    <string name="etiquetas_vacio">Aún no eliges ninguna. Toca una opción o escribe la tuya.</string>
+    <string name="etiquetas_condicion">Escribe una condición</string>
+    <string name="etiquetas_alergia">Escribe una alergia</string>
+    <string name="etiquetas_suplemento">Escribe un suplemento</string>
+
+    <string-array name="condiciones_comunes">
+        <item>Diabetes</item>
+        <item>Hipertensión</item>
+        <item>Colesterol alto</item>
+        <item>Tiroides</item>
+        <item>Gastritis</item>
+        <item>Artritis</item>
+        <item>Dolor de espalda</item>
+        <item>Asma</item>
+        <item>Obesidad</item>
+    </string-array>
+    <string-array name="alergias_comunes">
+        <item>Lactosa</item>
+        <item>Gluten</item>
+        <item>Frutos secos</item>
+        <item>Cacahuate</item>
+        <item>Mariscos</item>
+        <item>Huevo</item>
+        <item>Soya</item>
+    </string-array>
+    <string-array name="suplementos_comunes">
+        <item>Proteína</item>
+        <item>Creatina</item>
+        <item>BCAA</item>
+        <item>Omega-3</item>
+        <item>Vitamina D</item>
+        <item>Hierro</item>
+        <item>Magnesio</item>
+        <item>Multivitamínico</item>
+    </string-array>
+
     <string name="mapa_volver">Volver</string>
     <string name="mapa_titulo">Nutriólogos cerca de ti</string>
     <string name="mapa_buscar">Buscar nutriólogos en el mapa</string>

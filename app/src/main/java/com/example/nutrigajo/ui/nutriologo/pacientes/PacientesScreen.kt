@@ -3,6 +3,7 @@ package com.example.nutrigajo.ui.nutriologo.pacientes
 import android.content.Intent
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -31,6 +32,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
@@ -43,8 +45,10 @@ import com.example.nutrigajo.domain.model.CodigoVinculacion
 import com.example.nutrigajo.domain.model.EstadoVerificacion
 import com.example.nutrigajo.domain.model.PacienteResumen
 import com.example.nutrigajo.domain.model.Perfil
+import com.example.nutrigajo.domain.model.Rol
 import com.example.nutrigajo.ui.components.AlertaError
 import com.example.nutrigajo.ui.components.PantallaCarga
+import com.example.nutrigajo.ui.shared.expediente.ExpedienteFlujo
 import com.example.nutrigajo.ui.nutriologo.ubicacion.TarjetaUbicacion
 import com.example.nutrigajo.ui.nutriologo.ubicacion.UbicacionScreen
 import com.example.nutrigajo.ui.nutriologo.verificacion.TarjetaVerificacion
@@ -70,6 +74,7 @@ fun PacientesScreen(
     val verificacion by verificacionVm.estado.collectAsState()
     var enFormulario by rememberSaveable { mutableStateOf(false) }
     var enMapa by rememberSaveable { mutableStateOf(false) }
+    var pacienteAbierto by rememberSaveable { mutableStateOf<String?>(null) }
     LaunchedEffect(Unit) {
         vm.cargar()
         verificacionVm.cargar()
@@ -79,8 +84,15 @@ fun PacientesScreen(
         if (verificacion.verificacion?.estado == EstadoVerificacion.PENDIENTE) enFormulario = false
     }
 
+    val abierto = estado.pacientes.firstOrNull { it.id == pacienteAbierto }
     when {
         enMapa -> UbicacionScreen(perfil = perfil, onVolver = { enMapa = false })
+        abierto != null -> ExpedienteFlujo(
+            pacienteId = abierto.id,
+            nombrePaciente = abierto.nombre,
+            editor = Rol.NUTRIOLOGO,
+            onSalir = { pacienteAbierto = null },
+        )
         enFormulario -> {
             BackHandler { enFormulario = false }
             VerificacionScreen(
@@ -102,6 +114,7 @@ fun PacientesScreen(
                 enFormulario = true
             },
             onUbicar = { enMapa = true },
+            onPaciente = { pacienteAbierto = it.id },
             onActualizar = {
                 vm.cargar()
                 verificacionVm.cargar()
@@ -119,6 +132,7 @@ private fun PacientesContenido(
     onGenerarCodigo: () -> Unit,
     onVerificar: () -> Unit,
     onUbicar: () -> Unit,
+    onPaciente: (PacienteResumen) -> Unit,
     onActualizar: () -> Unit,
     onCerrarSesion: () -> Unit,
 ) {
@@ -180,7 +194,14 @@ private fun PacientesContenido(
                 )
             }
         } else {
-            items(estado.pacientes, key = { it.id }) { FilaPaciente(it) }
+            item {
+                Text(
+                    text = stringResource(R.string.expediente_pacientes_ayuda),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = colores.onSurfaceVariant,
+                )
+            }
+            items(estado.pacientes, key = { it.id }) { FilaPaciente(it, onClick = { onPaciente(it) }) }
         }
     }
 }
@@ -250,12 +271,14 @@ private fun TarjetaCodigo(codigo: CodigoVinculacion?, generando: Boolean, onGene
 }
 
 @Composable
-private fun FilaPaciente(paciente: PacienteResumen) {
+private fun FilaPaciente(paciente: PacienteResumen, onClick: () -> Unit) {
     val colores = MaterialTheme.colorScheme
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(colores.surfaceVariant, RoundedCornerShape(19.dp))
+            .clip(RoundedCornerShape(19.dp))
+            .background(colores.surfaceVariant)
+            .clickable(onClick = onClick)
             .padding(16.dp),
     ) {
         Text(paciente.nombre, style = MaterialTheme.typography.titleMedium, color = colores.onBackground)

@@ -19,14 +19,15 @@ data class PacienteEntity(
     // null hasta que el paciente crea su cuenta con correoVinculacion
     val usuarioId: String? = null,
     val nombre: String,
-    val fechaNacimiento: String,
-    val sexo: Sexo,
-    val estaturaCm: Double,
+    // los cuatro siguientes llegan con el expediente (opcional): el registro nace sin ellos
+    val fechaNacimiento: String? = null,
+    val sexo: Sexo? = null,
+    val estaturaCm: Double? = null,
     val telefono: String? = null,
     // en minúsculas y sin espacios
     val correoVinculacion: String,
     val alergias: String? = null,
-    val objetivo: String,
+    val objetivo: String? = null,
     val pesoMetaKg: Double? = null,
     val proximaCita: Long? = null,
     // clave del objeto en R2
