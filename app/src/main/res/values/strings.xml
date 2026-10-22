@@ -53,7 +53,31 @@
     <string name="error_demasiados_intentos">Demasiados intentos. Espera un momento e inténtalo de nuevo.</string>
     <string name="error_generico">Algo salió mal. Inténtalo de nuevo.</string>
 
+    <string name="error_codigo_invalido">El código no existe. Revísalo e inténtalo de nuevo.</string>
+    <string name="error_codigo_usado">Ese código ya fue utilizado. Pide uno nuevo a tu nutriólogo.</string>
+    <string name="error_codigo_vencido">Ese código venció. Pide uno nuevo a tu nutriólogo.</string>
+
     <string name="inicio_hola">Hola, %1$s</string>
     <string name="inicio_rol">Rol: %1$s</string>
+    <string name="inicio_nutriologo">Tu nutriólogo: %1$s</string>
     <string name="inicio_cerrar_sesion">Cerrar sesión</string>
+
+    <string name="perfil_error">No pudimos cargar tu perfil.</string>
+    <string name="perfil_reintentar">Reintentar</string>
+
+    <string name="pacientes_codigo_titulo">Tu código de vinculación</string>
+    <string name="pacientes_codigo_ayuda">Compártelo con tu paciente: lo escribe al registrarse y queda vinculado contigo. Sirve una sola vez.</string>
+    <string name="pacientes_codigo_vigencia">Vigente hasta el %1$s</string>
+    <string name="pacientes_generar">Generar código</string>
+    <string name="pacientes_generar_nuevo">Generar nuevo</string>
+    <string name="pacientes_compartir">Compartir</string>
+    <string name="pacientes_compartir_texto">Únete a mi consulta en nutriGajo. Regístrate como paciente y escribe este código para vincularte conmigo: %1$s</string>
+    <string name="pacientes_lista_titulo">Tus pacientes (%1$d)</string>
+    <string name="pacientes_vacio">Aún no tienes pacientes vinculados.</string>
+    <string name="pacientes_actualizar">Actualizar</string>
+
+    <string name="vincular_titulo">Vincúlate con tu nutriólogo</string>
+    <string name="vincular_ayuda">Pídele su código de vinculación y escríbelo aquí.</string>
+    <string name="vincular_codigo">Código de vinculación</string>
+    <string name="vincular_boton">vincularme</string>
 </resources>

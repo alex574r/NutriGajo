@@ -26,6 +26,8 @@ data class AuthEstado(
     val cargando: Boolean = false,
     @param:StringRes val error: Int? = null,
     val perfil: Perfil? = null,
+    // el perfil no se pudo leer (sin conexión, documento ausente o con rol desconocido)
+    val perfilFallo: Boolean = false,
 )
 
 private const val LARGO_MIN_CONTRASENA = 6 // mínimo de Firebase Auth
@@ -35,8 +37,9 @@ class AuthViewModel(private val repo: AuthRepository = AuthRepository()) : ViewM
     private val _estado = MutableStateFlow(AuthEstado(sesion = repo.sesionIniciada))
     val estado: StateFlow<AuthEstado> = _estado.asStateFlow()
 
+    // el correo va siempre en minúsculas: así coincide con el de Firebase Auth y con lo que piden las reglas
     fun ingresar(correo: String, contrasena: String) =
-        lanzar { repo.ingresar(correo.trim(), contrasena) }
+        lanzar { repo.ingresar(correo.trim().lowercase(), contrasena) }
 
     fun registrar(nombre: String, correo: String, contrasena: String, confirmacion: String, rol: Rol) {
         val error = when {
@@ -45,10 +48,11 @@ class AuthViewModel(private val repo: AuthRepository = AuthRepository()) : ViewM
             else -> null
         }
         if (error != null) _estado.update { it.copy(error = error) }
-        else lanzar { repo.registrar(nombre.trim(), correo.trim(), contrasena, rol) }
+        else lanzar { repo.registrar(nombre.trim(), correo.trim().lowercase(), contrasena, rol) }
     }
 
     fun cargarPerfil() {
+        _estado.update { it.copy(perfilFallo = false) }
         viewModelScope.launch {
             val perfil = try {
                 repo.perfil()
@@ -57,7 +61,7 @@ class AuthViewModel(private val repo: AuthRepository = AuthRepository()) : ViewM
             } catch (e: Exception) {
                 null
             }
-            _estado.update { it.copy(perfil = perfil) }
+            _estado.update { it.copy(perfil = perfil, perfilFallo = perfil == null) }
         }
     }
 

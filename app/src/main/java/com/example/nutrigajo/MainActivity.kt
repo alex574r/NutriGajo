@@ -10,8 +10,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -25,8 +25,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.nutrigajo.domain.model.Perfil
 import com.example.nutrigajo.domain.model.Rol
+import com.example.nutrigajo.ui.components.PantallaCarga
+import com.example.nutrigajo.ui.nutriologo.pacientes.PacientesScreen
+import com.example.nutrigajo.ui.paciente.inicio.InicioPacienteScreen
+import com.example.nutrigajo.ui.shared.InicioProvisional
 import com.example.nutrigajo.ui.shared.auth.AuthViewModel
 import com.example.nutrigajo.ui.shared.login.LoginScreen
 import com.example.nutrigajo.ui.shared.motivacion.MotivacionScreen
@@ -127,14 +130,20 @@ class MainActivity : ComponentActivity() {
                         onEditar = auth::limpiarError,
                     )
                     Paso.INICIO -> {
-                        LaunchedEffect(Unit) { auth.cargarPerfil() }
-                        InicioProvisional(
-                            perfil = estado.perfil,
-                            onCerrarSesion = {
-                                auth.cerrarSesion()
-                                paso = Paso.LOGIN
-                            },
-                        )
+                        val perfil = estado.perfil
+                        LaunchedEffect(Unit) { if (perfil == null) auth.cargarPerfil() }
+                        val cerrarSesion = {
+                            auth.cerrarSesion()
+                            paso = Paso.LOGIN
+                        }
+                        // el inicio depende del rol del perfil guardado en Firestore
+                        when {
+                            perfil == null && estado.perfilFallo -> PerfilNoDisponible(auth::cargarPerfil, cerrarSesion)
+                            perfil == null -> PantallaCarga()
+                            perfil.rol == Rol.NUTRIOLOGO -> PacientesScreen(perfil, cerrarSesion)
+                            perfil.rol == Rol.PACIENTE -> InicioPacienteScreen(perfil, cerrarSesion)
+                            else -> InicioProvisional(perfil, detalle = null, onCerrarSesion = cerrarSesion)
+                        }
                     }
                 }
             }
@@ -142,21 +151,16 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-// ponytail: pantalla de paso hasta que existan los inicios de nutriólogo y paciente; sirve para ver el perfil guardado.
+// El perfil no se pudo leer (sin conexión o cuenta sin perfil): se puede reintentar o salir.
 @Composable
-private fun InicioProvisional(perfil: Perfil?, onCerrarSesion: () -> Unit) {
-    Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-        Column(
-            modifier = Modifier.fillMaxSize().padding(innerPadding).padding(24.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterVertically),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            if (perfil != null) {
-                Text(stringResource(R.string.inicio_hola, perfil.nombre), style = MaterialTheme.typography.headlineMedium)
-                Text(stringResource(R.string.inicio_rol, perfil.rol.name), style = MaterialTheme.typography.bodyLarge)
-                Text(perfil.correo, style = MaterialTheme.typography.bodyMedium)
-            }
-            Button(onClick = onCerrarSesion) { Text(stringResource(R.string.inicio_cerrar_sesion)) }
-        }
+private fun PerfilNoDisponible(onReintentar: () -> Unit, onCerrarSesion: () -> Unit) {
+    Column(
+        modifier = Modifier.fillMaxSize().padding(24.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterVertically),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(stringResource(R.string.perfil_error), style = MaterialTheme.typography.bodyLarge)
+        Button(onClick = onReintentar) { Text(stringResource(R.string.perfil_reintentar)) }
+        TextButton(onClick = onCerrarSesion) { Text(stringResource(R.string.inicio_cerrar_sesion)) }
     }
 }

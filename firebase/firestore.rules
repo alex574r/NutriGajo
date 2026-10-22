@@ -3,6 +3,17 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    function rolDe(uid) {
+      return get(/databases/$(database)/documents/usuarios/$(uid)).data.rol;
+    }
+    // Código de vinculación antes y después de la escritura en curso (el canje es un lote de dos escrituras).
+    function codigoAntes(c) {
+      return get(/databases/$(database)/documents/codigosVinculacion/$(c)).data;
+    }
+    function codigoDespues(c) {
+      return getAfter(/databases/$(database)/documents/codigosVinculacion/$(c)).data;
+    }
+
     // Perfil de cuenta. ADMIN se da de alta a mano en la consola: nadie puede asignárselo al registrarse.
     match /usuarios/{uid} {
       allow read: if request.auth != null && request.auth.uid == uid;
@@ -13,7 +24,7 @@ service cloud.firestore {
         && request.resource.data.rol in ['NUTRIOLOGO', 'PACIENTE']
         && request.resource.data.verificado == false
         && request.resource.data.activo == true
-        && request.resource.data.correo == request.auth.token.email;
+        && request.resource.data.correo.lower() == request.auth.token.email.lower();
 
       // El usuario edita sus datos, pero no su rol ni su verificación ni su estado.
       allow update: if request.auth != null
@@ -25,7 +36,58 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    // Todo lo demás, denegado hasta definir sus reglas (pacientes, mediciones, planes…).
+    // Códigos con los que un nutriólogo invita a un paciente. El id del documento es el código.
+    match /codigosVinculacion/{codigo} {
+      // Validar un código concreto lo puede hacer cualquier sesión; listarlos, solo su dueño.
+      allow get: if request.auth != null;
+      allow list: if request.auth != null && resource.data.nutriologoId == request.auth.uid;
+
+      // Solo un nutriólogo crea códigos, a su nombre, sin usar y con vigencia de 7 días (más 1 de margen por relojes desajustados).
+      allow create: if request.auth != null
+        && rolDe(request.auth.uid) == 'NUTRIOLOGO'
+        && request.resource.data.keys().hasOnly(['nutriologoId', 'nutriologoNombre', 'creadoEn', 'expiraEn', 'usado'])
+        && request.resource.data.nutriologoId == request.auth.uid
+        && request.resource.data.usado == false
+        && request.resource.data.expiraEn > request.time.toMillis()
+        && request.resource.data.expiraEn <= request.time.toMillis() + 691200000;
+
+      // Canje: un paciente, una sola vez y antes de que venza; solo cambian los campos del canje.
+      allow update: if request.auth != null
+        && rolDe(request.auth.uid) == 'PACIENTE'
+        && resource.data.usado == false
+        && resource.data.expiraEn > request.time.toMillis()
+        && request.resource.data.usado == true
+        && request.resource.data.canjeadoPor == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['usado', 'canjeadoPor', 'canjeadoEn']);
+
+      allow delete: if false;
+    }
+
+    // Registro del paciente ante su nutriólogo. Ven el registro el nutriólogo y el propio paciente.
+    match /pacientes/{pacienteId} {
+      allow read: if request.auth != null
+        && (resource.data.nutriologoId == request.auth.uid || resource.data.usuarioId == request.auth.uid);
+
+      // Alta por canje: el paciente crea su registro en el mismo lote que marca el código como usado,
+      // y el nutriólogo sale del código, no de lo que escriba el cliente.
+      allow create: if request.auth != null
+        && rolDe(request.auth.uid) == 'PACIENTE'
+        && request.resource.data.keys().hasOnly(['nutriologoId', 'nutriologoNombre', 'usuarioId', 'nombre',
+                                                  'correoVinculacion', 'codigoVinculacion', 'activo',
+                                                  'fechaAlta', 'ultimaModificacion'])
+        && request.resource.data.usuarioId == request.auth.uid
+        && request.resource.data.correoVinculacion.lower() == request.auth.token.email.lower()
+        && request.resource.data.activo == true
+        && request.resource.data.nutriologoId == codigoAntes(request.resource.data.codigoVinculacion).nutriologoId
+        && codigoAntes(request.resource.data.codigoVinculacion).usado == false
+        && codigoDespues(request.resource.data.codigoVinculacion).usado == true
+        && codigoDespues(request.resource.data.codigoVinculacion).canjeadoPor == request.auth.uid;
+
+      // Sin edición ni baja por ahora (llegan con el cuestionario y el archivado).
+      allow update, delete: if false;
+    }
+
+    // Todo lo demás, denegado hasta definir sus reglas (mediciones, planes…).
     match /{document=**} {
       allow read, write: if false;
     }
