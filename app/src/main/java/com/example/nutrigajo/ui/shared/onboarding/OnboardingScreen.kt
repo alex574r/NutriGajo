@@ -51,7 +51,7 @@ private class Pagina(
 )
 
 // Fotos (Pexels, licencia Pexels: uso libre, sin atribución obligatoria):
-// planes: @marcuschanmedia | IG, /photo/20379176 · medidas: Mikhail Nilov, /photo/8670203
+// planes: Анар Гумбатов, /photo/29027900 · medidas: Mikhail Nilov, /photo/8670203
 // fotos: cottonbro studio, /photo/4754123 · alimentación: Jo Macabre, /photo/7719248
 private val paginas = listOf(
     Pagina(R.drawable.onboarding_planes, R.string.onboarding_planes_titulo, R.string.onboarding_planes_desc),
@@ -141,8 +141,8 @@ fun OnboardingScreen(
                     .padding(start = 16.dp, end = 16.dp, bottom = MARGEN_BOTONES),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                BotonNavegacion(R.drawable.ic_arrow_back, R.string.onboarding_anterior, anterior, Modifier.weight(1f))
-                BotonNavegacion(R.drawable.ic_arrow_forward, R.string.onboarding_siguiente, siguiente, Modifier.weight(1f))
+                BotonNavegacion(R.drawable.ic_flecha_atras, R.string.onboarding_anterior, anterior, Modifier.weight(1f))
+                BotonNavegacion(R.drawable.ic_flecha_adelante, R.string.onboarding_siguiente, siguiente, Modifier.weight(1f))
             }
         }
     }
@@ -165,7 +165,7 @@ private fun BotonNavegacion(
         Icon(
             painter = painterResource(icono),
             contentDescription = stringResource(descripcion),
-            modifier = Modifier.size(24.dp),
+            modifier = Modifier.size(20.dp),
         )
     }
 }

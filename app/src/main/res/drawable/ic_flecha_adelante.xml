@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Flecha del diseño (Vector Stroke-1.svg) -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="17dp"
+    android:height="16dp"
+    android:viewportWidth="17"
+    android:viewportHeight="16">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:fillType="evenOdd"
+        android:pathData="M8.44721 0L13.7199 2.63636L13.2848 3.50662L13.7199 2.63636C14.3855 2.96917 14.9253 3.50888 15.2581 4.17449C16.4289 6.51624 16.4289 9.27261 15.2581 11.6144C14.9253 12.28 14.3855 12.8197 13.7199 13.1525L8.44721 15.7889L7.55279 14L12.8255 11.3636C13.1041 11.2244 13.3299 10.9985 13.4692 10.7199C13.7603 10.1378 13.9561 9.52194 14.0566 8.89443H0V6.89443H14.0566C13.9561 6.26691 13.7603 5.65105 13.4692 5.06891C13.3299 4.79036 13.1041 4.56449 12.8255 4.42522L13.2727 3.53079L12.8255 4.42522L7.55279 1.78885L8.44721 0Z" />
+</vector>

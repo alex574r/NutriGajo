@@ -74,16 +74,11 @@ class MainActivity : ComponentActivity() {
                 }
 
                 when (paso) {
-                    Paso.SPLASH -> SplashScreen(onTerminar = { paso = Paso.MOTIVACION })
-                    Paso.MOTIVACION -> MotivacionScreen(
-                        onContinuar = {
-                            paso = when {
-                                estado.sesion -> Paso.INICIO
-                                onboardingVisto -> Paso.LOGIN
-                                else -> Paso.BIENVENIDA
-                            }
-                        },
+                    // con sesión, la frase da paso al inicio; sin ella, se muestra la bienvenida
+                    Paso.SPLASH -> SplashScreen(
+                        onTerminar = { paso = if (estado.sesion) Paso.MOTIVACION else Paso.BIENVENIDA },
                     )
+                    Paso.MOTIVACION -> MotivacionScreen(onContinuar = { paso = Paso.INICIO })
                     Paso.BIENVENIDA -> BienvenidaScreen(
                         onComenzar = { paso = Paso.ONBOARDING },
                         onIngresar = {
