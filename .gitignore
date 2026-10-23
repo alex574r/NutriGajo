@@ -19,3 +19,8 @@ app/google-services.json
 .dev.vars
 *.jks
 *.keystore
+
+# Worker de Cloudflare
+backend/node_modules
+backend/.wrangler
+backend/.wrangler-dev.log

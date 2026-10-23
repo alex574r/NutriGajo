@@ -1,0 +1,12 @@
+name = "nutrigajo-api"
+main = "src/index.ts"
+compatibility_date = "2026-10-01"
+
+[vars]
+FIREBASE_PROJECT_ID = "nutrigajo"
+
+# Bucket de R2 de la cuenta (el Worker lo usa por su nombre, no por la dirección de la API S3). Las portadas van en `portadas/{uid}`.
+# En local (`npm run dev`) se simula sin cuenta.
+[[r2_buckets]]
+binding = "FOTOS"
+bucket_name = "appsmobile"
