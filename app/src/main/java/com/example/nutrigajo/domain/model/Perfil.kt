@@ -6,4 +6,10 @@ data class Perfil(
     val nombre: String,
     val correo: String,
     val rol: Rol,
+    // milisegundos del alta; null si el documento no lo trae
+    val fechaAlta: Long? = null,
+    // versión de la portada en R2 (la hora de su subida); null si no ha puesto una
+    val portadaVersion: Long? = null,
+    // versión de la foto de perfil en R2; null si no ha puesto una
+    val avatarVersion: Long? = null,
 )

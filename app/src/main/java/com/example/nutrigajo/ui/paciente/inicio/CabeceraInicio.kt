@@ -14,22 +14,17 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -38,35 +33,48 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.nutrigajo.R
+import com.example.nutrigajo.ui.components.AvatarInicial
+import com.example.nutrigajo.ui.components.CLAVE_AVATAR
+import com.example.nutrigajo.ui.components.TransicionPerfil
+import com.example.nutrigajo.ui.components.compartido
+import com.example.nutrigajo.ui.components.formaAvatar
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 private val CRISTAL = Color(0xFFBDBDBD).copy(alpha = 0.21f)
 
-// Cabecera del inicio: foto con la fecha, la campana, el avatar (abre el menú de cuenta) y el saludo.
+// Cabecera del inicio: foto con la fecha, la campana, el avatar (abre el perfil) y el saludo.
 // Mide 215 dp bajo la barra de estado (44 más que en el diseño, que se veía pequeño en el teléfono);
 // la foto llega hasta el borde superior de la pantalla.
 @Composable
 fun CabeceraInicio(
     nombre: String,
     resumen: ResumenDia,
-    onExpediente: () -> Unit,
-    onCerrarSesion: () -> Unit,
+    onPerfil: () -> Unit,
     modifier: Modifier = Modifier,
+    imagenAvatar: ImageBitmap? = null,
+    // la portada que eligió la persona en su perfil; sin ella, la foto de siempre
+    imagenPortada: ImageBitmap? = null,
+    // el avatar viaja al perfil cuando se abre
+    transicion: TransicionPerfil? = null,
 ) {
     val colores = MaterialTheme.colorScheme
     val fecha = remember {
         LocalDate.now().format(DateTimeFormatter.ofPattern("d MMM yyyy", Locale.getDefault())).uppercase().replace(".", "")
     }
     Box(modifier.fillMaxWidth().clip(RoundedCornerShape(bottomStart = 34.dp, bottomEnd = 34.dp))) {
-        Image(
-            painter = painterResource(R.drawable.inicio_cabecera),
-            contentDescription = null,
-            modifier = Modifier.matchParentSize(),
-            contentScale = ContentScale.Crop,
-            alignment = Alignment.TopCenter,
-        )
+        if (imagenPortada != null) {
+            Image(bitmap = imagenPortada, contentDescription = null, modifier = Modifier.matchParentSize(), contentScale = ContentScale.Crop)
+        } else {
+            Image(
+                painter = painterResource(R.drawable.inicio_cabecera),
+                contentDescription = null,
+                modifier = Modifier.matchParentSize(),
+                contentScale = ContentScale.Crop,
+                alignment = Alignment.TopCenter,
+            )
+        }
         // la foto es clara en algunas zonas: el velo mantiene el contraste del texto blanco
         Box(Modifier.matchParentSize().background(Color.Black.copy(alpha = 0.25f)))
         Column(Modifier.statusBarsPadding().height(215.dp).padding(horizontal = 21.dp)) {
@@ -77,7 +85,7 @@ fun CabeceraInicio(
             }
             Spacer(Modifier.height(20.dp))
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Avatar(nombre, onExpediente, onCerrarSesion)
+                Avatar(nombre, imagenAvatar, transicion, onPerfil)
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(
                         text = stringResource(R.string.inicio_hola, nombre),
@@ -121,43 +129,19 @@ fun CabeceraInicio(
     }
 }
 
-// Aún no hay foto de perfil (llegará con el almacenamiento): inicial del nombre sobre naranja.
+// El avatar abre el perfil, donde están el expediente, la configuración y cerrar sesión.
 @Composable
-private fun Avatar(nombre: String, onExpediente: () -> Unit, onCerrarSesion: () -> Unit) {
-    val colores = MaterialTheme.colorScheme
-    var abierto by remember { mutableStateOf(false) }
-    Box {
-        Box(
-            modifier = Modifier
-                .size(70.dp)
-                .clip(CircleShape)
-                .background(colores.primary)
-                .clickable(onClickLabel = stringResource(R.string.inicio_menu_cuenta), role = Role.Button) { abierto = true },
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                text = nombre.firstOrNull()?.uppercase().orEmpty(),
-                style = MaterialTheme.typography.headlineLarge,
-                color = colores.onPrimary,
-            )
-        }
-        DropdownMenu(expanded = abierto, onDismissRequest = { abierto = false }) {
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.inicio_menu_expediente)) },
-                onClick = {
-                    abierto = false
-                    onExpediente()
-                },
-            )
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.inicio_cerrar_sesion)) },
-                onClick = {
-                    abierto = false
-                    onCerrarSesion()
-                },
-            )
-        }
-    }
+private fun Avatar(nombre: String, imagen: ImageBitmap?, transicion: TransicionPerfil?, onPerfil: () -> Unit) {
+    AvatarInicial(
+        nombre = nombre,
+        tamano = 70.dp,
+        estilo = MaterialTheme.typography.headlineLarge,
+        imagen = imagen,
+        forma = formaAvatar(transicion, circulo = true),
+        modifier = Modifier
+            .compartido(transicion, CLAVE_AVATAR)
+            .clickable(onClickLabel = stringResource(R.string.inicio_abrir_perfil), role = Role.Button, onClick = onPerfil),
+    )
 }
 
 @Composable

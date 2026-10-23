@@ -78,6 +78,7 @@ class VinculacionRepository(
             .map { d ->
                 PacienteResumen(
                     id = d.id,
+                    usuarioId = d.getString("usuarioId").orEmpty(),
                     nombre = d.getString("nombre").orEmpty(),
                     correo = d.getString("correoVinculacion").orEmpty(),
                     fechaAlta = d.getLong("fechaAlta") ?: 0L,

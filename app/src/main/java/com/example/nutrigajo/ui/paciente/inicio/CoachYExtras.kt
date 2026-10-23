@@ -30,6 +30,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.nutrigajo.R
+import com.example.nutrigajo.ui.components.Etiqueta
 
 // ponytail: los mensajes pendientes son de muestra y el botón no abre nada; el chat con el nutriólogo llega después.
 // La foto del coach es la del diseño; se sustituye por la del nutriólogo cuando exista el almacenamiento de fotos.
@@ -85,16 +86,6 @@ fun TarjetaCoach(nutriologo: String, modifier: Modifier = Modifier) {
             }
         }
     }
-}
-
-@Composable
-internal fun Etiqueta(texto: String, modifier: Modifier = Modifier) {
-    Text(
-        text = texto,
-        modifier = modifier.background(Color(0xFFBDBDBD).copy(alpha = 0.35f), RoundedCornerShape(7.dp)).padding(horizontal = 10.dp, vertical = 3.dp),
-        style = MaterialTheme.typography.labelLarge.copy(fontSize = 12.sp),
-        color = Color.White,
-    )
 }
 
 // ponytail: sin destino todavía; el catálogo de ejercicios llega con las rutinas.

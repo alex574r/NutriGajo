@@ -10,6 +10,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -23,7 +24,13 @@ import com.example.nutrigajo.ui.components.Esqueleto
 // Estado de la verificación del nutriólogo en su inicio: invita a enviar la cédula, avisa que está en revisión,
 // muestra el motivo de un rechazo (con opción de reenviar) o confirma la cuenta verificada.
 @Composable
-fun TarjetaVerificacion(estado: VerificacionEstado, onVerificar: () -> Unit, modifier: Modifier = Modifier) {
+fun TarjetaVerificacion(
+    estado: VerificacionEstado,
+    onVerificar: () -> Unit,
+    modifier: Modifier = Modifier,
+    // con la solicitud en revisión ofrece volver a consultar el resultado, que es lo que pide el texto de la tarjeta
+    onActualizar: (() -> Unit)? = null,
+) {
     val colores = MaterialTheme.colorScheme
     when {
         estado.cargando -> Esqueleto(modifier.fillMaxWidth().height(142.dp), RoundedCornerShape(24.dp))
@@ -62,6 +69,11 @@ fun TarjetaVerificacion(estado: VerificacionEstado, onVerificar: () -> Unit, mod
                         shape = RoundedCornerShape(21.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = colores.onBackground, contentColor = colores.background),
                     ) { Text(stringResource(boton)) }
+                }
+                if (verificacion?.estado == EstadoVerificacion.PENDIENTE && onActualizar != null) {
+                    OutlinedButton(onClick = onActualizar, shape = RoundedCornerShape(21.dp)) {
+                        Text(stringResource(R.string.pacientes_actualizar))
+                    }
                 }
             }
         }

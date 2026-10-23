@@ -49,7 +49,12 @@ class AuthRepository(
         val uid = auth.currentUser?.uid ?: return null
         val doc = db.collection(FirestorePaths.USUARIOS).document(uid).get().await()
         val rol = doc.getString("rol")?.let { runCatching { Rol.valueOf(it) }.getOrNull() } ?: return null
-        return Perfil(uid, doc.getString("nombre").orEmpty(), doc.getString("correo").orEmpty(), rol)
+        return Perfil(uid, doc.getString("nombre").orEmpty(), doc.getString("correo").orEmpty(), rol, doc.getLong("fechaAlta"), doc.getLong("portadaVersion"), doc.getLong("avatarVersion"))
+    }
+
+    // Firebase manda el correo con el enlace para elegir una contraseña nueva.
+    suspend fun restablecerContrasena(correo: String) {
+        auth.sendPasswordResetEmail(correo).await()
     }
 
     fun cerrarSesion() = auth.signOut()

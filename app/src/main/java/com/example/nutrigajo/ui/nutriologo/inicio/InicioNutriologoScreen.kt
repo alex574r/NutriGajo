@@ -19,13 +19,16 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.nutrigajo.R
 import com.example.nutrigajo.domain.model.EstadoVerificacion
 import com.example.nutrigajo.domain.model.Perfil
 import com.example.nutrigajo.domain.model.Rol
+import com.example.nutrigajo.ui.components.ActualizarAlDeslizar
 import com.example.nutrigajo.ui.components.BarraInferior
+import com.example.nutrigajo.ui.components.CambioConAvatar
 import com.example.nutrigajo.ui.components.ItemBarra
 import com.example.nutrigajo.ui.components.PantallaCarga
 import com.example.nutrigajo.ui.nutriologo.pacientes.PacientesViewModel
@@ -49,6 +52,10 @@ fun InicioNutriologoScreen(
     verificacionVm: VerificacionViewModel = viewModel(key = "verificacion-${perfil.uid}"),
 ) {
     val estado by vm.estado.collectAsState()
+    val fotosPacientes by vm.fotosPacientes.collectAsState()
+    // las fotos de los pacientes se piden cada vez que la lista cambia (al abrir y al actualizar)
+    val cache = LocalContext.current.cacheDir
+    LaunchedEffect(estado.pacientes) { vm.cargarFotos(cache, estado.pacientes) }
     val verificacion by verificacionVm.estado.collectAsState()
     var pestana by rememberSaveable { mutableStateOf(Pestana.INICIO) }
     var enFormulario by rememberSaveable { mutableStateOf(false) }
@@ -70,6 +77,10 @@ fun InicioNutriologoScreen(
     val verificar = {
         verificacionVm.limpiarError()
         enFormulario = true
+    }
+    val actualizar = {
+        vm.cargar()
+        verificacionVm.cargar()
     }
     // sin cuenta verificada el mapa no está disponible: se lleva al perfil, donde está el estado de la verificación
     val irAlMapa = { if (aprobada) enMapa = true else pestana = Pestana.PERFIL }
@@ -96,38 +107,52 @@ fun InicioNutriologoScreen(
         else -> {
             BackHandler(enabled = pestana != Pestana.INICIO) { pestana = Pestana.INICIO }
             Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-                when (pestana) {
-                    Pestana.INICIO -> TabInicio(
-                        perfil = perfil,
-                        estado = estado,
-                        verificacion = verificacion,
-                        aprobada = aprobada,
-                        onPerfil = { pestana = Pestana.PERFIL },
-                        onBuscar = { pestana = Pestana.PACIENTES },
-                        onPacientes = { pestana = Pestana.PACIENTES },
-                        onCodigo = { codigoAbierto = true },
-                        onGenerar = { vm.generarCodigo(perfil.nombre) },
-                        onMapa = irAlMapa,
-                        onVerificar = verificar,
-                        onPaciente = { pacienteAbierto = it.id },
-                    )
-                    Pestana.PACIENTES -> TabPacientes(
-                        estado = estado,
-                        onPaciente = { pacienteAbierto = it.id },
-                        onActualizar = {
-                            vm.cargar()
-                            verificacionVm.cargar()
-                        },
-                        onCodigo = { codigoAbierto = true },
-                    )
-                    Pestana.PERFIL -> TabPerfil(
-                        perfil = perfil,
-                        verificacion = verificacion,
-                        aprobada = aprobada,
-                        onVerificar = verificar,
-                        onMapa = irAlMapa,
-                        onCerrarSesion = onCerrarSesion,
-                    )
+                // deslizar hacia abajo en cualquiera de las tres pestañas vuelve a cargar pacientes y verificación
+                ActualizarAlDeslizar(
+                    refrescando = estado.cargando || verificacion.cargando,
+                    onActualizar = actualizar,
+                    modifier = Modifier.fillMaxSize(),
+                ) {
+                    // al pasar de una pestaña a otra el avatar de la cabecera viaja al del perfil y viceversa
+                    CambioConAvatar(pestana, Modifier.fillMaxSize()) { destino, transicion ->
+                        when (destino) {
+                            Pestana.INICIO -> TabInicio(
+                                perfil = perfil,
+                                estado = estado,
+                                verificacion = verificacion,
+                                aprobada = aprobada,
+                                onPerfil = { pestana = Pestana.PERFIL },
+                                onBuscar = { pestana = Pestana.PACIENTES },
+                                onPacientes = { pestana = Pestana.PACIENTES },
+                                onCodigo = { codigoAbierto = true },
+                                onGenerar = { vm.generarCodigo(perfil.nombre) },
+                                onMapa = irAlMapa,
+                                onVerificar = verificar,
+                                onActualizar = actualizar,
+                                onPaciente = { pacienteAbierto = it.id },
+                                transicion = transicion,
+                            )
+                            Pestana.PACIENTES -> TabPacientes(
+                                estado = estado,
+                                onPaciente = { pacienteAbierto = it.id },
+                                onActualizar = actualizar,
+                                onCodigo = { codigoAbierto = true },
+                                fotos = fotosPacientes,
+                            )
+                            Pestana.PERFIL -> TabPerfil(
+                                perfil = perfil,
+                                verificacion = verificacion,
+                                aprobada = aprobada,
+                                pacientes = estado.pacientes.size,
+                                onVerificar = verificar,
+                                onActualizar = actualizar,
+                                onMapa = irAlMapa,
+                                onCodigo = { codigoAbierto = true },
+                                onCerrarSesion = onCerrarSesion,
+                                transicion = transicion,
+                            )
+                        }
+                    }
                 }
                 BarraInferior(
                     izquierda = listOf(

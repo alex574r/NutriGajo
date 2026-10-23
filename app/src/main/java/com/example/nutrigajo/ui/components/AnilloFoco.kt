@@ -13,16 +13,17 @@ import androidx.compose.ui.unit.dp
 
 val ANILLO_FOCO = 4.dp
 
-// Anillo de foco del diseño: 4dp de naranja al 25% alrededor del elemento activo.
+// Anillo de foco del diseño: 4dp de naranja al 25% alrededor del elemento activo (negro en las pestañas).
 // Ocupa su espacio aunque esté inactivo, para que nada se mueva al enfocar o elegir.
 @Composable
 fun AnilloFoco(
     activo: Boolean,
     radio: Dp,
     modifier: Modifier = Modifier,
+    anillo: Color = MaterialTheme.colorScheme.primary.copy(alpha = 0.25f),
     contenido: @Composable () -> Unit,
 ) {
-    val color = if (activo) MaterialTheme.colorScheme.primary.copy(alpha = 0.25f) else Color.Transparent
+    val color = if (activo) anillo else Color.Transparent
     Box(
         modifier = modifier
             .border(ANILLO_FOCO, color, RoundedCornerShape(radio + ANILLO_FOCO))

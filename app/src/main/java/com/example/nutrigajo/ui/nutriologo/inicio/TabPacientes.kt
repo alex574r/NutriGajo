@@ -1,5 +1,7 @@
 package com.example.nutrigajo.ui.nutriologo.inicio
 
+import android.graphics.Bitmap
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -18,7 +20,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -29,6 +30,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -49,6 +53,7 @@ fun TabPacientes(
     onPaciente: (PacienteResumen) -> Unit,
     onActualizar: () -> Unit,
     onCodigo: () -> Unit,
+    fotos: Map<String, Bitmap>,
     modifier: Modifier = Modifier,
 ) {
     val colores = MaterialTheme.colorScheme
@@ -99,14 +104,18 @@ fun TabPacientes(
                     color = colores.onSurfaceVariant,
                 )
             }
-            items(estado.pacientes, key = { it.id }) { FilaPaciente(it, onClick = { onPaciente(it) }) }
+            items(estado.pacientes, key = { it.id }) { paciente ->
+                // el mapa trae Bitmap; se convierte una vez por foto y no en cada recomposición de la fila
+                val foto = fotos[paciente.usuarioId]
+                FilaPaciente(paciente, remember(foto) { foto?.asImageBitmap() }, onClick = { onPaciente(paciente) })
+            }
         }
     }
 }
 
 // Fila del diseño de "mis rutinas": miniatura a la izquierda, nombre con su etiqueta y los datos debajo.
 @Composable
-private fun FilaPaciente(paciente: PacienteResumen, onClick: () -> Unit) {
+private fun FilaPaciente(paciente: PacienteResumen, foto: ImageBitmap?, onClick: () -> Unit) {
     val colores = MaterialTheme.colorScheme
     Row(
         modifier = Modifier
@@ -122,11 +131,16 @@ private fun FilaPaciente(paciente: PacienteResumen, onClick: () -> Unit) {
             modifier = Modifier.size(64.dp).clip(RoundedCornerShape(18.dp)).background(colores.primaryContainer),
             contentAlignment = Alignment.Center,
         ) {
-            Text(
-                text = paciente.nombre.firstOrNull()?.uppercase().orEmpty(),
-                style = MaterialTheme.typography.headlineMedium,
-                color = colores.primary,
-            )
+            // su foto de perfil si la tiene; mientras llega, o si no la tiene, la inicial
+            if (foto != null) {
+                Image(bitmap = foto, contentDescription = null, modifier = Modifier.matchParentSize(), contentScale = ContentScale.Crop)
+            } else {
+                Text(
+                    text = paciente.nombre.firstOrNull()?.uppercase().orEmpty(),
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = colores.primary,
+                )
+            }
         }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -168,22 +182,5 @@ private fun FilaPaciente(paciente: PacienteResumen, onClick: () -> Unit) {
             modifier = Modifier.size(18.dp),
             tint = colores.onSurfaceVariant,
         )
-    }
-}
-
-// Aún no hay foto de perfil (llegará con el almacenamiento): inicial del nombre sobre naranja.
-@Composable
-internal fun AvatarInicial(
-    nombre: String,
-    tamano: androidx.compose.ui.unit.Dp,
-    estilo: androidx.compose.ui.text.TextStyle,
-    modifier: Modifier = Modifier,
-) {
-    val colores = MaterialTheme.colorScheme
-    Box(
-        modifier = modifier.size(tamano).clip(CircleShape).background(colores.primary),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(text = nombre.firstOrNull()?.uppercase().orEmpty(), style = estilo, color = colores.onPrimary)
     }
 }

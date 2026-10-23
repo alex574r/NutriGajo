@@ -26,7 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.nutrigajo.domain.model.Rol
-import com.example.nutrigajo.ui.admin.verificaciones.VerificacionesScreen
+import com.example.nutrigajo.ui.admin.inicio.InicioAdminScreen
 import com.example.nutrigajo.ui.components.PantallaCarga
 import com.example.nutrigajo.ui.nutriologo.inicio.InicioNutriologoScreen
 import com.example.nutrigajo.ui.paciente.inicio.InicioPacienteScreen
@@ -138,7 +138,7 @@ class MainActivity : ComponentActivity() {
                             perfil.rol == Rol.NUTRIOLOGO -> InicioNutriologoScreen(perfil, cerrarSesion)
                             perfil.rol == Rol.PACIENTE -> InicioPacienteScreen(perfil, cerrarSesion)
                             // ADMIN
-                            else -> VerificacionesScreen(perfil, cerrarSesion)
+                            else -> InicioAdminScreen(perfil, cerrarSesion)
                         }
                     }
                 }

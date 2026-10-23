@@ -27,13 +27,21 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.nutrigajo.domain.model.Perfil
 import com.example.nutrigajo.domain.model.Rol
 import com.example.nutrigajo.domain.model.Vinculo
+import com.example.nutrigajo.ui.shared.perfil.rememberFotoAvatar
+import com.example.nutrigajo.ui.shared.perfil.rememberFotoPortada
+import com.example.nutrigajo.ui.components.ActualizarAlDeslizar
 import com.example.nutrigajo.ui.components.BarraEstadoClara
+import com.example.nutrigajo.ui.components.CambioConAvatar
 import com.example.nutrigajo.ui.components.PantallaCarga
+import com.example.nutrigajo.ui.components.TransicionPerfil
 import com.example.nutrigajo.ui.paciente.mapa.MapaScreen
 import com.example.nutrigajo.ui.paciente.mapa.MapaViewModel
 import com.example.nutrigajo.ui.shared.expediente.ExpedienteEstado
 import com.example.nutrigajo.ui.shared.expediente.ExpedienteFlujo
 import com.example.nutrigajo.ui.shared.expediente.ExpedienteViewModel
+import kotlinx.coroutines.delay
+
+private const val PAUSA_EXITO_MS = 1400L
 
 // Entrada del paciente: sin nutriólogo pide el código (o deja buscarlo en el mapa); con uno, abre su inicio.
 // ponytail: las secciones del inicio salvo el expediente y el coach usan datos de muestra (DatosMuestra.kt).
@@ -49,19 +57,34 @@ fun InicioPacienteScreen(
     val mapa by mapaVm.estado.collectAsState()
     var enMapa by rememberSaveable { mutableStateOf(false) }
     var enExpediente by rememberSaveable { mutableStateOf(false) }
+    var enPerfil by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(Unit) { vm.cargar() }
     LaunchedEffect(enMapa) { if (enMapa) mapaVm.cargar() }
 
     val vinculo = estado.vinculo
+    // al canjear el código se deja ver el acierto un momento antes de abrir el inicio
+    var canjeado by remember { mutableStateOf(false) }
+    var celebrado by remember { mutableStateOf(false) }
+    val enExito = vinculo != null && canjeado
+    LaunchedEffect(enExito) {
+        if (enExito) {
+            delay(PAUSA_EXITO_MS)
+            celebrado = true
+        }
+    }
     when {
         estado.cargando -> PantallaCarga(conCabecera = true)
         vinculo == null && enMapa -> {
             BackHandler { enMapa = false }
             MapaScreen(estado = mapa, onActualizar = mapaVm::cargar, onVolver = { enMapa = false })
         }
-        vinculo == null -> VincularScreen(
+        vinculo == null || (enExito && !celebrado) -> VincularScreen(
             estado = estado,
-            onCanjear = { vm.canjear(it, perfil) },
+            vinculado = vinculo != null,
+            onCanjear = {
+                canjeado = true
+                vm.canjear(it, perfil)
+            },
             onEditar = vm::limpiarError,
             onMapa = { enMapa = true },
             onCerrarSesion = onCerrarSesion,
@@ -72,7 +95,22 @@ fun InicioPacienteScreen(
             editor = Rol.PACIENTE,
             onSalir = { enExpediente = false },
         )
-        else -> InicioPaciente(perfil, vinculo, onExpediente = { enExpediente = true }, onCerrarSesion = onCerrarSesion)
+        // inicio y perfil comparten el avatar: al tocarlo viaja de un sitio al otro y se transforma de círculo en cuadrado redondeado
+        else -> CambioConAvatar(enPerfil, Modifier.fillMaxSize()) { perfilAbierto, transicion ->
+            if (perfilAbierto) {
+                BackHandler { enPerfil = false }
+                PerfilPacienteScreen(
+                    perfil = perfil,
+                    vinculo = vinculo,
+                    onExpediente = { enExpediente = true },
+                    onVolver = { enPerfil = false },
+                    onCerrarSesion = onCerrarSesion,
+                    transicion = transicion,
+                )
+            } else {
+                InicioPaciente(perfil, vinculo, onExpediente = { enExpediente = true }, onPerfil = { enPerfil = true }, transicion = transicion)
+            }
+        }
     }
 }
 
@@ -81,7 +119,8 @@ private fun InicioPaciente(
     perfil: Perfil,
     vinculo: Vinculo,
     onExpediente: () -> Unit,
-    onCerrarSesion: () -> Unit,
+    onPerfil: () -> Unit,
+    transicion: TransicionPerfil,
     // misma clave que el flujo del expediente: la tarjeta refleja lo que se guarda ahí
     expedienteVm: ExpedienteViewModel = viewModel(key = "expediente-${vinculo.pacienteId}-${Rol.PACIENTE.name}"),
 ) {
@@ -97,22 +136,29 @@ private fun InicioPaciente(
     }
     BarraEstadoClara(sobreFoto)
 
-    LazyColumn(
-        modifier = Modifier.fillMaxSize().background(colores.background),
-        state = lista,
-        contentPadding = WindowInsets.navigationBars.asPaddingValues(),
-        verticalArrangement = Arrangement.spacedBy(24.dp),
+    // deslizar hacia abajo vuelve a pedir el expediente, lo único del inicio que no es de muestra
+    ActualizarAlDeslizar(
+        refrescando = expediente.cargando,
+        onActualizar = { expedienteVm.cargar(vinculo.pacienteId) },
+        modifier = Modifier.fillMaxSize(),
     ) {
-        item { CabeceraInicio(perfil.nombre, resumenDia, onExpediente, onCerrarSesion) }
-        // una vez completo, el expediente se consulta desde el menú de la cuenta
-        if (expediente.cargando || !expediente.expediente.completo) {
-            item { TarjetaExpediente(expediente, onExpediente, Modifier.padding(horizontal = 16.dp)) }
+        LazyColumn(
+            modifier = Modifier.fillMaxSize().background(colores.background),
+            state = lista,
+            contentPadding = WindowInsets.navigationBars.asPaddingValues(),
+            verticalArrangement = Arrangement.spacedBy(24.dp),
+        ) {
+            item { CabeceraInicio(perfil.nombre, resumenDia, onPerfil, imagenAvatar = rememberFotoAvatar(perfil), imagenPortada = rememberFotoPortada(perfil), transicion = transicion) }
+            // una vez completo, el expediente se consulta desde el perfil
+            if (expediente.cargando || !expediente.expediente.completo) {
+                item { TarjetaExpediente(expediente, onExpediente, Modifier.padding(horizontal = 16.dp)) }
+            }
+            item { MetricasFitness(resumenDia) }
+            item { RutinaDeHoy(rutinaDeHoy) }
+            item { DietaNutricion(comidas) }
+            item { ActividadReciente() }
+            item { TarjetaCoach(vinculo.nutriologoNombre) }
+            item { EjerciciosExtra(ejerciciosExtra) }
         }
-        item { MetricasFitness(resumenDia) }
-        item { RutinaDeHoy(rutinaDeHoy) }
-        item { DietaNutricion(comidas) }
-        item { ActividadReciente() }
-        item { TarjetaCoach(vinculo.nutriologoNombre) }
-        item { EjerciciosExtra(ejerciciosExtra) }
     }
 }

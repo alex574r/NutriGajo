@@ -66,7 +66,7 @@
     <string name="inicio_avance">Avance %1$d%%</string>
     <string name="inicio_plan">Pro</string>
     <string name="inicio_notificaciones">Notificaciones</string>
-    <string name="inicio_menu_cuenta">Abrir menú de cuenta</string>
+    <string name="inicio_abrir_perfil">Abrir mi perfil</string>
     <string name="inicio_menu_expediente">Mi expediente</string>
     <string name="inicio_ver_todas">Ver todas</string>
     <string name="inicio_metricas">Métricas fitness</string>
@@ -148,6 +148,7 @@
     <string name="vincular_buscar">Buscar nutriólogo</string>
     <string name="vincular_codigo">Código de vinculación</string>
     <string name="vincular_boton">vincularme</string>
+    <string name="vincular_exito">Vinculado</string>
 
     <string name="verificacion_titulo">Verifica tu cuenta</string>
     <string name="verificacion_tarjeta_ayuda">Envía tu cédula profesional para que te reconozcan como nutriólogo verificado.</string>
@@ -316,21 +317,69 @@
     <string name="mapa_ayuda">Toca un marcador para ver al nutriólogo. Para vincularte, pídele su código de vinculación.</string>
     <string name="mapa_vacio">Aún no hay nutriólogos verificados en el mapa.</string>
     <string name="ubicacion_titulo">Tu consultorio en el mapa</string>
-    <string name="ubicacion_tarjeta_ayuda">Marca dónde atiendes para que los pacientes te encuentren.</string>
     <string name="ubicacion_tarjeta_boton">Ubicar en el mapa</string>
     <string name="ubicacion_ayuda">Toca el mapa para marcar tu consultorio. Los pacientes verán este punto junto a tu nombre.</string>
     <string name="ubicacion_guardar">Guardar ubicación</string>
     <string name="ubicacion_quitar">Quitar del mapa</string>
 
-    <string name="admin_titulo">Verificaciones pendientes (%1$d)</string>
     <string name="admin_vacio">No hay verificaciones pendientes.</string>
+    <string name="admin_panel">Panel de administración</string>
+    <string name="admin_aviso">Revisa cada cédula en el portal de la SEP antes de aprobar.</string>
+    <string name="admin_resumen">Resumen</string>
+    <string name="admin_etiqueta">Verificación</string>
+    <plurals name="admin_pendientes">
+        <item quantity="one">%d pendiente</item>
+        <item quantity="other">%d pendientes</item>
+    </plurals>
+    <string name="admin_orden">De la más antigua a la más reciente</string>
+    <string name="admin_al_dia">Todo al día</string>
+    <string name="admin_solicitudes">Solicitudes</string>
+    <string name="admin_etiqueta_pendiente">Pendiente</string>
+    <string name="admin_actualizar">Actualizar solicitudes</string>
+    <string name="admin_nav_solicitudes">Solicitudes</string>
+    <string name="admin_nav_perfil">Perfil</string>
+    <string name="rol_admin">Administrador</string>
     <string name="admin_cedula">Cédula %1$s</string>
     <string name="admin_nombre_cedula">Nombre en la cédula: %1$s</string>
     <string name="admin_nombre_coincide">El nombre coincide con el de la cuenta</string>
     <string name="admin_nombre_distinto">El nombre no coincide con el de la cuenta</string>
     <string name="admin_abrir_sep">Abrir consulta de la SEP</string>
+    <string name="admin_revisar">Revisar en la SEP</string>
+    <string name="admin_cedula_copiada">Cédula copiada</string>
     <string name="admin_aprobar">Aprobar</string>
     <string name="admin_rechazar">Rechazar</string>
     <string name="admin_rechazar_titulo">Rechazar verificación</string>
     <string name="admin_motivo">Motivo del rechazo</string>
+
+    <!-- Perfil -->
+    <string name="perfil_volver">Volver</string>
+    <string name="perfil_datos">Datos</string>
+    <string name="perfil_ajustes">Configuración</string>
+    <string name="perfil_dato_nombre">Nombre</string>
+    <string name="perfil_dato_correo">Correo</string>
+    <string name="perfil_dato_rol">Rol</string>
+    <string name="perfil_dato_alta">Miembro desde</string>
+    <string name="perfil_dato_nutriologo">Nutriólogo</string>
+    <string name="perfil_dato_cedula">Cédula profesional</string>
+    <string name="perfil_desde">Desde %1$s</string>
+    <string name="perfil_con_nutriologo">Con %1$s</string>
+    <string name="perfil_codigo">Mi código</string>
+    <string name="perfil_cambiar_portada">Cambiar portada</string>
+    <string name="perfil_cambiar_avatar">Cambiar foto de perfil</string>
+    <string name="perfil_foto_error">No se pudo subir la foto. Inténtalo de nuevo.</string>
+    <string name="perfil_sep">SEP</string>
+    <string name="perfil_estado_aprobada">Verificado</string>
+    <string name="perfil_estado_pendiente">En revisión</string>
+    <string name="perfil_estado_rechazada">Rechazado</string>
+    <string name="perfil_estado_sin">Sin verificar</string>
+    <plurals name="perfil_pacientes">
+        <item quantity="one">%d paciente</item>
+        <item quantity="other">%d pacientes</item>
+    </plurals>
+    <string name="perfil_version">Versión</string>
+    <string name="perfil_contrasena_titulo">Cambiar contraseña</string>
+    <string name="perfil_contrasena_ayuda">Te enviaremos un correo a %1$s con un enlace para elegir una contraseña nueva.</string>
+    <string name="perfil_contrasena_enviar">Enviar correo</string>
+    <string name="perfil_contrasena_enviado">Revisa %1$s: ahí está el enlace para cambiar tu contraseña.</string>
+    <string name="perfil_listo">Listo</string>
 </resources>

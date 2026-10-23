@@ -6,7 +6,8 @@ data class CodigoVinculacion(val codigo: String, val expiraEn: Long) {
 }
 
 // Fila de la lista de pacientes de un nutriólogo.
-data class PacienteResumen(val id: String, val nombre: String, val correo: String, val fechaAlta: Long)
+// `usuarioId` es la cuenta del paciente: con él se encuentra su foto de perfil.
+data class PacienteResumen(val id: String, val usuarioId: String, val nombre: String, val correo: String, val fechaAlta: Long)
 
 // Lo que el paciente necesita saber de su nutriólogo.
 data class Vinculo(val pacienteId: String, val nutriologoNombre: String)

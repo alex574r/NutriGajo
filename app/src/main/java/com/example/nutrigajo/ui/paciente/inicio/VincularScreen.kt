@@ -58,6 +58,8 @@ fun VincularScreen(
     onMapa: () -> Unit,
     onCerrarSesion: () -> Unit,
     modifier: Modifier = Modifier,
+    // el código ya se canjeó: las casillas se funden en la cápsula "Vinculado" mientras llega el inicio
+    vinculado: Boolean = false,
 ) {
     val colores = MaterialTheme.colorScheme
     var codigo by rememberSaveable { mutableStateOf("") }
@@ -95,7 +97,10 @@ fun VincularScreen(
             largo = LARGO_CODIGO,
             descripcion = stringResource(R.string.vincular_codigo),
             modifier = Modifier.fillMaxWidth().padding(horizontal = MARGEN - ANILLO_FOCO),
-            onListo = { if (completo && !estado.canjeando) onCanjear(codigo) },
+            onListo = { if (completo && !estado.canjeando && !vinculado) onCanjear(codigo) },
+            error = estado.error != null,
+            verificando = estado.canjeando,
+            exito = if (vinculado) stringResource(R.string.vincular_exito) else null,
         )
         estado.error?.let {
             Spacer(Modifier.height(16.dp))
@@ -106,7 +111,7 @@ fun VincularScreen(
             texto = stringResource(R.string.vincular_boton),
             onClick = { onCanjear(codigo) },
             modifier = Modifier.fillMaxWidth().padding(horizontal = MARGEN),
-            enabled = completo,
+            enabled = completo && !vinculado,
             colors = ButtonDefaults.buttonColors(containerColor = colores.onBackground, contentColor = colores.background),
             cargando = estado.canjeando,
         )

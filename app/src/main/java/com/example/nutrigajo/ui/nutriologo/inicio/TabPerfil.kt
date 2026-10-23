@@ -1,86 +1,64 @@
 package com.example.nutrigajo.ui.nutriologo.inicio
 
-import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.example.nutrigajo.R
+import com.example.nutrigajo.domain.model.EstadoVerificacion
 import com.example.nutrigajo.domain.model.Perfil
 import com.example.nutrigajo.ui.components.ALTO_BARRA_INFERIOR
-import com.example.nutrigajo.ui.nutriologo.ubicacion.TarjetaUbicacion
+import com.example.nutrigajo.ui.components.TransicionPerfil
+import com.example.nutrigajo.ui.components.AccionPerfil
 import com.example.nutrigajo.ui.nutriologo.verificacion.TarjetaVerificacion
 import com.example.nutrigajo.ui.nutriologo.verificacion.VerificacionEstado
+import com.example.nutrigajo.ui.shared.perfil.DatoPerfil
+import com.example.nutrigajo.ui.shared.perfil.PerfilScreen
+import com.example.nutrigajo.ui.shared.perfil.altaCorta
+import com.example.nutrigajo.ui.shared.perfil.datosBase
 
-// Cuenta del nutriólogo: sus datos, el estado de la verificación, el mapa (si está verificado) y cerrar sesión.
+// Perfil del nutriólogo: sus datos con el estado de la verificación y la configuración de la cuenta.
+// Con la cuenta verificada la cabecera lleva la insignia azul; el mapa y el código quedan a un toque.
 @Composable
 fun TabPerfil(
     perfil: Perfil,
     verificacion: VerificacionEstado,
     aprobada: Boolean,
+    pacientes: Int,
     onVerificar: () -> Unit,
+    onActualizar: () -> Unit,
     onMapa: () -> Unit,
+    onCodigo: () -> Unit,
     onCerrarSesion: () -> Unit,
     modifier: Modifier = Modifier,
+    transicion: TransicionPerfil? = null,
 ) {
-    val colores = MaterialTheme.colorScheme
-    LazyColumn(
-        modifier = modifier.fillMaxSize().statusBarsPadding(),
-        contentPadding = PaddingValues(
-            start = 20.dp,
-            end = 20.dp,
-            top = 24.dp,
-            bottom = ALTO_BARRA_INFERIOR + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding(),
-        ),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-    ) {
-        item {
-            Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-                AvatarInicial(perfil.nombre, 96.dp, MaterialTheme.typography.headlineLarge)
-                Text(
-                    text = perfil.nombre,
-                    modifier = Modifier.padding(top = 12.dp),
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = colores.onBackground,
-                )
-                Text(perfil.correo, style = MaterialTheme.typography.bodySmall, color = colores.onSurfaceVariant)
-                Text(
-                    text = stringResource(R.string.rol_nutriologo),
-                    modifier = Modifier
-                        .padding(top = 8.dp)
-                        .border(1.dp, colores.outline, RoundedCornerShape(8.dp))
-                        .padding(horizontal = 10.dp, vertical = 3.dp),
-                    style = MaterialTheme.typography.labelLarge.copy(fontSize = 12.sp),
-                    color = colores.onSurfaceVariant,
-                )
-            }
-        }
-        item { TarjetaVerificacion(verificacion, onVerificar) }
-        if (aprobada) item { TarjetaUbicacion(onMapa) }
-        item {
-            OutlinedButton(
-                onClick = onCerrarSesion,
-                modifier = Modifier.fillMaxWidth().height(56.dp),
-                shape = RoundedCornerShape(21.dp),
-            ) { Text(stringResource(R.string.inicio_cerrar_sesion), style = MaterialTheme.typography.titleMedium) }
-        }
+    val solicitud = verificacion.verificacion
+    val estadoVerificacion = when (solicitud?.estado) {
+        EstadoVerificacion.APROBADA -> R.string.perfil_estado_aprobada
+        EstadoVerificacion.PENDIENTE -> R.string.perfil_estado_pendiente
+        EstadoVerificacion.RECHAZADA -> R.string.perfil_estado_rechazada
+        null -> R.string.perfil_estado_sin
     }
+    PerfilScreen(
+        perfil = perfil,
+        rol = R.string.rol_nutriologo,
+        verificado = aprobada,
+        estadisticas = listOfNotNull(
+            pluralStringResource(R.plurals.perfil_pacientes, pacientes, pacientes),
+            stringResource(estadoVerificacion),
+            perfil.altaCorta()?.let { stringResource(R.string.perfil_desde, it) },
+        ),
+        principal = AccionPerfil(R.drawable.ic_compartir, R.string.perfil_codigo, onCodigo),
+        secundaria = AccionPerfil(R.drawable.ic_ubicacion, R.string.nutri_nav_mapa, onMapa),
+        datos = datosBase(perfil, R.string.rol_nutriologo) +
+            listOfNotNull(solicitud?.let { DatoPerfil(R.drawable.ic_verificado, R.string.perfil_dato_cedula, it.cedula) }),
+        onCerrarSesion = onCerrarSesion,
+        modifier = modifier,
+        espacioInferior = ALTO_BARRA_INFERIOR,
+        transicion = transicion,
+        datosExtra = { TarjetaVerificacion(verificacion, onVerificar, Modifier.padding(horizontal = 16.dp), onActualizar = onActualizar) },
+    )
 }
