@@ -4,6 +4,7 @@ import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.nutrigajo.data.repository.DirectorioRepository
+import com.example.nutrigajo.domain.model.DatosConsultorio
 import com.example.nutrigajo.domain.model.NutriologoEnMapa
 import com.example.nutrigajo.ui.shared.mensajeDeFirestore
 import kotlinx.coroutines.CancellationException
@@ -42,7 +43,8 @@ class UbicacionViewModel(private val repo: DirectorioRepository = DirectorioRepo
         }
     }
 
-    fun publicar(nombre: String, lat: Double, lng: Double) = guardar { repo.publicar(nombre, lat, lng) }
+    fun publicar(nombre: String, lat: Double, lng: Double, consultorio: DatosConsultorio) =
+        guardar { repo.publicar(nombre, lat, lng, consultorio) }
 
     fun quitar() = guardar { repo.quitar() }
 

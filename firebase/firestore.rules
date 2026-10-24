@@ -135,8 +135,14 @@ service cloud.firestore {
         && getAfter(verificacionRef(resource.data.nutriologoId)).data.cedula == cedula;
     }
 
+    // Dato de texto opcional del consultorio: si está, es texto de hasta `limite` caracteres.
+    function textoOpcional(d, campo, limite) {
+      return !(campo in d.keys()) || (d[campo] is string && d[campo].size() <= limite);
+    }
+
     // Consultorio de un nutriólogo verificado en el mapa (el id es su uid). Lo ve cualquier sesión;
-    // solo él lo publica, y solo mientras su cuenta esté verificada.
+    // solo él lo publica, y solo mientras su cuenta esté verificada. La cédula tiene que ser la de su
+    // solicitud aprobada, así un paciente la ve sin poder leer la solicitud. Los límites de texto son los de DatosConsultorio.
     match /directorio/{uid} {
       allow read: if request.auth != null;
 
@@ -144,12 +150,20 @@ service cloud.firestore {
         && request.auth.uid == uid
         && get(/databases/$(database)/documents/usuarios/$(uid)).data.rol == 'NUTRIOLOGO'
         && get(/databases/$(database)/documents/usuarios/$(uid)).data.verificado == true
-        && request.resource.data.keys().hasOnly(['nutriologoId', 'nombre', 'lat', 'lng', 'actualizadoEn'])
-        && request.resource.data.keys().hasAll(['nutriologoId', 'nombre', 'lat', 'lng', 'actualizadoEn'])
+        && request.resource.data.keys().hasOnly(['nutriologoId', 'nombre', 'lat', 'lng', 'cedula', 'actualizadoEn',
+                                                 'especialidad', 'direccion', 'telefono', 'horario', 'descripcion'])
+        && request.resource.data.keys().hasAll(['nutriologoId', 'nombre', 'lat', 'lng', 'cedula', 'actualizadoEn'])
         && request.resource.data.nutriologoId == uid
         && request.resource.data.nombre == get(/databases/$(database)/documents/usuarios/$(uid)).data.nombre
         && request.resource.data.lat is number && request.resource.data.lat >= -90 && request.resource.data.lat <= 90
         && request.resource.data.lng is number && request.resource.data.lng >= -180 && request.resource.data.lng <= 180
+        && get(verificacionRef(uid)).data.estado == 'APROBADA'
+        && request.resource.data.cedula == get(verificacionRef(uid)).data.cedula
+        && textoOpcional(request.resource.data, 'especialidad', 80)
+        && textoOpcional(request.resource.data, 'direccion', 160)
+        && textoOpcional(request.resource.data, 'telefono', 20)
+        && textoOpcional(request.resource.data, 'horario', 120)
+        && textoOpcional(request.resource.data, 'descripcion', 280)
         && request.resource.data.actualizadoEn is int;
 
       // quitarse del mapa

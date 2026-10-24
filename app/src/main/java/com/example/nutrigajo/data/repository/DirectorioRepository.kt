@@ -1,6 +1,7 @@
 package com.example.nutrigajo.data.repository
 
 import com.example.nutrigajo.data.remote.firebase.firestore.FirestorePaths
+import com.example.nutrigajo.domain.model.DatosConsultorio
 import com.example.nutrigajo.domain.model.NutriologoEnMapa
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.DocumentSnapshot
@@ -24,16 +25,27 @@ class DirectorioRepository(
 
     suspend fun miUbicacion(): NutriologoEnMapa? = mio().get().await().aNutriologo()
 
-    suspend fun publicar(nombre: String, lat: Double, lng: Double) {
-        mio().set(
-            mapOf(
-                "nutriologoId" to uid,
-                "nombre" to nombre,
-                "lat" to lat,
-                "lng" to lng,
-                "actualizadoEn" to System.currentTimeMillis(),
-            ),
-        ).await()
+    // Reemplaza el documento entero: un dato del consultorio que se vació deja de publicarse.
+    suspend fun publicar(nombre: String, lat: Double, lng: Double, consultorio: DatosConsultorio) {
+        // la cédula sale de la solicitud aprobada, las reglas la comparan con ella
+        val cedula = db.collection(FirestorePaths.VERIFICACIONES).document(uid).get().await().getString("cedula")
+            ?: error("Sin solicitud de verificación")
+        val datos = mutableMapOf<String, Any>(
+            "nutriologoId" to uid,
+            "nombre" to nombre,
+            "lat" to lat,
+            "lng" to lng,
+            "cedula" to cedula,
+            "actualizadoEn" to System.currentTimeMillis(),
+        )
+        mapOf(
+            "especialidad" to consultorio.especialidad,
+            "direccion" to consultorio.direccion,
+            "telefono" to consultorio.telefono,
+            "horario" to consultorio.horario,
+            "descripcion" to consultorio.descripcion,
+        ).forEach { (campo, valor) -> if (valor.isNotBlank()) datos[campo] = valor.trim() }
+        mio().set(datos).await()
     }
 
     suspend fun quitar() {
@@ -55,6 +67,14 @@ class DirectorioRepository(
             nombre = getString("nombre").orEmpty(),
             lat = getDouble("lat") ?: return null,
             lng = getDouble("lng") ?: return null,
+            cedula = getString("cedula").orEmpty(),
+            consultorio = DatosConsultorio(
+                especialidad = getString("especialidad").orEmpty(),
+                direccion = getString("direccion").orEmpty(),
+                telefono = getString("telefono").orEmpty(),
+                horario = getString("horario").orEmpty(),
+                descripcion = getString("descripcion").orEmpty(),
+            ),
         )
     }
 }

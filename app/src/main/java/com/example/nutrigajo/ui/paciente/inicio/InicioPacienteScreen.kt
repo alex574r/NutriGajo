@@ -21,6 +21,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -76,7 +77,14 @@ fun InicioPacienteScreen(
         estado.cargando -> PantallaCarga(conCabecera = true)
         vinculo == null && enMapa -> {
             BackHandler { enMapa = false }
-            MapaScreen(estado = mapa, onActualizar = mapaVm::cargar, onVolver = { enMapa = false })
+            val cache = LocalContext.current.cacheDir
+            MapaScreen(
+                estado = mapa,
+                onActualizar = mapaVm::cargar,
+                onVolver = { enMapa = false },
+                onVerMas = { mapaVm.abrirFicha(it, cache) },
+                onCerrarFicha = mapaVm::cerrarFicha,
+            )
         }
         vinculo == null || (enExito && !celebrado) -> VincularScreen(
             estado = estado,

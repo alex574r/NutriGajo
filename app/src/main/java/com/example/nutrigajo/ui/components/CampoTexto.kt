@@ -40,6 +40,8 @@ fun CampoTexto(
     teclado: KeyboardOptions = KeyboardOptions.Default,
     transformacion: VisualTransformation = VisualTransformation.None,
     extremo: (@Composable () -> Unit)? = null,
+    // más de una línea para textos largos (el campo no crece: desplaza)
+    lineas: Int = 1,
 ) {
     val colores = MaterialTheme.colorScheme
     val interaccion = remember { MutableInteractionSource() }
@@ -68,7 +70,9 @@ fun CampoTexto(
                 trailingIcon = extremo,
                 visualTransformation = transformacion,
                 keyboardOptions = teclado,
-                singleLine = true,
+                singleLine = lineas == 1,
+                minLines = lineas,
+                maxLines = lineas,
                 interactionSource = interaccion,
                 shape = forma,
                 colors = TextFieldDefaults.colors(
