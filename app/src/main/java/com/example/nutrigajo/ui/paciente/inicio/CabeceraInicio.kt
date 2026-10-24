@@ -88,7 +88,8 @@ fun CabeceraInicio(
                 Avatar(nombre, imagenAvatar, transicion, onPerfil)
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(
-                        text = stringResource(R.string.inicio_hola, nombre),
+                        // solo el primer nombre: el completo no cabe y se cortaba con puntos suspensivos
+                        text = stringResource(R.string.inicio_hola, nombre.trim().substringBefore(' ')),
                         style = MaterialTheme.typography.headlineMedium,
                         color = Color.White,
                         maxLines = 1,
