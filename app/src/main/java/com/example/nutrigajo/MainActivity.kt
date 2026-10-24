@@ -39,6 +39,7 @@ import com.example.nutrigajo.ui.shared.registro.RegistroScreen
 import com.example.nutrigajo.ui.shared.registro.RolScreen
 import com.example.nutrigajo.ui.shared.splash.SplashScreen
 import com.example.nutrigajo.ui.theme.NutriGajoTheme
+import com.google.android.gms.maps.MapsInitializer
 
 private const val CLAVE_ONBOARDING_VISTO = "onboarding_visto"
 
@@ -58,6 +59,8 @@ class MainActivity : ComponentActivity() {
         installSplashScreen()
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        // CameraUpdateFactory (usado antes de que el mapa exista) falla si el SDK de Maps no está inicializado
+        MapsInitializer.initialize(applicationContext)
         setContent {
             NutriGajoTheme {
                 val auth: AuthViewModel = viewModel()
