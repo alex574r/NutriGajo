@@ -170,6 +170,78 @@ service cloud.firestore {
       allow delete: if request.auth != null && request.auth.uid == uid;
     }
 
+    function citaRef(id) {
+      return /databases/$(database)/documents/citas/$(id);
+    }
+    function directorioRef(uid) {
+      return /databases/$(database)/documents/directorio/$(uid);
+    }
+
+    // Hora ya pedida a un nutriólogo (el id es el inicio en milisegundos). La ve cualquier sesión para no ofrecerla;
+    // no lleva datos del paciente. La crea el paciente en el mismo lote que su cita y, al ser el id el inicio, dos
+    // pacientes no pueden tomar la misma hora: la segunda creación sería una actualización y se rechaza.
+    // La libera el lote que rechaza o cancela la cita.
+    match /directorio/{nutriologoId}/ocupados/{inicio} {
+      allow read: if request.auth != null;
+
+      allow create: if request.auth != null
+        && request.resource.data.keys().hasOnly(['citaId', 'inicio'])
+        && request.resource.data.keys().hasAll(['citaId', 'inicio'])
+        && request.resource.data.citaId is string
+        && request.resource.data.inicio is int
+        && string(request.resource.data.inicio) == inicio
+        && !exists(citaRef(request.resource.data.citaId))
+        && getAfter(citaRef(request.resource.data.citaId)).data.nutriologoId == nutriologoId
+        && getAfter(citaRef(request.resource.data.citaId)).data.usuarioId == request.auth.uid
+        && getAfter(citaRef(request.resource.data.citaId)).data.inicio == request.resource.data.inicio
+        && getAfter(citaRef(request.resource.data.citaId)).data.estado == 'PENDIENTE';
+
+      allow update: if false;
+
+      allow delete: if request.auth != null
+        && (get(citaRef(resource.data.citaId)).data.nutriologoId == request.auth.uid
+            || get(citaRef(resource.data.citaId)).data.usuarioId == request.auth.uid)
+        && getAfter(citaRef(resource.data.citaId)).data.estado in ['RECHAZADA', 'CANCELADA'];
+    }
+
+    // Cita que un paciente pide a un nutriólogo del directorio. La ven los dos. El paciente la crea pendiente, con su
+    // nombre y el del consultorio tal como están registrados; el nutriólogo confirma o rechaza lo pendiente y cancela lo
+    // confirmado; el paciente cancela la suya. Solo cambian el estado y la fecha de actualización.
+    match /citas/{citaId} {
+      allow read: if request.auth != null
+        && (resource.data.nutriologoId == request.auth.uid || resource.data.usuarioId == request.auth.uid);
+
+      allow create: if request.auth != null
+        && rolDe(request.auth.uid) == 'PACIENTE'
+        && request.resource.data.keys().hasOnly(['nutriologoId', 'nutriologoNombre', 'usuarioId', 'pacienteNombre',
+                                                  'inicio', 'estado', 'creadaEn', 'actualizadaEn'])
+        && request.resource.data.keys().hasAll(['nutriologoId', 'nutriologoNombre', 'usuarioId', 'pacienteNombre',
+                                                 'inicio', 'estado', 'creadaEn', 'actualizadaEn'])
+        && request.resource.data.usuarioId == request.auth.uid
+        && request.resource.data.pacienteNombre == get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.nombre
+        && request.resource.data.nutriologoNombre == get(directorioRef(request.resource.data.nutriologoId)).data.nombre
+        && request.resource.data.estado == 'PENDIENTE'
+        && request.resource.data.inicio is int
+        && request.resource.data.inicio > request.time.toMillis()
+        && request.resource.data.inicio <= request.time.toMillis() + 5184000000
+        && request.resource.data.inicio % 900000 == 0
+        && request.resource.data.creadaEn is int
+        && request.resource.data.actualizadaEn is int
+        && existsAfter(/databases/$(database)/documents/directorio/$(request.resource.data.nutriologoId)/ocupados/$(string(request.resource.data.inicio)));
+
+      allow update: if request.auth != null
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['estado', 'actualizadaEn'])
+        && request.resource.data.actualizadaEn is int
+        && ((resource.data.nutriologoId == request.auth.uid
+             && ((resource.data.estado == 'PENDIENTE' && request.resource.data.estado in ['CONFIRMADA', 'RECHAZADA'])
+                 || (resource.data.estado == 'CONFIRMADA' && request.resource.data.estado == 'CANCELADA')))
+            || (resource.data.usuarioId == request.auth.uid
+                && resource.data.estado in ['PENDIENTE', 'CONFIRMADA']
+                && request.resource.data.estado == 'CANCELADA'));
+
+      allow delete: if false;
+    }
+
     // Códigos con los que un nutriólogo invita a un paciente. El id del documento es el código.
     match /codigosVinculacion/{codigo} {
       // Validar un código concreto lo puede hacer cualquier sesión; listarlos, solo su dueño.

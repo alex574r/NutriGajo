@@ -323,7 +323,7 @@
     <string name="mapa_volver">Volver</string>
     <string name="mapa_titulo">Nutriólogos cerca de ti</string>
     <string name="mapa_verificado">Nutriólogo verificado</string>
-    <string name="mapa_ayuda">Toca un marcador y luego «ver más» para conocer al nutriólogo. Para vincularte, pídele su código de vinculación.</string>
+    <string name="mapa_ayuda">Toca un marcador y luego «ver más» para conocer al nutriólogo y agendar una cita. Para vincularte, pídele su código de vinculación.</string>
     <string name="mapa_vacio">Aún no hay nutriólogos verificados en el mapa.</string>
     <string name="ubicacion_titulo">Tu consultorio en el mapa</string>
     <string name="ubicacion_tarjeta_boton">Ubicar en el mapa</string>
@@ -405,4 +405,53 @@
     <string name="perfil_contrasena_enviar">Enviar correo</string>
     <string name="perfil_contrasena_enviado">Revisa %1$s: ahí está el enlace para cambiar tu contraseña.</string>
     <string name="perfil_listo">Listo</string>
+
+    <string name="agendar_boton">agendar cita</string>
+    <string name="agendar_titulo">Agendar cita</string>
+    <string name="agendar_con">con %1$s</string>
+    <string name="agendar_dia">Elige un día</string>
+    <string name="agendar_hora">Elige una hora</string>
+    <string name="agendar_cargando">Cargando horarios</string>
+    <string name="agendar_sin_horarios">Este nutriólogo no tiene horarios libres en los próximos días.</string>
+    <string name="agendar_enviar">solicitar cita</string>
+    <string name="agendar_ayuda">El nutriólogo confirmará tu solicitud. La verás en «Mis citas».</string>
+    <string name="agendar_error_ocupada">Esa hora ya no está disponible. Elige otra.</string>
+    <string name="agendar_enviada_titulo">Solicitud enviada</string>
+    <string name="agendar_enviada_ayuda">%1$s la revisará y la confirmará. Mira su estado en «Mis citas».</string>
+    <string name="agendar_listo">listo</string>
+
+    <string name="citas_titulo_paciente">Mis citas</string>
+    <string name="citas_titulo_nutriologo">Citas</string>
+    <string name="citas_vacio_paciente">Aún no has pedido ninguna cita. Busca un nutriólogo en el mapa, abre su ficha y elige una hora.</string>
+    <string name="citas_vacio_nutriologo">Todavía no te han pedido citas. Los pacientes las piden desde tu ficha en el mapa.</string>
+    <string name="citas_por_confirmar">Por confirmar</string>
+    <string name="citas_confirmadas">Confirmadas</string>
+    <string name="citas_historial">Historial</string>
+    <string name="cita_estado_pendiente">Por confirmar</string>
+    <string name="cita_estado_confirmada">Confirmada</string>
+    <string name="cita_estado_rechazada">Rechazada</string>
+    <string name="cita_estado_cancelada">Cancelada</string>
+    <string name="cita_estado_vencida">Vencida</string>
+    <string name="cita_confirmar">confirmar</string>
+    <string name="cita_rechazar">rechazar</string>
+    <string name="cita_cancelar">cancelar cita</string>
+    <string name="cita_dialogo_rechazar">¿Rechazar la solicitud?</string>
+    <string name="cita_dialogo_cancelar">¿Cancelar la cita?</string>
+    <string name="cita_dialogo_ayuda">La hora quedará libre para otros pacientes.</string>
+    <string name="cita_dialogo_si_rechazar">Sí, rechazar</string>
+    <string name="cita_dialogo_si_cancelar">Sí, cancelar</string>
+    <string name="cita_dialogo_volver">Volver</string>
+    <string name="vincular_mis_citas">Mis citas</string>
+    <string name="nutri_atajo_citas">Citas</string>
+    <string name="nutri_citas_titulo">Citas</string>
+    <string name="nutri_citas_sin_pendientes">Sin solicitudes por confirmar</string>
+    <plurals name="nutri_citas_pendientes">
+        <item quantity="one">%d solicitud por confirmar</item>
+        <item quantity="other">%d solicitudes por confirmar</item>
+    </plurals>
+    <string name="nutri_citas_sin_confirmadas">Sin citas confirmadas</string>
+    <plurals name="nutri_citas_confirmadas">
+        <item quantity="one">%d cita confirmada</item>
+        <item quantity="other">%d citas confirmadas</item>
+    </plurals>
 </resources>

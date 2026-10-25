@@ -35,6 +35,8 @@ import com.example.nutrigajo.ui.nutriologo.pacientes.PacientesViewModel
 import com.example.nutrigajo.ui.nutriologo.ubicacion.UbicacionScreen
 import com.example.nutrigajo.ui.nutriologo.verificacion.VerificacionScreen
 import com.example.nutrigajo.ui.nutriologo.verificacion.VerificacionViewModel
+import com.example.nutrigajo.ui.shared.citas.CitasScreen
+import com.example.nutrigajo.ui.shared.citas.CitasViewModel
 import com.example.nutrigajo.ui.shared.expediente.ExpedienteFlujo
 
 private enum class Pestana { INICIO, PACIENTES, PERFIL }
@@ -50,8 +52,10 @@ fun InicioNutriologoScreen(
     vm: PacientesViewModel = viewModel(key = perfil.uid),
     // clave propia: dos ViewModels con la misma clave se pisarían
     verificacionVm: VerificacionViewModel = viewModel(key = "verificacion-${perfil.uid}"),
+    citasVm: CitasViewModel = viewModel(key = "citas-${perfil.uid}"),
 ) {
     val estado by vm.estado.collectAsState()
+    val citas by citasVm.estado.collectAsState()
     val fotosPacientes by vm.fotosPacientes.collectAsState()
     // las fotos de los pacientes se piden cada vez que la lista cambia (al abrir y al actualizar)
     val cache = LocalContext.current.cacheDir
@@ -60,11 +64,13 @@ fun InicioNutriologoScreen(
     var pestana by rememberSaveable { mutableStateOf(Pestana.INICIO) }
     var enFormulario by rememberSaveable { mutableStateOf(false) }
     var enMapa by rememberSaveable { mutableStateOf(false) }
+    var enCitas by rememberSaveable { mutableStateOf(false) }
     var codigoAbierto by rememberSaveable { mutableStateOf(false) }
     var pacienteAbierto by rememberSaveable { mutableStateOf<String?>(null) }
     LaunchedEffect(Unit) {
         vm.cargar()
         verificacionVm.cargar()
+        citasVm.cargar(Rol.NUTRIOLOGO)
     }
     // al enviar la cédula la solicitud queda pendiente: se vuelve al inicio
     LaunchedEffect(verificacion.verificacion?.estado) {
@@ -81,12 +87,23 @@ fun InicioNutriologoScreen(
     val actualizar = {
         vm.cargar()
         verificacionVm.cargar()
+        citasVm.cargar(Rol.NUTRIOLOGO)
     }
     // sin cuenta verificada el mapa no está disponible: se lleva al perfil, donde está el estado de la verificación
     val irAlMapa = { if (aprobada) enMapa = true else pestana = Pestana.PERFIL }
 
     when {
         enMapa -> UbicacionScreen(perfil = perfil, onVolver = { enMapa = false })
+        enCitas -> {
+            BackHandler { enCitas = false }
+            CitasScreen(
+                rol = Rol.NUTRIOLOGO,
+                estado = citas,
+                onActualizar = { citasVm.cargar(Rol.NUTRIOLOGO) },
+                onCambiar = citasVm::cambiarEstado,
+                onVolver = { enCitas = false },
+            )
+        }
         abierto != null -> ExpedienteFlujo(
             pacienteId = abierto.id,
             nombrePaciente = abierto.nombre,
@@ -127,6 +144,8 @@ fun InicioNutriologoScreen(
                                 onCodigo = { codigoAbierto = true },
                                 onGenerar = { vm.generarCodigo(perfil.nombre) },
                                 onMapa = irAlMapa,
+                                citas = citas,
+                                onCitas = { enCitas = true },
                                 onVerificar = verificar,
                                 onActualizar = actualizar,
                                 onPaciente = { pacienteAbierto = it.id },

@@ -8,6 +8,8 @@ package com.example.nutrigajo.data.remote.firebase.firestore
  * verificaciones/{uid}                solicitud de verificación del nutriólogo (cédula, estado PENDIENTE|APROBADA|RECHAZADA)
  * cedulas/{numero}                    reserva de una cédula por un nutriólogo (una cédula, una cuenta)
  * directorio/{uid}                    consultorio de un nutriólogo verificado en el mapa (nombre, lat, lng)
+ *   └─ ocupados/{inicio}              hora ya pedida (citaId, inicio); sin datos del paciente, la ve cualquier sesión
+ * citas/{citaId}                      cita que un paciente pide a un nutriólogo (estado PENDIENTE|CONFIRMADA|RECHAZADA|CANCELADA)
  * pacientes/{pacienteId}              nutriologoId, usuarioId, correoVinculacion…
  *   ├─ mediciones/{id}
  *   ├─ planes/{id}                    comidas[] embebidas
@@ -24,6 +26,8 @@ object FirestorePaths {
     const val VERIFICACIONES = "verificaciones"
     const val CEDULAS = "cedulas"
     const val DIRECTORIO = "directorio"
+    const val OCUPADOS = "ocupados"
+    const val CITAS = "citas"
     const val PACIENTES = "pacientes"
     const val MEDICIONES = "mediciones"
     const val PLANES = "planes"

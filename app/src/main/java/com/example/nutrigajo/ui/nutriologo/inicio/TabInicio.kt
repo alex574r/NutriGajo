@@ -48,6 +48,7 @@ import androidx.compose.ui.unit.sp
 import com.example.nutrigajo.R
 import com.example.nutrigajo.ui.shared.perfil.rememberFotoAvatar
 import com.example.nutrigajo.domain.model.CodigoVinculacion
+import com.example.nutrigajo.domain.model.EstadoCita
 import com.example.nutrigajo.domain.model.PacienteResumen
 import com.example.nutrigajo.domain.model.Perfil
 import com.example.nutrigajo.ui.components.ALTO_BARRA_INFERIOR
@@ -56,18 +57,20 @@ import com.example.nutrigajo.ui.components.AccionTarjeta
 import com.example.nutrigajo.ui.components.AvisoInformativo
 import com.example.nutrigajo.ui.components.CabeceraUsuario
 import com.example.nutrigajo.ui.components.Etiqueta
+import com.example.nutrigajo.ui.components.FilaAjuste
 import com.example.nutrigajo.ui.components.TarjetaDestacada
 import com.example.nutrigajo.ui.nutriologo.pacientes.PacientesEstado
 import com.example.nutrigajo.ui.nutriologo.verificacion.TarjetaVerificacion
 import com.example.nutrigajo.ui.nutriologo.verificacion.VerificacionEstado
 import com.example.nutrigajo.ui.paciente.inicio.EncabezadoSeccion
+import com.example.nutrigajo.ui.shared.citas.CitasEstado
 import com.example.nutrigajo.ui.theme.Gray100
 
 private val MARGEN = 20.dp
 private const val MAX_RECIENTES = 6
 
 // Inicio del nutriólogo con el diseño de las secciones del paciente: cabecera, atajos, aviso, el código de
-// vinculación como tarjeta destacada, los pacientes recientes y el mapa. Todo viene de datos reales.
+// vinculación como tarjeta destacada, las citas por atender, los pacientes recientes y el mapa. Todo viene de datos reales.
 @Composable
 fun TabInicio(
     perfil: Perfil,
@@ -80,6 +83,8 @@ fun TabInicio(
     onCodigo: () -> Unit,
     onGenerar: () -> Unit,
     onMapa: () -> Unit,
+    citas: CitasEstado,
+    onCitas: () -> Unit,
     onVerificar: () -> Unit,
     onActualizar: () -> Unit,
     onPaciente: (PacienteResumen) -> Unit,
@@ -87,6 +92,9 @@ fun TabInicio(
     transicion: TransicionPerfil? = null,
 ) {
     val recientes = remember(estado.pacientes) { estado.pacientes.sortedByDescending { it.fechaAlta }.take(MAX_RECIENTES) }
+    val ahora = remember(citas.citas) { System.currentTimeMillis() }
+    val porConfirmar = remember(citas.citas) { citas.citas.count { it.vigente(ahora) && it.estado == EstadoCita.PENDIENTE } }
+    val confirmadas = remember(citas.citas) { citas.citas.count { it.vigente(ahora) && it.estado == EstadoCita.CONFIRMADA } }
     LazyColumn(
         modifier = modifier.fillMaxSize().statusBarsPadding(),
         contentPadding = PaddingValues(
@@ -109,7 +117,7 @@ fun TabInicio(
                 transicion = transicion,
             )
         }
-        item { Atajos(aprobada, onPacientes, onCodigo, onMapa) }
+        item { Atajos(aprobada, onPacientes, onCodigo, onCitas, onMapa) }
         item {
             AvisoInformativo(
                 if (estado.pacientes.isEmpty()) stringResource(R.string.nutri_aviso_vacio)
@@ -122,6 +130,29 @@ fun TabInicio(
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 EncabezadoSeccion(stringResource(R.string.nutri_codigo_titulo))
                 CodigoDestacado(estado.codigo, estado.generando, onGenerar, Modifier.padding(horizontal = MARGEN))
+            }
+        }
+        // las citas solo llegan a quien está en el mapa, es decir, con la cuenta verificada
+        if (aprobada) {
+            item {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    EncabezadoSeccion(stringResource(R.string.nutri_citas_titulo))
+                    FilaAjuste(
+                        icono = R.drawable.ic_calendario,
+                        titulo = if (porConfirmar > 0) {
+                            pluralStringResource(R.plurals.nutri_citas_pendientes, porConfirmar, porConfirmar)
+                        } else {
+                            stringResource(R.string.nutri_citas_sin_pendientes)
+                        },
+                        modifier = Modifier.padding(horizontal = MARGEN),
+                        etiqueta = if (confirmadas > 0) {
+                            pluralStringResource(R.plurals.nutri_citas_confirmadas, confirmadas, confirmadas)
+                        } else {
+                            stringResource(R.string.nutri_citas_sin_confirmadas)
+                        },
+                        onClick = onCitas,
+                    )
+                }
             }
         }
         item {
@@ -161,16 +192,19 @@ fun TabInicio(
     }
 }
 
-// Atajos a lo que el nutriólogo usa más; el del mapa solo aparece con la cuenta verificada.
+// Atajos a lo que el nutriólogo usa más; los de citas y mapa solo aparecen con la cuenta verificada.
 @Composable
-private fun Atajos(aprobada: Boolean, onPacientes: () -> Unit, onCodigo: () -> Unit, onMapa: () -> Unit) {
+private fun Atajos(aprobada: Boolean, onPacientes: () -> Unit, onCodigo: () -> Unit, onCitas: () -> Unit, onMapa: () -> Unit) {
     Row(
         modifier = Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = MARGEN),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Atajo(R.drawable.ic_pacientes, R.string.nutri_atajo_pacientes, onPacientes)
         Atajo(R.drawable.ic_compartir, R.string.nutri_atajo_codigo, onCodigo)
-        if (aprobada) Atajo(R.drawable.ic_ubicacion, R.string.nutri_atajo_mapa, onMapa)
+        if (aprobada) {
+            Atajo(R.drawable.ic_calendario, R.string.nutri_atajo_citas, onCitas)
+            Atajo(R.drawable.ic_ubicacion, R.string.nutri_atajo_mapa, onMapa)
+        }
     }
 }
 

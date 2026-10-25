@@ -56,6 +56,7 @@ fun VincularScreen(
     onCanjear: (codigo: String) -> Unit,
     onEditar: () -> Unit,
     onMapa: () -> Unit,
+    onCitas: () -> Unit,
     onCerrarSesion: () -> Unit,
     modifier: Modifier = Modifier,
     // el código ya se canjeó: las casillas se funden en la cápsula "Vinculado" mientras llega el inicio
@@ -134,6 +135,13 @@ fun VincularScreen(
                 textDecoration = TextDecoration.Underline,
             )
         }
+        Text(
+            text = stringResource(R.string.vincular_mis_citas),
+            modifier = Modifier.clickable(role = Role.Button, onClick = onCitas).padding(horizontal = MARGEN, vertical = 14.dp),
+            style = MaterialTheme.typography.labelLarge,
+            color = colores.primary,
+            textDecoration = TextDecoration.Underline,
+        )
         Spacer(Modifier.navigationBarsPadding().height(8.dp))
     }
 }
@@ -176,6 +184,6 @@ private fun BarraSuperior(onAtras: () -> Unit, modifier: Modifier = Modifier) {
 @Composable
 private fun VincularScreenPreview() {
     NutriGajoTheme {
-        VincularScreen(estado = VinculoEstado(cargando = false), onCanjear = {}, onEditar = {}, onMapa = {}, onCerrarSesion = {})
+        VincularScreen(estado = VinculoEstado(cargando = false), onCanjear = {}, onEditar = {}, onMapa = {}, onCitas = {}, onCerrarSesion = {})
     }
 }

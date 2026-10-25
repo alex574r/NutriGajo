@@ -49,11 +49,11 @@ private val MARGEN = 16.dp
 // el interlineado de la escala no sirve para texto de varias líneas
 private val TEXTO_LARGO @Composable get() = MaterialTheme.typography.bodyMedium.copy(lineHeight = 1.4.em)
 
-// La ficha del nutriólogo que el paciente abre con «Ver más»: su foto, su cédula y lo que contó de su consultorio.
-// Solo se muestra lo que el nutriólogo llenó.
+// La ficha del nutriólogo que el paciente abre con «Ver más»: su foto, su cédula y lo que contó de su consultorio,
+// con el botón para agendar una cita. Solo se muestra lo que el nutriólogo llenó.
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun FichaNutriologo(nutriologo: NutriologoEnMapa, foto: Bitmap?, onCerrar: () -> Unit) {
+fun FichaNutriologo(nutriologo: NutriologoEnMapa, foto: Bitmap?, onCerrar: () -> Unit, onAgendar: () -> Unit) {
     val colores = MaterialTheme.colorScheme
     val contexto = LocalContext.current
     val consultorio = nutriologo.consultorio
@@ -133,10 +133,15 @@ fun FichaNutriologo(nutriologo: NutriologoEnMapa, foto: Bitmap?, onCerrar: () ->
             }
 
             BotonPrimario(
+                texto = stringResource(R.string.agendar_boton),
+                onClick = onAgendar,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            BotonPrimario(
                 texto = stringResource(R.string.ficha_como_llegar),
                 onClick = { comoLlegar(contexto, nutriologo.lat, nutriologo.lng) },
                 modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(containerColor = colores.onBackground, contentColor = colores.background),
+                colors = ButtonDefaults.buttonColors(containerColor = colores.surfaceVariant, contentColor = colores.onBackground),
             )
         }
     }

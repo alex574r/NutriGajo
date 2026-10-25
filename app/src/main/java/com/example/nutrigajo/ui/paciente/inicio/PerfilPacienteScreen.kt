@@ -18,6 +18,7 @@ fun PerfilPacienteScreen(
     perfil: Perfil,
     vinculo: Vinculo,
     onExpediente: () -> Unit,
+    onCitas: () -> Unit,
     onVolver: () -> Unit,
     onCerrarSesion: () -> Unit,
     transicion: TransicionPerfil? = null,
@@ -31,7 +32,7 @@ fun PerfilPacienteScreen(
             perfil.altaCorta()?.let { stringResource(R.string.perfil_desde, it) },
         ),
         principal = AccionPerfil(R.drawable.ic_corazon, R.string.inicio_menu_expediente, onExpediente),
-        secundaria = null,
+        secundaria = AccionPerfil(R.drawable.ic_calendario, R.string.citas_titulo_paciente, onCitas),
         datos = datosBase(perfil, R.string.rol_paciente) +
             DatoPerfil(R.drawable.ic_pacientes, R.string.perfil_dato_nutriologo, vinculo.nutriologoNombre),
         onCerrarSesion = onCerrarSesion,

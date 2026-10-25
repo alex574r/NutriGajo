@@ -64,7 +64,7 @@ import kotlinx.coroutines.launch
 private const val ZOOM_ZONA = 13f
 
 // El paciente ve en el mapa a los nutriólogos verificados; al tocar un marcador el mapa lo centra y sale una tarjeta con
-// «ver más», que abre su ficha. Para vincularse sigue haciendo falta el código del nutriólogo.
+// «ver más», que abre su ficha y desde ahí puede agendar una cita. Para vincularse sigue haciendo falta el código del nutriólogo.
 @Composable
 fun MapaScreen(
     estado: MapaEstado,
@@ -72,6 +72,7 @@ fun MapaScreen(
     onVolver: () -> Unit,
     onVerMas: (NutriologoEnMapa) -> Unit,
     onCerrarFicha: () -> Unit,
+    onAgendar: (NutriologoEnMapa) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colores = MaterialTheme.colorScheme
@@ -153,7 +154,7 @@ fun MapaScreen(
             }
             TarjetaAnimada(elegido, onVerMas)
         }
-        estado.seleccionado?.let { FichaNutriologo(it, estado.foto, onCerrarFicha) }
+        estado.seleccionado?.let { FichaNutriologo(it, estado.foto, onCerrarFicha, onAgendar = { onAgendar(it) }) }
         Column(
             modifier = Modifier.fillMaxWidth().padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),

@@ -35,8 +35,12 @@ import com.example.nutrigajo.ui.components.BarraEstadoClara
 import com.example.nutrigajo.ui.components.CambioConAvatar
 import com.example.nutrigajo.ui.components.PantallaCarga
 import com.example.nutrigajo.ui.components.TransicionPerfil
+import com.example.nutrigajo.ui.paciente.citas.AgendaViewModel
+import com.example.nutrigajo.ui.paciente.citas.AgendarCitaSheet
 import com.example.nutrigajo.ui.paciente.mapa.MapaScreen
 import com.example.nutrigajo.ui.paciente.mapa.MapaViewModel
+import com.example.nutrigajo.ui.shared.citas.CitasScreen
+import com.example.nutrigajo.ui.shared.citas.CitasViewModel
 import com.example.nutrigajo.ui.shared.expediente.ExpedienteEstado
 import com.example.nutrigajo.ui.shared.expediente.ExpedienteFlujo
 import com.example.nutrigajo.ui.shared.expediente.ExpedienteViewModel
@@ -53,14 +57,20 @@ fun InicioPacienteScreen(
     vm: VinculoViewModel = viewModel(key = perfil.uid),
     // claves propias: dos ViewModels con la misma clave se pisarían
     mapaVm: MapaViewModel = viewModel(key = "mapa-${perfil.uid}"),
+    agendaVm: AgendaViewModel = viewModel(key = "agenda-${perfil.uid}"),
+    citasVm: CitasViewModel = viewModel(key = "citas-${perfil.uid}"),
 ) {
     val estado by vm.estado.collectAsState()
     val mapa by mapaVm.estado.collectAsState()
+    val agenda by agendaVm.estado.collectAsState()
+    val citas by citasVm.estado.collectAsState()
     var enMapa by rememberSaveable { mutableStateOf(false) }
     var enExpediente by rememberSaveable { mutableStateOf(false) }
     var enPerfil by rememberSaveable { mutableStateOf(false) }
+    var enCitas by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(Unit) { vm.cargar() }
     LaunchedEffect(enMapa) { if (enMapa) mapaVm.cargar() }
+    LaunchedEffect(enCitas) { if (enCitas) citasVm.cargar(Rol.PACIENTE) }
 
     val vinculo = estado.vinculo
     // al canjear el código se deja ver el acierto un momento antes de abrir el inicio
@@ -75,6 +85,16 @@ fun InicioPacienteScreen(
     }
     when {
         estado.cargando -> PantallaCarga(conCabecera = true)
+        enCitas -> {
+            BackHandler { enCitas = false }
+            CitasScreen(
+                rol = Rol.PACIENTE,
+                estado = citas,
+                onActualizar = { citasVm.cargar(Rol.PACIENTE) },
+                onCambiar = citasVm::cambiarEstado,
+                onVolver = { enCitas = false },
+            )
+        }
         vinculo == null && enMapa -> {
             BackHandler { enMapa = false }
             val cache = LocalContext.current.cacheDir
@@ -84,6 +104,14 @@ fun InicioPacienteScreen(
                 onVolver = { enMapa = false },
                 onVerMas = { mapaVm.abrirFicha(it, cache) },
                 onCerrarFicha = mapaVm::cerrarFicha,
+                onAgendar = agendaVm::abrir,
+            )
+            AgendarCitaSheet(
+                estado = agenda,
+                onDia = agendaVm::elegirDia,
+                onHora = agendaVm::elegirHora,
+                onEnviar = { agendaVm.enviar(perfil) },
+                onCerrar = agendaVm::cerrar,
             )
         }
         vinculo == null || (enExito && !celebrado) -> VincularScreen(
@@ -95,6 +123,7 @@ fun InicioPacienteScreen(
             },
             onEditar = vm::limpiarError,
             onMapa = { enMapa = true },
+            onCitas = { enCitas = true },
             onCerrarSesion = onCerrarSesion,
         )
         enExpediente -> ExpedienteFlujo(
@@ -111,6 +140,7 @@ fun InicioPacienteScreen(
                     perfil = perfil,
                     vinculo = vinculo,
                     onExpediente = { enExpediente = true },
+                    onCitas = { enCitas = true },
                     onVolver = { enPerfil = false },
                     onCerrarSesion = onCerrarSesion,
                     transicion = transicion,
