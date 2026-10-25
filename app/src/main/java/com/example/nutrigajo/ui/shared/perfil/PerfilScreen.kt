@@ -7,16 +7,27 @@ import androidx.annotation.StringRes
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -32,6 +43,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
@@ -59,6 +71,21 @@ class DatoPerfil(
     @param:StringRes val etiqueta: Int,
     val valor: String,
 )
+
+// La fila sube desde 10 dp mientras se hace visible, con un retraso por posición para que lleguen en cascada.
+@Composable
+private fun Aparece(indice: Int, animar: Boolean, contenido: @Composable () -> Unit) {
+    val progreso = remember { Animatable(if (animar) 0f else 1f) }
+    LaunchedEffect(Unit) {
+        if (animar) progreso.animateTo(1f, tween(260, delayMillis = 20 + indice * 40, easing = FastOutSlowInEasing))
+    }
+    Box(
+        Modifier.graphicsLayer {
+            alpha = progreso.value
+            translationY = (1f - progreso.value) * 10.dp.toPx()
+        },
+    ) { contenido() }
+}
 
 // Mes y año del alta ("oct 2026"), o null si la cuenta no lo trae.
 fun Perfil.altaCorta(): String? = fechaAlta?.let {
@@ -110,6 +137,8 @@ fun PerfilScreen(
     }
     LaunchedEffect(perfil.portadaVersion) { vm.cargarFoto(FotoPerfil.PORTADA, contexto.cacheDir, perfil.uid, perfil.portadaVersion) }
     var pestana by rememberSaveable { mutableIntStateOf(0) }
+    // las filas solo se animan al cambiar de pestaña, no al abrir el perfil
+    var huboCambio by remember { mutableStateOf(false) }
     var cambiandoContrasena by rememberSaveable { mutableStateOf(false) }
     val version = remember { runCatching { contexto.packageManager.getPackageInfo(contexto.packageName, 0).versionName }.getOrNull().orEmpty() }
 
@@ -138,49 +167,77 @@ fun PerfilScreen(
             )
         }
         (portada.error ?: avatar.error)?.let { item { AlertaError(stringResource(it), Modifier.padding(horizontal = MARGEN)) } }
-        item { SelectorPestanas(PESTANAS, pestana, { pestana = it }, Modifier.padding(horizontal = MARGEN, vertical = 8.dp)) }
-        if (pestana == 0) {
-            items(datos) {
-                FilaAjuste(it.icono, titulo = it.valor, modifier = Modifier.padding(horizontal = MARGEN), etiqueta = stringResource(it.etiqueta))
-            }
-            item { datosExtra() }
-        } else {
-            item {
-                FilaAjuste(
-                    icono = R.drawable.ic_campana,
-                    titulo = stringResource(R.string.inicio_notificaciones),
-                    modifier = Modifier.padding(horizontal = MARGEN),
-                    onClick = {
-                        contexto.startActivity(
-                            Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, contexto.packageName),
-                        )
-                    },
-                )
-            }
-            item {
-                FilaAjuste(
-                    icono = R.drawable.ic_lock,
-                    titulo = stringResource(R.string.perfil_contrasena_titulo),
-                    modifier = Modifier.padding(horizontal = MARGEN),
-                    onClick = { cambiandoContrasena = true },
-                )
-            }
-            item {
-                FilaAjuste(
-                    icono = R.drawable.ic_informacion,
-                    titulo = version,
-                    modifier = Modifier.padding(horizontal = MARGEN),
-                    etiqueta = stringResource(R.string.perfil_version),
-                )
-            }
-            item {
-                FilaAjuste(
-                    icono = R.drawable.ic_flecha_atras,
-                    titulo = stringResource(R.string.inicio_cerrar_sesion),
-                    modifier = Modifier.padding(horizontal = MARGEN),
-                    destructiva = true,
-                    onClick = onCerrarSesion,
-                )
+        item {
+            SelectorPestanas(
+                PESTANAS,
+                pestana,
+                {
+                    huboCambio = true
+                    pestana = it
+                },
+                Modifier.padding(horizontal = MARGEN, vertical = 8.dp),
+            )
+        }
+        // El contenido de la pestaña entra desde el lado hacia el que se va (y el anterior sale al contrario) y sus filas
+        // aparecen una tras otra; al abrir el perfil las filas ya salen puestas.
+        item {
+            AnimatedContent(
+                targetState = pestana,
+                transitionSpec = {
+                    val sentido = if (targetState > initialState) 1 else -1
+                    (slideInHorizontally(tween(320, easing = FastOutSlowInEasing)) { sentido * it / 5 } + fadeIn(tween(220, delayMillis = 30))) togetherWith
+                        (slideOutHorizontally(tween(220, easing = FastOutSlowInEasing)) { -sentido * it / 5 } + fadeOut(tween(120)))
+                },
+                label = "pestana",
+            ) { actual ->
+                Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (actual == 0) {
+                        datos.forEachIndexed { indice, dato ->
+                            Aparece(indice, huboCambio) {
+                                FilaAjuste(dato.icono, titulo = dato.valor, modifier = Modifier.padding(horizontal = MARGEN), etiqueta = stringResource(dato.etiqueta))
+                            }
+                        }
+                        Aparece(datos.size, huboCambio) { datosExtra() }
+                    } else {
+                        Aparece(0, huboCambio) {
+                            FilaAjuste(
+                                icono = R.drawable.ic_campana,
+                                titulo = stringResource(R.string.inicio_notificaciones),
+                                modifier = Modifier.padding(horizontal = MARGEN),
+                                onClick = {
+                                    contexto.startActivity(
+                                        Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, contexto.packageName),
+                                    )
+                                },
+                            )
+                        }
+                        Aparece(1, huboCambio) {
+                            FilaAjuste(
+                                icono = R.drawable.ic_lock,
+                                titulo = stringResource(R.string.perfil_contrasena_titulo),
+                                modifier = Modifier.padding(horizontal = MARGEN),
+                                onClick = { cambiandoContrasena = true },
+                            )
+                        }
+                        Aparece(2, huboCambio) {
+                            FilaAjuste(
+                                icono = R.drawable.ic_informacion,
+                                titulo = version,
+                                modifier = Modifier.padding(horizontal = MARGEN),
+                                etiqueta = stringResource(R.string.perfil_version),
+                            )
+                        }
+                        Aparece(3, huboCambio) {
+                            FilaAjuste(
+                                icono = R.drawable.ic_flecha_atras,
+                                titulo = stringResource(R.string.inicio_cerrar_sesion),
+                                modifier = Modifier.padding(horizontal = MARGEN),
+                                destructiva = true,
+                                onClick = onCerrarSesion,
+                            )
+                        }
+                    }
+                }
             }
         }
     }
