@@ -1,6 +1,6 @@
 package com.example.nutrigajo.domain.model
 
-// Código con el que un nutriólogo invita a un paciente; se escribe con guion (XXXX-XXXX) pero se guarda sin él.
+// Código de 4 dígitos con el que un nutriólogo invita a un paciente; si algún día es más largo, se muestra en grupos de 4 con guion.
 data class CodigoVinculacion(val codigo: String, val expiraEn: Long) {
     val formateado: String get() = codigo.chunked(4).joinToString("-")
 }

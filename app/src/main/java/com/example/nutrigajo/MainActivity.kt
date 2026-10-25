@@ -40,8 +40,11 @@ import com.example.nutrigajo.ui.shared.registro.RolScreen
 import com.example.nutrigajo.ui.shared.splash.SplashScreen
 import com.example.nutrigajo.ui.theme.NutriGajoTheme
 import com.google.android.gms.maps.MapsInitializer
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 
 private const val CLAVE_ONBOARDING_VISTO = "onboarding_visto"
+private var emuladorConectado = false
 
 private enum class Paso { SPLASH, MOTIVACION, BIENVENIDA, ONBOARDING, ROL, REGISTRO, LOGIN, INICIO }
 
@@ -61,6 +64,12 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         // CameraUpdateFactory (usado antes de que el mapa exista) falla si el SDK de Maps no está inicializado
         MapsInitializer.initialize(applicationContext)
+        if (BuildConfig.USAR_EMULADOR && !emuladorConectado) {
+            // debe ir antes del primer uso de Auth y Firestore; solo una vez por proceso (la actividad se recrea al girar)
+            FirebaseAuth.getInstance().useEmulator("localhost", 9099)
+            FirebaseFirestore.getInstance().useEmulator("localhost", 8080)
+            emuladorConectado = true
+        }
         setContent {
             NutriGajoTheme {
                 val auth: AuthViewModel = viewModel()

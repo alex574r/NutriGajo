@@ -15,8 +15,10 @@ class VinculoException(val motivo: Motivo) : Exception(motivo.name) {
     enum class Motivo { INVALIDO, USADO, VENCIDO }
 }
 
-private const val ALFABETO = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789" // sin 0/O ni 1/I: se dictan y se leen sin confusión
-private const val LARGO_CODIGO = 8
+// ponytail: 4 dígitos son solo 10 000 códigos; con el código de un solo uso y vigencia basta para el piloto,
+// si hace falta más margen se sube LARGO_CODIGO (CampoCodigo y VincularScreen lo leen de aquí).
+private const val ALFABETO = "0123456789"
+private const val LARGO_CODIGO = 4
 private const val INTENTOS_CODIGO = 3
 private const val VIGENCIA_MS = 7L * 24 * 60 * 60 * 1000
 
@@ -39,6 +41,8 @@ class VinculacionRepository(
             .whereEqualTo("nutriologoId", uid)
             .whereEqualTo("usado", false)
             .get().await().documents
+            // los códigos largos de antes ya no se pueden canjear: se ignoran y el nutriólogo genera uno nuevo
+            .filter { it.id.length == LARGO_CODIGO }
             .mapNotNull { d -> d.getLong("expiraEn")?.takeIf { it > ahora }?.let { CodigoVinculacion(d.id, it) } }
             .maxByOrNull { it.expiraEn }
     }

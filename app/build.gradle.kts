@@ -38,7 +38,13 @@ android {
     }
 
     buildTypes {
+        debug {
+            // ./gradlew installDebug -PemuladorFirebase=true apunta Auth y Firestore a los emuladores locales
+            // (npx firebase emulators:start + adb reverse tcp:9099 y tcp:8080); sin la propiedad usa el Firebase real
+            buildConfigField("boolean", "USAR_EMULADOR", "${project.findProperty("emuladorFirebase") == "true"}")
+        }
         release {
+            buildConfigField("boolean", "USAR_EMULADOR", "false")
             optimization {
                 enable = false
             }

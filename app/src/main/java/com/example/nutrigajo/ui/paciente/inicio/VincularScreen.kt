@@ -47,9 +47,9 @@ import com.example.nutrigajo.ui.components.CampoCodigo
 import com.example.nutrigajo.ui.theme.NutriGajoTheme
 
 private val MARGEN = 16.dp
-private const val LARGO_CODIGO = 8
+private const val LARGO_CODIGO = 4
 
-// El paciente sin nutriólogo escribe el código que este le dio (XXXX-XXXX; el guion lo pone la pantalla).
+// El paciente sin nutriólogo escribe el código de 4 dígitos que este le dio.
 @Composable
 fun VincularScreen(
     estado: VinculoEstado,

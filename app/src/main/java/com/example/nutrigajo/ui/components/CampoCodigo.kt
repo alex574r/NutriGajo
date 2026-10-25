@@ -55,7 +55,6 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.lerp
@@ -123,19 +122,14 @@ fun CampoCodigo(
 
     BasicTextField(
         value = valor,
-        onValueChange = { onValorChange(it.filter(Char::isLetterOrDigit).uppercase().take(largo)) },
+        onValueChange = { onValorChange(it.filter(Char::isDigit).take(largo)) },
         modifier = modifier
             .focusRequester(foco)
             .onFocusChanged { enfocado = it.isFocused }
             .semantics { contentDescription = descripcion },
         readOnly = exito != null,
         singleLine = true,
-        keyboardOptions = KeyboardOptions(
-            capitalization = KeyboardCapitalization.Characters,
-            autoCorrectEnabled = false,
-            keyboardType = KeyboardType.Ascii,
-            imeAction = ImeAction.Done,
-        ),
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
         keyboardActions = KeyboardActions(onDone = { onListo() }),
         cursorBrush = SolidColor(Color.Transparent),
         decorationBox = {

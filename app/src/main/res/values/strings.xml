@@ -143,7 +143,7 @@
 
     <string name="vincular_barra">Vincular</string>
     <string name="vincular_titulo">Ingresa el código de tu nutriólogo</string>
-    <string name="vincular_ayuda">Escribe los ocho caracteres que te dio tu nutriólogo para vincularte con él.</string>
+    <string name="vincular_ayuda">Escribe los cuatro dígitos que te dio tu nutriólogo para vincularte con él.</string>
     <string name="vincular_sin_codigo">¿Aún no tienes un código?</string>
     <string name="vincular_buscar">Buscar nutriólogo</string>
     <string name="vincular_codigo">Código de vinculación</string>
