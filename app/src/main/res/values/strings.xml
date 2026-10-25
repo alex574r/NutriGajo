@@ -188,6 +188,15 @@
     <string name="expediente_editado_paciente">Última edición: el paciente, %1$s</string>
     <string name="expediente_editado_nutriologo">Última edición: el nutriólogo, %1$s</string>
     <string name="expediente_vacio">Aún no hay datos en este expediente.</string>
+    <string name="resumen_datos">%1$d de %2$d datos respondidos</string>
+    <string name="resumen_cat_cuerpo">Cuerpo</string>
+    <string name="resumen_cat_salud">Salud</string>
+    <string name="resumen_cat_alimentacion">Alimentación</string>
+    <string name="resumen_cat_actividad">Actividad física</string>
+    <string name="resumen_cat_descanso">Descanso</string>
+    <string name="resumen_dias_valor">%1$d de 7 días</string>
+    <string name="resumen_calidad">Calidad</string>
+    <string name="resumen_horas">Horas de sueño</string>
     <string name="expediente_tarjeta_titulo">Tu expediente</string>
     <string name="expediente_tarjeta_ayuda">Cuéntanos de ti para que tu nutriólogo te conozca. Es opcional: él también puede completarlo.</string>
     <string name="expediente_tarjeta_en_curso">Dejaste tu expediente a medias. Puedes retomarlo cuando quieras.</string>
