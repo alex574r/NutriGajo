@@ -1,9 +1,12 @@
 import { verificarSesion } from "./auth/firebase";
+import { avisarConfirmacion } from "./routes/cita";
 import { leerFoto, subirFoto, type Tipo } from "./routes/foto";
 
 export interface Env {
   FOTOS: R2Bucket;
   FIREBASE_PROJECT_ID: string;
+  // JSON de la clave de la cuenta de servicio de Firebase (`wrangler secret put FIREBASE_SERVICE_ACCOUNT`); sin ella los avisos responden 503
+  FIREBASE_SERVICE_ACCOUNT?: string;
 }
 
 export default {
@@ -22,6 +25,13 @@ export default {
         if (!uid) return new Response("No autorizado", { status: 401 });
         return subirFoto(req, env, uid, tipo);
       }
+    }
+
+    // aviso al paciente de que su cita quedó confirmada: lo pide el nutriólogo con su sesión
+    if (req.method === "POST" && pathname === "/citas/notificar") {
+      const uid = await verificarSesion(req, env.FIREBASE_PROJECT_ID);
+      if (!uid) return new Response("No autorizado", { status: 401 });
+      return avisarConfirmacion(req, env, uid);
     }
 
     return new Response("No encontrado", { status: 404 });

@@ -406,6 +406,7 @@
     <string name="perfil_contrasena_enviado">Revisa %1$s: ahí está el enlace para cambiar tu contraseña.</string>
     <string name="perfil_listo">Listo</string>
 
+    <string name="aviso_canal_citas">Citas</string>
     <string name="agendar_boton">agendar cita</string>
     <string name="agendar_titulo">Agendar cita</string>
     <string name="agendar_con">con %1$s</string>
@@ -414,10 +415,10 @@
     <string name="agendar_cargando">Cargando horarios</string>
     <string name="agendar_sin_horarios">Este nutriólogo no tiene horarios libres en los próximos días.</string>
     <string name="agendar_enviar">solicitar cita</string>
-    <string name="agendar_ayuda">El nutriólogo confirmará tu solicitud. La verás en «Mis citas».</string>
+    <string name="agendar_ayuda">El nutriólogo confirmará tu solicitud y te avisaremos cuando lo haga.</string>
     <string name="agendar_error_ocupada">Esa hora ya no está disponible. Elige otra.</string>
     <string name="agendar_enviada_titulo">Solicitud enviada</string>
-    <string name="agendar_enviada_ayuda">%1$s la revisará y la confirmará. Mira su estado en «Mis citas».</string>
+    <string name="agendar_enviada_ayuda">%1$s la revisará y la confirmará. Te avisaremos cuando lo haga.</string>
     <string name="agendar_listo">listo</string>
 
     <string name="citas_titulo_paciente">Mis citas</string>

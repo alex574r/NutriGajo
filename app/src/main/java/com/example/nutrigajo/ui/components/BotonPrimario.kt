@@ -39,7 +39,8 @@ fun BotonPrimario(
         enabled = enabled,
         colors = colors,
         shape = RoundedCornerShape(21.dp),
-        contentPadding = PaddingValues(horizontal = 32.dp, vertical = 16.dp),
+        // el relleno vertical solo cabe en alturas de 56dp o más; en un botón más bajo recortaba el texto
+        contentPadding = PaddingValues(horizontal = 32.dp, vertical = if (altura >= 56.dp) 16.dp else 0.dp),
     ) {
         Text(text = texto, style = MaterialTheme.typography.titleLarge)
         Spacer(Modifier.width(16.dp))

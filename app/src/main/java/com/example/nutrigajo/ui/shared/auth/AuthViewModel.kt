@@ -1,10 +1,12 @@
 package com.example.nutrigajo.ui.shared.auth
 
+import android.util.Log
 import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.nutrigajo.R
 import com.example.nutrigajo.data.repository.AuthRepository
+import com.example.nutrigajo.data.repository.DispositivoRepository
 import com.example.nutrigajo.domain.model.Perfil
 import com.example.nutrigajo.domain.model.Rol
 import com.google.firebase.FirebaseNetworkException
@@ -19,6 +21,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 
 // La navegación reacciona a `sesion`, no a callbacks: así sobrevive a un giro de pantalla a medio inicio de sesión.
 data class AuthEstado(
@@ -33,7 +36,10 @@ data class AuthEstado(
 private const val LARGO_MIN_CONTRASENA = 6 // mínimo de Firebase Auth
 
 // ponytail: repositorio por defecto en el constructor; pasa a inyección (Hilt) cuando haya más ViewModels.
-class AuthViewModel(private val repo: AuthRepository = AuthRepository()) : ViewModel() {
+class AuthViewModel(
+    private val repo: AuthRepository = AuthRepository(),
+    private val dispositivo: DispositivoRepository = DispositivoRepository(),
+) : ViewModel() {
     private val _estado = MutableStateFlow(AuthEstado(sesion = repo.sesionIniciada))
     val estado: StateFlow<AuthEstado> = _estado.asStateFlow()
 
@@ -62,11 +68,36 @@ class AuthViewModel(private val repo: AuthRepository = AuthRepository()) : ViewM
                 null
             }
             _estado.update { it.copy(perfil = perfil, perfilFallo = perfil == null) }
+            // con el perfil ya a la vista, el teléfono se da de alta para los avisos; si falla no se nota (se reintenta al abrir la app)
+            if (perfil != null) {
+                try {
+                    dispositivo.registrar()
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Log.w("AuthViewModel", "No se pudo registrar el teléfono para los avisos", e)
+                }
+            }
         }
     }
 
     fun cerrarSesion() {
-        repo.cerrarSesion()
+        // este teléfono deja de recibir los avisos de la cuenta antes de cerrar la sesión (después ya no hay permiso para escribir
+        // en el perfil); si no se logra en unos segundos, la sesión se cierra igual
+        viewModelScope.launch {
+            try {
+                withTimeoutOrNull(3_000) {
+                    try {
+                        dispositivo.olvidar()
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (_: Exception) {
+                    }
+                }
+            } finally {
+                repo.cerrarSesion()
+            }
+        }
         _estado.value = AuthEstado(sesion = false)
     }
 

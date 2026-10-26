@@ -25,6 +25,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.nutrigajo.data.push.Avisos
 import com.example.nutrigajo.domain.model.Rol
 import com.example.nutrigajo.ui.admin.inicio.InicioAdminScreen
 import com.example.nutrigajo.ui.components.PantallaCarga
@@ -64,6 +65,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         // CameraUpdateFactory (usado antes de que el mapa exista) falla si el SDK de Maps no está inicializado
         MapsInitializer.initialize(applicationContext)
+        Avisos.crearCanales(this)
         if (BuildConfig.USAR_EMULADOR && !emuladorConectado) {
             // debe ir antes del primer uso de Auth y Firestore; solo una vez por proceso (la actividad se recrea al girar)
             FirebaseAuth.getInstance().useEmulator("localhost", 9099)

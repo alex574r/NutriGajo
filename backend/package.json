@@ -2,13 +2,14 @@
   "name": "nutrigajo-api",
   "version": "1.0.0",
   "private": true,
-  "description": "Worker de Cloudflare de nutriGajo: guarda en R2 los archivos que la app sube (hoy, la portada del perfil)",
+  "description": "Worker de Cloudflare de nutriGajo: guarda en R2 los archivos que la app sube (fotos del perfil) y avisa por FCM al paciente cuando se confirma su cita",
   "type": "module",
   "scripts": {
     "dev": "wrangler dev --port 8787",
     "deploy": "wrangler deploy",
     "check": "tsc --noEmit",
-    "test": "node test/humo.mjs"
+    "test": "node test/humo.mjs",
+    "test:aviso": "node test/aviso.mjs"
   },
   "dependencies": {
     "jose": "^6.2.13"

@@ -1,5 +1,10 @@
 package com.example.nutrigajo.ui.paciente.citas
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -34,6 +39,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -42,6 +48,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import com.example.nutrigajo.R
 import com.example.nutrigajo.domain.Agenda
 import com.example.nutrigajo.ui.components.AlertaError
@@ -70,6 +77,18 @@ fun AgendarCitaSheet(
 ) {
     val nutriologo = estado.nutriologo ?: return
     val colores = MaterialTheme.colorScheme
+    // desde Android 13 los avisos piden permiso: se pide al solicitar la primera cita y la solicitud sigue diga lo que diga
+    val contexto = LocalContext.current
+    val pedirPermiso = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { onEnviar() }
+    val enviar = {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(contexto, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) {
+            pedirPermiso.launch(Manifest.permission.POST_NOTIFICATIONS)
+        } else {
+            onEnviar()
+        }
+    }
     val horarios = remember(estado.dia, estado.ocupados) {
         estado.dia?.let { Agenda.horarios(it, estado.ocupados, Instant.now(), ZoneId.systemDefault()) }.orEmpty()
     }
@@ -127,7 +146,7 @@ fun AgendarCitaSheet(
                 estado.hora?.let { Text(diaYHora(it), style = MaterialTheme.typography.titleMedium, color = colores.onBackground) }
                 BotonPrimario(
                     texto = stringResource(R.string.agendar_enviar),
-                    onClick = onEnviar,
+                    onClick = enviar,
                     modifier = Modifier.fillMaxWidth(),
                     enabled = estado.hora != null && !estado.cargando,
                     cargando = estado.enviando,

@@ -12,6 +12,10 @@ for (const tipo of ["portada", "avatar"]) {
   assert.equal(await pedir(`/${tipo}`, { method: "PUT", body: "x", headers: { ...jpeg, Authorization: "Bearer falso" } }), 401, `${tipo}: subir con token falso`);
   assert.equal(await pedir(`/${tipo}/${uidAjeno}`), 404, `${tipo}: leer una foto que no existe`);
 }
+const json = { "Content-Type": "application/json" };
+assert.equal(await pedir("/citas/notificar", { method: "POST", body: "{}", headers: json }), 401, "avisar sin sesión");
+assert.equal(await pedir("/citas/notificar", { method: "POST", body: "{}", headers: { ...json, Authorization: "Bearer falso" } }), 401, "avisar con token falso");
+assert.equal(await pedir("/citas/notificar"), 404, "avisar con GET");
 assert.equal(await pedir("/portada/../x"), 404, "ruta inexistente");
 assert.equal(await pedir("/otra"), 404, "tipo desconocido");
 console.log("humo.mjs: ok");

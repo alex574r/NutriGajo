@@ -1,8 +1,10 @@
 package com.example.nutrigajo.ui.shared.citas
 
+import android.util.Log
 import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.nutrigajo.data.repository.AvisoCitaRepository
 import com.example.nutrigajo.data.repository.CitasRepository
 import com.example.nutrigajo.domain.model.Cita
 import com.example.nutrigajo.domain.model.EstadoCita
@@ -25,7 +27,10 @@ data class CitasEstado(
 
 // Las citas del usuario según su rol (las que pidió el paciente o las que recibió el nutriólogo) y sus cambios de estado.
 // ponytail: se carga al abrir y con "deslizar para actualizar"; un listener en tiempo real cuando haga falta.
-class CitasViewModel(private val repo: CitasRepository = CitasRepository()) : ViewModel() {
+class CitasViewModel(
+    private val repo: CitasRepository = CitasRepository(),
+    private val avisos: AvisoCitaRepository = AvisoCitaRepository(),
+) : ViewModel() {
     private val _estado = MutableStateFlow(CitasEstado())
     val estado: StateFlow<CitasEstado> = _estado.asStateFlow()
 
@@ -52,6 +57,7 @@ class CitasViewModel(private val repo: CitasRepository = CitasRepository()) : Vi
         viewModelScope.launch {
             val error = try {
                 repo.cambiarEstado(cita, estado)
+                if (estado == EstadoCita.CONFIRMADA) avisarAlPaciente(cita)
                 null
             } catch (e: CancellationException) {
                 throw e
@@ -67,6 +73,20 @@ class CitasViewModel(private val repo: CitasRepository = CitasRepository()) : Vi
                 null
             }
             _estado.update { it.copy(trabajando = null, error = error, citas = citas ?: it.citas) }
+        }
+    }
+
+    // El push al paciente va aparte de la confirmación: no hace esperar al nutriólogo y, si el Worker falla, la cita queda confirmada igual.
+    // ponytail: sin reintento; el paciente la verá en «Mis citas» aunque no le llegue el aviso.
+    private fun avisarAlPaciente(cita: Cita) {
+        viewModelScope.launch {
+            try {
+                avisos.confirmada(cita.id)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w("CitasViewModel", "No se pudo avisar al paciente de la cita ${cita.id}", e)
+            }
         }
     }
 }
