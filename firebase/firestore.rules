@@ -300,7 +300,28 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    // Todo lo demás, denegado hasta definir sus reglas (mediciones, planes…).
+    // Plan de alimentación y ejercicio que un nutriólogo envía a su paciente (el PDF vive en R2, detrás del Worker; aquí quedan
+    // sus datos para armar el siguiente). Lo ven los dos; lo crea el nutriólogo del paciente, firmado con su nombre, y ya no cambia
+    // ni se borra: cada cambio es un plan nuevo. `notificadaEn` lo escribe el Worker al avisar al paciente.
+    match /pacientes/{pacienteId}/planes/{planId} {
+      allow read: if request.auth != null
+        && (get(/databases/$(database)/documents/pacientes/$(pacienteId)).data.nutriologoId == request.auth.uid
+            || get(/databases/$(database)/documents/pacientes/$(pacienteId)).data.usuarioId == request.auth.uid);
+
+      allow create: if request.auth != null
+        && get(/databases/$(database)/documents/pacientes/$(pacienteId)).data.nutriologoId == request.auth.uid
+        && request.resource.data.keys().hasOnly(['enviadoPor', 'nutriologoNombre', 'enviadoEn', 'titulo', 'contenido'])
+        && request.resource.data.keys().hasAll(['enviadoPor', 'nutriologoNombre', 'enviadoEn', 'titulo', 'contenido'])
+        && request.resource.data.enviadoPor == request.auth.uid
+        && request.resource.data.nutriologoNombre == get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.nombre
+        && request.resource.data.enviadoEn is int
+        && request.resource.data.titulo is string && request.resource.data.titulo.size() <= 120
+        && request.resource.data.contenido is map;
+
+      allow update, delete: if false;
+    }
+
+    // Todo lo demás, denegado hasta definir sus reglas (mediciones, rutinas…).
     match /{document=**} {
       allow read, write: if false;
     }

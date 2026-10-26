@@ -19,7 +19,7 @@ class NutriMessagingService : FirebaseMessagingService() {
     }
 
     override fun onMessageReceived(mensaje: RemoteMessage) {
-        mensaje.notification?.let { Avisos.mostrar(this, it.title.orEmpty(), it.body.orEmpty()) }
+        mensaje.notification?.let { Avisos.mostrar(this, it.title.orEmpty(), it.body.orEmpty(), mensaje.data) }
     }
 
     override fun onDestroy() {

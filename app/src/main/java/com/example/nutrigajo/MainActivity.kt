@@ -1,5 +1,6 @@
 package com.example.nutrigajo
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -59,9 +60,22 @@ class MainActivity : ComponentActivity() {
 
     private fun marcarOnboardingVisto() = prefs.edit().putBoolean(CLAVE_ONBOARDING_VISTO, true).apply()
 
+    // se tocó el aviso de un plan nuevo: el inicio del paciente lo abre y lo da por atendido
+    private var abrirPlan by mutableStateOf(false)
+
+    private fun Intent?.esAvisoDePlan() = this?.getStringExtra("tipo") == Avisos.TIPO_PLAN_NUEVO
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        if (intent.esAvisoDePlan()) abrirPlan = true
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
         super.onCreate(savedInstanceState)
+        // al girar la pantalla la intención es la misma de antes: solo cuenta la de un arranque nuevo
+        if (savedInstanceState == null && intent.esAvisoDePlan()) abrirPlan = true
         enableEdgeToEdge()
         // CameraUpdateFactory (usado antes de que el mapa exista) falla si el SDK de Maps no está inicializado
         MapsInitializer.initialize(applicationContext)
@@ -150,7 +164,12 @@ class MainActivity : ComponentActivity() {
                             perfil == null && estado.perfilFallo -> PerfilNoDisponible(auth::cargarPerfil, cerrarSesion)
                             perfil == null -> PantallaCarga()
                             perfil.rol == Rol.NUTRIOLOGO -> InicioNutriologoScreen(perfil, cerrarSesion)
-                            perfil.rol == Rol.PACIENTE -> InicioPacienteScreen(perfil, cerrarSesion)
+                            perfil.rol == Rol.PACIENTE -> InicioPacienteScreen(
+                                perfil,
+                                cerrarSesion,
+                                abrirPlan = abrirPlan,
+                                onPlanConsumido = { abrirPlan = false },
+                            )
                             // ADMIN
                             else -> InicioAdminScreen(perfil, cerrarSesion)
                         }

@@ -12,7 +12,7 @@ package com.example.nutrigajo.data.remote.firebase.firestore
  * citas/{citaId}                      cita que un paciente pide a un nutriólogo (estado PENDIENTE|CONFIRMADA|RECHAZADA|CANCELADA)
  * pacientes/{pacienteId}              nutriologoId, usuarioId, correoVinculacion…
  *   ├─ mediciones/{id}
- *   ├─ planes/{id}                    comidas[] embebidas
+ *   ├─ planes/{id}                    plan de alimentación y ejercicio enviado (enviadoPor, enviadoEn, contenido…); su PDF vive en R2
  *   ├─ rutinas/{id}                   ejercicios[] embebidos
  *   ├─ fotos/{id}                     solo metadatos; el archivo vive en R2
  *   └─ cumplimientos/{id}

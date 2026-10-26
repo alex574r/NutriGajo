@@ -32,7 +32,9 @@ android {
         // sin clave el mapa se dibuja en blanco, pero la app compila
         manifestPlaceholders["MAPS_API_KEY"] = localProperties.getProperty("MAPS_API_KEY", "")
         // Worker de Cloudflare que guarda los archivos en R2; por defecto el de `npm run dev` en backend/ (con adb reverse tcp:8787 tcp:8787)
-        buildConfigField("String", "WORKER_URL", "\"${localProperties.getProperty("WORKER_URL", "http://localhost:8787")}\"")
+        // ./gradlew installDebug -PworkerUrl=http://localhost:8787 lo cambia para una sola compilación (pruebas con un Worker de mentira)
+        val workerUrl = project.findProperty("workerUrl") as String? ?: localProperties.getProperty("WORKER_URL", "http://localhost:8787")
+        buildConfigField("String", "WORKER_URL", "\"$workerUrl\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

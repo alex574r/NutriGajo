@@ -32,6 +32,7 @@ import com.example.nutrigajo.ui.components.CambioConAvatar
 import com.example.nutrigajo.ui.components.ItemBarra
 import com.example.nutrigajo.ui.components.PantallaCarga
 import com.example.nutrigajo.ui.nutriologo.pacientes.PacientesViewModel
+import com.example.nutrigajo.ui.nutriologo.plan.PlanScreen
 import com.example.nutrigajo.ui.nutriologo.ubicacion.UbicacionScreen
 import com.example.nutrigajo.ui.nutriologo.verificacion.VerificacionScreen
 import com.example.nutrigajo.ui.nutriologo.verificacion.VerificacionViewModel
@@ -67,6 +68,10 @@ fun InicioNutriologoScreen(
     var enCitas by rememberSaveable { mutableStateOf(false) }
     var codigoAbierto by rememberSaveable { mutableStateOf(false) }
     var pacienteAbierto by rememberSaveable { mutableStateOf<String?>(null) }
+    // el panel del plan se abre desde el expediente del paciente abierto
+    var planAbierto by rememberSaveable { mutableStateOf(false) }
+    // al cerrar al paciente, el panel también
+    LaunchedEffect(pacienteAbierto) { if (pacienteAbierto == null) planAbierto = false }
     LaunchedEffect(Unit) {
         vm.cargar()
         verificacionVm.cargar()
@@ -104,11 +109,18 @@ fun InicioNutriologoScreen(
                 onVolver = { enCitas = false },
             )
         }
+        abierto != null && planAbierto -> PlanScreen(
+            pacienteId = abierto.id,
+            nombrePaciente = abierto.nombre,
+            nombreNutriologo = perfil.nombre,
+            onSalir = { planAbierto = false },
+        )
         abierto != null -> ExpedienteFlujo(
             pacienteId = abierto.id,
             nombrePaciente = abierto.nombre,
             editor = Rol.NUTRIOLOGO,
             onSalir = { pacienteAbierto = null },
+            onPlan = { planAbierto = true },
         )
         enFormulario -> {
             BackHandler { enFormulario = false }

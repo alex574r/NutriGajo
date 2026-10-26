@@ -35,7 +35,8 @@ fun CampoTexto(
     etiqueta: String,
     valor: String,
     onValorChange: (String) -> Unit,
-    @DrawableRes icono: Int,
+    // sin icono el campo es solo texto (los formularios largos, como el plan, no lo llevan)
+    @DrawableRes icono: Int? = null,
     modifier: Modifier = Modifier,
     teclado: KeyboardOptions = KeyboardOptions.Default,
     transformacion: VisualTransformation = VisualTransformation.None,
@@ -64,8 +65,10 @@ fun CampoTexto(
                     .border(1.dp, if (enfocado) colores.primary else Color.Transparent, forma),
                 // sin alternativas contextuales: Inter dibuja "7x4" como "7×4" y una contraseña debe verse tal cual
                 textStyle = MaterialTheme.typography.bodyMedium.copy(fontFeatureSettings = "calt 0"),
-                leadingIcon = {
-                    Icon(painterResource(icono), contentDescription = null, modifier = Modifier.size(24.dp), tint = colores.onBackground)
+                leadingIcon = icono?.let {
+                    {
+                        Icon(painterResource(it), contentDescription = null, modifier = Modifier.size(24.dp), tint = colores.onBackground)
+                    }
                 },
                 trailingIcon = extremo,
                 visualTransformation = transformacion,

@@ -407,6 +407,157 @@
     <string name="perfil_listo">Listo</string>
 
     <string name="aviso_canal_citas">Citas</string>
+    <string name="aviso_canal_planes">Planes</string>
+
+    <!-- Panel del plan del nutriólogo -->
+    <string name="plan_boton_crear">crear plan</string>
+    <string name="plan_titulo">Plan de %1$s</string>
+    <string name="plan_intro">Arma su plan de alimentación y de ejercicio. El PDF solo lleva lo que llenes; lo verás completo antes de enviarlo.</string>
+    <string name="plan_ultimo_envio">Último plan enviado: %1$s. Partes de él para el siguiente.</string>
+    <string name="plan_sec_datos">Datos clave</string>
+    <string name="plan_peso">Peso (kg)</string>
+    <string name="plan_talla">Talla (cm)</string>
+    <string name="plan_imc">IMC: %1$s · %2$s</string>
+    <string name="plan_cintura">Circunferencia de cintura (cm)</string>
+    <string name="plan_cadera">Circunferencia de cadera (cm)</string>
+    <string name="plan_grasa">Grasa corporal (porcentaje)</string>
+    <string name="plan_seguimiento">Próxima consulta</string>
+    <string name="plan_sec_mensaje">Mensaje de bienvenida</string>
+    <string name="plan_mensaje_campo">Mensaje para el paciente</string>
+    <string name="plan_saludo">Hola %1$s, soy %2$s y voy a acompañarte en tu proceso. Me da mucho gusto que hayas dado este paso. %3$s ¡Juntos haremos un gran equipo a favor de tu salud!</string>
+    <string name="plan_saludo_bajar_peso">Entiendo que tu objetivo principal es bajar de peso de forma saludable.</string>
+    <string name="plan_saludo_ganar_musculo">Entiendo que tu objetivo principal es ganar masa muscular.</string>
+    <string name="plan_saludo_mejorar_alimentacion">Entiendo que tu objetivo principal es mejorar tu alimentación.</string>
+    <string name="plan_saludo_mejorar_resistencia">Entiendo que tu objetivo principal es mejorar tu resistencia.</string>
+    <string name="plan_saludo_condicion_salud">Entiendo que tu objetivo principal es cuidar tu salud y tus condiciones médicas.</string>
+    <string name="plan_sec_metas">Metas</string>
+    <string name="plan_meta_campo">Escribe otra meta</string>
+    <string name="plan_meta_comunes">Metas comunes</string>
+    <string name="plan_meta_agregar">Agregar</string>
+    <string-array name="plan_metas_comunes">
+        <item>Equilibra tu alimentación</item>
+        <item>Limita las bebidas azucaradas</item>
+        <item>Limita las harinas refinadas con grasa y azúcares</item>
+        <item>Bebe 1.5 litros de agua natural</item>
+        <item>Aumenta tu consumo de fibra</item>
+        <item>Haz 3 comidas principales al día</item>
+        <item>Come más verduras y frutas</item>
+        <item>Muévete al menos 30 minutos al día</item>
+    </string-array>
+    <string name="plan_sec_alimentacion">Plan de alimentación</string>
+    <string name="plan_alimentacion_ayuda">Las calorías y las porciones (equivalentes) de cada grupo en cada tiempo de comida.</string>
+    <string name="plan_calorias">Calorías al día</string>
+    <plurals name="plan_total_equivalentes">
+        <item quantity="one">%1$d equivalente</item>
+        <item quantity="other">%1$d equivalentes</item>
+    </plurals>
+    <string name="plan_menos">Menos en %1$s</string>
+    <string name="plan_mas">Más en %1$s</string>
+    <string name="plan_sec_menu">Opciones de menú</string>
+    <string name="plan_menu_ayuda">Hasta seis opciones para desayuno, comida y cena.</string>
+    <string name="plan_agregar_opcion">agregar opción</string>
+    <string name="plan_quitar">Quitar</string>
+    <string name="plan_sec_ejercicio">Plan de ejercicio</string>
+    <string name="plan_ejercicio_ayuda">Indicaciones generales y la rutina de la semana.</string>
+    <string name="plan_ejercicio_notas">Indicaciones generales</string>
+    <string name="plan_sesion">Sesión %1$d</string>
+    <string name="plan_dia">Día</string>
+    <string-array name="plan_dias">
+        <item>Lunes</item>
+        <item>Martes</item>
+        <item>Miércoles</item>
+        <item>Jueves</item>
+        <item>Viernes</item>
+        <item>Sábado</item>
+        <item>Domingo</item>
+    </string-array>
+    <string name="plan_enfoque">Enfoque (cardio, fuerza…)</string>
+    <string name="plan_detalle">Qué hacer</string>
+    <string name="plan_agregar_sesion">agregar sesión</string>
+    <string name="plan_sec_notas">Indicaciones finales</string>
+    <string name="plan_notas_campo">Indicaciones para el paciente</string>
+    <string name="plan_generar">generar pdf</string>
+    <string name="plan_previa">Vista previa</string>
+    <string name="plan_enviar">enviar al paciente</string>
+    <string name="plan_seguir_editando">Seguir editando</string>
+    <string name="plan_confirmar_titulo">¿Enviar el plan?</string>
+    <string name="plan_confirmar_texto">%1$s recibirá una notificación y podrá abrir el PDF desde la app. Un plan enviado no se edita: si cambias algo, envías uno nuevo.</string>
+    <string name="plan_confirmar_si">Sí, enviar</string>
+    <string name="plan_enviado_titulo">Plan enviado</string>
+    <string name="plan_enviado_avisado">%1$s recibió una notificación para ver su plan.</string>
+    <string name="plan_enviado_sin_aviso">El plan quedó enviado, pero no se pudo mandar la notificación. %1$s lo verá al abrir la app.</string>
+    <string name="plan_enviado_listo">Listo</string>
+    <string name="plan_error_vacio">Llena al menos una sección para generar el plan.</string>
+    <string name="plan_error_pdf">No se pudo armar el PDF. Inténtalo de nuevo.</string>
+    <string name="plan_error_enviar">No pudimos enviar el plan. Revisa tu conexión e inténtalo de nuevo.</string>
+
+    <!-- Plan en el teléfono del paciente -->
+    <string name="visor_pdf_cargando">Abriendo el PDF…</string>
+    <string name="plan_paciente_titulo">Tu plan</string>
+    <string name="plan_paciente_enviado">Enviado por %1$s el %2$s</string>
+    <string name="plan_paciente_error">No pudimos abrir tu plan. Revisa tu conexión e inténtalo de nuevo.</string>
+    <string name="plan_paciente_reintentar">Reintentar</string>
+    <string name="plan_tarjeta_titulo">Tu plan nutricional</string>
+    <string name="plan_tarjeta_etiqueta">De %1$s · %2$s</string>
+
+    <!-- PDF del plan de alimentación y ejercicio -->
+    <string name="pdf_continuacion">%1$s (continuación)</string>
+    <string name="pdf_pie">Confidencial · %1$s</string>
+    <string name="pdf_pagina">Página %1$d</string>
+    <string name="pdf_titulo_portada">Plan de alimentación y ejercicio</string>
+    <string name="pdf_subtitulo_portada">Asesoría nutricional · %1$s</string>
+    <string name="pdf_con_nutriologo">Con %1$s</string>
+    <string name="pdf_lema">Tu seguimiento nutricional, siempre contigo.</string>
+    <string name="pdf_bienvenida">¡Hola, %1$s!</string>
+    <string name="pdf_datos_clave">Datos clave</string>
+    <string name="pdf_dato_peso">Peso actual</string>
+    <string name="pdf_dato_talla">Talla</string>
+    <string name="pdf_dato_cintura">Circunferencia de cintura</string>
+    <string name="pdf_dato_cadera">Circunferencia de cadera</string>
+    <string name="pdf_dato_grasa">Grasa corporal</string>
+    <string name="pdf_dato_seguimiento">Próxima consulta</string>
+    <string name="pdf_unidad_kg">%1$s kg</string>
+    <string name="pdf_unidad_m">%1$s m</string>
+    <string name="pdf_unidad_cm">%1$s cm</string>
+    <string name="pdf_imc">Índice de masa corporal (IMC)</string>
+    <string name="pdf_imc_bajo">Bajo peso</string>
+    <string name="pdf_imc_saludable">Peso saludable</string>
+    <string name="pdf_imc_sobrepeso">Sobrepeso</string>
+    <string name="pdf_imc_obesidad1">Obesidad I</string>
+    <string name="pdf_imc_obesidad2">Obesidad II</string>
+    <string name="pdf_metas">Metas en las que trabajaremos</string>
+    <string name="pdf_metas_ayuda">Establecer un hábito requiere constancia: se estima que hacen falta 21 días seguidos para consolidarlo. Si algún día no lo logras, reinicia el conteo sin culpa: cada intento es una oportunidad para aprender y mejorar. Vamos paso a paso hacia un estilo de vida más saludable.</string>
+    <string name="pdf_plan_nutricional">Plan nutricional</string>
+    <string name="pdf_plan_intro_calorias">Tu plan de alimentación es de %1$d calorías al día, con base en tu peso, estatura y actividad física. Sirve como guía para organizar tus horarios de comida y elegir los alimentos adecuados; puedes apoyarte con lo que tengas en casa, siempre que respetes las porciones indicadas. Conforme avance tu seguimiento, las calorías o el equilibrio nutricional podrían ajustarse.</string>
+    <string name="pdf_plan_intro">Tu plan de alimentación sirve como guía para organizar tus horarios de comida y elegir los alimentos adecuados; puedes apoyarte con lo que tengas en casa, siempre que respetes las porciones indicadas.</string>
+    <string name="pdf_distribucion_calorias">Distribución de equivalentes · %1$d calorías</string>
+    <string name="pdf_distribucion">Distribución de equivalentes</string>
+    <string name="pdf_col_grupo">Distribución</string>
+    <string name="pdf_col_equivalentes">Equivalentes</string>
+    <string name="pdf_col_desayuno">Desayuno</string>
+    <string name="pdf_col_comida">Comida</string>
+    <string name="pdf_col_cena">Cena</string>
+    <string name="pdf_col_opcion">Opción</string>
+    <string name="pdf_col_dia">Día</string>
+    <string name="pdf_col_enfoque">Enfoque</string>
+    <string name="pdf_col_detalle">Qué hacer</string>
+    <string name="pdf_equivalente_nota">1 equivalente = la porción indicada junto a cada alimento en tu lista de intercambio de alimentos.</string>
+    <string name="pdf_grupo_verduras">Verduras</string>
+    <string name="pdf_grupo_frutas">Frutas</string>
+    <string name="pdf_grupo_cereales">Cereales</string>
+    <string name="pdf_grupo_animal">Origen animal</string>
+    <string name="pdf_grupo_leguminosas">Leguminosas</string>
+    <string name="pdf_grupo_lacteos">Lácteos</string>
+    <string name="pdf_grupo_grasas_proteina">Grasas con proteína</string>
+    <string name="pdf_grupo_grasas">Grasas</string>
+    <string name="pdf_menu">Opciones de menú</string>
+    <string name="pdf_opcion">Opción %1$d</string>
+    <string name="pdf_ejercicio">Plan de ejercicio</string>
+    <string name="pdf_cierre">Indicaciones finales</string>
+    <string name="pdf_dudas">¿Dudas?</string>
+    <string name="pdf_dudas_texto">Escríbele a %1$s desde NutriGajo cuando lo necesites.</string>
+    <string name="pdf_telefono">Teléfono: %1$s</string>
+    <string name="pdf_direccion">Consultorio: %1$s</string>
     <string name="agendar_boton">agendar cita</string>
     <string name="agendar_titulo">Agendar cita</string>
     <string name="agendar_con">con %1$s</string>
@@ -445,7 +596,7 @@
     <string name="vincular_mis_citas">Mis citas</string>
     <string name="nutri_atajo_citas">Citas</string>
     <string name="nutri_citas_titulo">Citas</string>
-    <string name="nutri_citas_sin_pendientes">Sin solicitudes por confirmar</string>
+    <string name="nutri_citas_sin_pendientes">Sin solicitudes pendientes</string>
     <plurals name="nutri_citas_pendientes">
         <item quantity="one">%d solicitud por confirmar</item>
         <item quantity="other">%d solicitudes por confirmar</item>

@@ -20,6 +20,8 @@ fun ExpedienteFlujo(
     nombrePaciente: String,
     editor: Rol,
     onSalir: () -> Unit,
+    // el nutriólogo puede pasar del expediente al panel del plan de su paciente; el paciente no lo tiene
+    onPlan: (() -> Unit)? = null,
     // clave propia: la tarjeta del inicio del paciente comparte este ViewModel
     vm: ExpedienteViewModel = viewModel(key = "expediente-$pacienteId-${editor.name}"),
 ) {
@@ -55,6 +57,7 @@ fun ExpedienteFlujo(
             expediente = estado.expediente,
             onEditar = { enAsistente = true },
             onVolver = onSalir,
+            onPlan = onPlan,
         )
     }
 }

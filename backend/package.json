@@ -9,7 +9,8 @@
     "deploy": "wrangler deploy",
     "check": "tsc --noEmit",
     "test": "node test/humo.mjs",
-    "test:aviso": "node test/aviso.mjs"
+    "test:aviso": "node test/aviso.mjs",
+    "test:plan": "node test/plan.mjs"
   },
   "dependencies": {
     "jose": "^6.2.13"

@@ -35,7 +35,14 @@ import com.example.nutrigajo.ui.components.BarraEstadoClara
 import com.example.nutrigajo.ui.components.CambioConAvatar
 import com.example.nutrigajo.ui.components.PantallaCarga
 import com.example.nutrigajo.ui.components.TransicionPerfil
+import androidx.compose.ui.res.stringResource
+import com.example.nutrigajo.R
+import com.example.nutrigajo.domain.model.PlanEnviado
+import com.example.nutrigajo.ui.components.FilaAjuste
+import com.example.nutrigajo.ui.nutriologo.inicio.fechaMedia
 import com.example.nutrigajo.ui.paciente.citas.AgendaViewModel
+import com.example.nutrigajo.ui.paciente.plan.PlanPacienteScreen
+import com.example.nutrigajo.ui.paciente.plan.PlanPacienteViewModel
 import com.example.nutrigajo.ui.paciente.citas.AgendarCitaSheet
 import com.example.nutrigajo.ui.paciente.mapa.MapaScreen
 import com.example.nutrigajo.ui.paciente.mapa.MapaViewModel
@@ -59,20 +66,33 @@ fun InicioPacienteScreen(
     mapaVm: MapaViewModel = viewModel(key = "mapa-${perfil.uid}"),
     agendaVm: AgendaViewModel = viewModel(key = "agenda-${perfil.uid}"),
     citasVm: CitasViewModel = viewModel(key = "citas-${perfil.uid}"),
+    planVm: PlanPacienteViewModel = viewModel(key = "plan-${perfil.uid}"),
+    // se tocó la notificación de un plan nuevo: se abre directo; `onPlanConsumido` avisa que ya se atendió
+    abrirPlan: Boolean = false,
+    onPlanConsumido: () -> Unit = {},
 ) {
     val estado by vm.estado.collectAsState()
     val mapa by mapaVm.estado.collectAsState()
     val agenda by agendaVm.estado.collectAsState()
     val citas by citasVm.estado.collectAsState()
+    val plan by planVm.estado.collectAsState()
     var enMapa by rememberSaveable { mutableStateOf(false) }
     var enExpediente by rememberSaveable { mutableStateOf(false) }
     var enPerfil by rememberSaveable { mutableStateOf(false) }
     var enCitas by rememberSaveable { mutableStateOf(false) }
+    var enPlan by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(Unit) { vm.cargar() }
     LaunchedEffect(enMapa) { if (enMapa) mapaVm.cargar() }
     LaunchedEffect(enCitas) { if (enCitas) citasVm.cargar(Rol.PACIENTE) }
 
     val vinculo = estado.vinculo
+    LaunchedEffect(vinculo?.pacienteId) { vinculo?.let { planVm.cargar(it.pacienteId) } }
+    LaunchedEffect(abrirPlan, vinculo) {
+        if (abrirPlan && vinculo != null) {
+            enPlan = true
+            onPlanConsumido()
+        }
+    }
     // al canjear el código se deja ver el acierto un momento antes de abrir el inicio
     var canjeado by remember { mutableStateOf(false) }
     var celebrado by remember { mutableStateOf(false) }
@@ -95,6 +115,15 @@ fun InicioPacienteScreen(
                 onVolver = { enCitas = false },
             )
         }
+        enPlan && vinculo != null -> PlanPacienteScreen(
+            pacienteId = vinculo.pacienteId,
+            onVolver = {
+                enPlan = false
+                // volver al inicio refresca la tarjeta del plan (pudo llegar uno nuevo)
+                planVm.cargar(vinculo.pacienteId)
+            },
+            vm = planVm,
+        )
         vinculo == null && enMapa -> {
             BackHandler { enMapa = false }
             val cache = LocalContext.current.cacheDir
@@ -146,7 +175,15 @@ fun InicioPacienteScreen(
                     transicion = transicion,
                 )
             } else {
-                InicioPaciente(perfil, vinculo, onExpediente = { enExpediente = true }, onPerfil = { enPerfil = true }, transicion = transicion)
+                InicioPaciente(
+                    perfil,
+                    vinculo,
+                    onExpediente = { enExpediente = true },
+                    onPerfil = { enPerfil = true },
+                    transicion = transicion,
+                    plan = plan.plan,
+                    onPlan = { enPlan = true },
+                )
             }
         }
     }
@@ -159,6 +196,9 @@ private fun InicioPaciente(
     onExpediente: () -> Unit,
     onPerfil: () -> Unit,
     transicion: TransicionPerfil,
+    // el último plan que le envió su nutriólogo, si lo hay
+    plan: PlanEnviado?,
+    onPlan: () -> Unit,
     // misma clave que el flujo del expediente: la tarjeta refleja lo que se guarda ahí
     expedienteVm: ExpedienteViewModel = viewModel(key = "expediente-${vinculo.pacienteId}-${Rol.PACIENTE.name}"),
 ) {
@@ -190,6 +230,17 @@ private fun InicioPaciente(
             // una vez completo, el expediente se consulta desde el perfil
             if (expediente.cargando || !expediente.expediente.completo) {
                 item { TarjetaExpediente(expediente, onExpediente, Modifier.padding(horizontal = 16.dp)) }
+            }
+            plan?.let {
+                item {
+                    FilaAjuste(
+                        icono = R.drawable.ic_documento,
+                        titulo = stringResource(R.string.plan_tarjeta_titulo),
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                        etiqueta = stringResource(R.string.plan_tarjeta_etiqueta, it.nutriologoNombre, fechaMedia(it.enviadoEn)),
+                        onClick = onPlan,
+                    )
+                }
             }
             item { MetricasFitness(resumenDia) }
             item { RutinaDeHoy(rutinaDeHoy) }

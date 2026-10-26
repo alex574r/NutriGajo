@@ -1,6 +1,7 @@
 import { verificarSesion } from "./auth/firebase";
 import { avisarConfirmacion } from "./routes/cita";
 import { leerFoto, subirFoto, type Tipo } from "./routes/foto";
+import { avisarPlan, leerPlan, subirPlan } from "./routes/plan";
 
 export interface Env {
   FOTOS: R2Bucket;
@@ -32,6 +33,19 @@ export default {
       const uid = await verificarSesion(req, env.FIREBASE_PROJECT_ID);
       if (!uid) return new Response("No autorizado", { status: 401 });
       return avisarConfirmacion(req, env, uid);
+    }
+
+    // planes de alimentación y ejercicio (PDF): siempre con sesión; las reglas de quién puede cada cosa están en routes/plan.ts
+    const plan = pathname.match(/^\/plan\/([A-Za-z0-9_-]{1,128})\/([A-Za-z0-9_-]{1,128})$/);
+    if (plan && (req.method === "GET" || req.method === "PUT")) {
+      const uid = await verificarSesion(req, env.FIREBASE_PROJECT_ID);
+      if (!uid) return new Response("No autorizado", { status: 401 });
+      return req.method === "PUT" ? subirPlan(req, env, uid, plan[1], plan[2]) : leerPlan(env, uid, plan[1], plan[2]);
+    }
+    if (req.method === "POST" && pathname === "/planes/notificar") {
+      const uid = await verificarSesion(req, env.FIREBASE_PROJECT_ID);
+      if (!uid) return new Response("No autorizado", { status: 401 });
+      return avisarPlan(req, env, uid);
     }
 
     return new Response("No encontrado", { status: 404 });

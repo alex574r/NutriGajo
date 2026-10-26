@@ -44,6 +44,8 @@ fun ResumenScreen(
     onEditar: () -> Unit,
     onVolver: () -> Unit,
     modifier: Modifier = Modifier,
+    // solo el nutriólogo: abre el panel del plan de alimentación y ejercicio de este paciente
+    onPlan: (() -> Unit)? = null,
 ) {
     BackHandler(onBack = onVolver)
     val colores = MaterialTheme.colorScheme
@@ -107,11 +109,16 @@ fun ResumenScreen(
             }
             CategoriasExpediente(expediente, Modifier.padding(bottom = 8.dp))
         }
-        BotonPrimario(
-            texto = stringResource(if (expediente.completo) R.string.expediente_editar else R.string.expediente_completar),
-            onClick = onEditar,
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = colores.onBackground, contentColor = colores.background),
-        )
+        Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (onPlan != null) {
+                BotonPrimario(texto = stringResource(R.string.plan_boton_crear), onClick = onPlan, modifier = Modifier.fillMaxWidth())
+            }
+            BotonPrimario(
+                texto = stringResource(if (expediente.completo) R.string.expediente_editar else R.string.expediente_completar),
+                onClick = onEditar,
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = colores.onBackground, contentColor = colores.background),
+            )
+        }
     }
 }
