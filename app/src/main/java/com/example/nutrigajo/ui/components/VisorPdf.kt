@@ -120,7 +120,8 @@ fun VisorPdf(archivo: File, modifier: Modifier = Modifier) {
         } else {
             // las páginas se pintan al doble del ancho de la pantalla: sobra resolución para ampliar sin que se vean borrosas
             val anchoPx = with(LocalDensity.current) { (anchoPantalla * 2).roundToPx() }
-            Row(Modifier.fillMaxSize().horizontalScroll(rememberScrollState())) {
+            // el PDF se forma al abrirse: llega desenfocado y se afina (Generate, de Bencho)
+            Row(Modifier.fillMaxSize().formandose(archivo).horizontalScroll(rememberScrollState())) {
                 LazyColumn(
                     modifier = Modifier.width(anchoPantalla * escala).fillMaxHeight(),
                     contentPadding = PaddingValues(vertical = 12.dp),

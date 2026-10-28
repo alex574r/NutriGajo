@@ -36,6 +36,8 @@ data class PlanEstado(
     // cuándo se envió el plan anterior; null si es el primero
     val ultimoEnvio: Long? = null,
     val generando: Boolean = false,
+    // 0..1 mientras se genera el PDF
+    val progreso: Float = 0f,
     val enviando: Boolean = false,
     // PDF de la vista previa abierto
     val previa: File? = null,
@@ -136,12 +138,14 @@ class PlanViewModel(
             _estado.update { it.copy(error = R.string.plan_error_vacio) }
             return null
         }
-        _estado.update { it.copy(generando = true, error = null) }
+        _estado.update { it.copy(generando = true, progreso = 0f, error = null) }
         return try {
             withContext(Dispatchers.Default) {
                 val archivo = File(cache, "plan-previa.pdf")
                 val fecha = LocalDate.now().format(DateTimeFormatter.ofPattern("d 'de' MMMM 'de' yyyy", Locale.forLanguageTag("es-MX")))
-                generador.generar(DatosPlanPdf(paciente, nutriologo, fecha, contenido, estado.telefono, estado.direccion), archivo)
+                generador.generar(DatosPlanPdf(paciente, nutriologo, fecha, contenido, estado.telefono, estado.direccion), archivo) { avance ->
+                    _estado.update { it.copy(progreso = avance) }
+                }
                 archivo
             }
         } catch (e: CancellationException) {

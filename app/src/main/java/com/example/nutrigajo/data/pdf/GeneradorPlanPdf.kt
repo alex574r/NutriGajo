@@ -65,20 +65,30 @@ private val COLORES_IMC = listOf(0xFF7BA7D1, 0xFF16A34A, 0xFFEAB308, 0xFFF97316,
 class GeneradorPlanPdf(private val contexto: Context) {
     private val base: Typeface = ResourcesCompat.getFont(contexto, R.font.inter) ?: Typeface.SANS_SERIF
 
-    fun generar(datos: DatosPlanPdf, destino: File) {
+    // `avance` recibe de 0 a 1 cuánto va, una vez por etapa (cada sección del PDF y, al final, la escritura del archivo); se
+    // llama desde el hilo que genera.
+    fun generar(datos: DatosPlanPdf, destino: File, avance: (Float) -> Unit = {}) {
         val documento = PdfDocument()
         try {
             val lienzo = Lienzo(documento, datos.paciente)
             val plan = datos.contenido
-            portada(lienzo, datos)
-            bienvenida(lienzo, datos)
-            if (plan.metas.isNotEmpty()) metas(lienzo, plan)
-            if (plan.calorias != null || plan.equivalentes.isNotEmpty()) planNutricional(lienzo, plan)
-            if (plan.opciones.isNotEmpty()) menu(lienzo, plan)
-            if (plan.sesiones.isNotEmpty() || plan.ejercicioNotas.isNotBlank()) ejercicio(lienzo, plan)
-            if (plan.notas.isNotBlank() || datos.telefono.isNotBlank() || datos.direccion.isNotBlank()) cierre(lienzo, datos)
-            lienzo.terminar()
-            destino.outputStream().use { documento.writeTo(it) }
+            val etapas = buildList<() -> Unit> {
+                add { portada(lienzo, datos) }
+                add { bienvenida(lienzo, datos) }
+                if (plan.metas.isNotEmpty()) add { metas(lienzo, plan) }
+                if (plan.calorias != null || plan.equivalentes.isNotEmpty()) add { planNutricional(lienzo, plan) }
+                if (plan.opciones.isNotEmpty()) add { menu(lienzo, plan) }
+                if (plan.sesiones.isNotEmpty() || plan.ejercicioNotas.isNotBlank()) add { ejercicio(lienzo, plan) }
+                if (plan.notas.isNotBlank() || datos.telefono.isNotBlank() || datos.direccion.isNotBlank()) add { cierre(lienzo, datos) }
+                add {
+                    lienzo.terminar()
+                    destino.outputStream().use { documento.writeTo(it) }
+                }
+            }
+            etapas.forEachIndexed { i, etapa ->
+                etapa()
+                avance((i + 1f) / etapas.size)
+            }
         } finally {
             documento.close()
         }

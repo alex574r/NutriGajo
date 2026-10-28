@@ -1,5 +1,7 @@
 package com.example.nutrigajo.ui.components
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
@@ -15,6 +17,7 @@ import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.Dp
@@ -32,6 +35,9 @@ fun BotonPrimario(
     colors: ButtonColors = ButtonDefaults.buttonColors(),
     // cambia la flecha por un indicador de progreso; los toques se ignoran mientras dura
     cargando: Boolean = false,
+    // 0..1 si se sabe cuánto va: en vez del indicador se ve el número subiendo (Generate, de Bencho). Sube con resorte, así
+    // un avance a saltos se lee como cuenta y no como parpadeo; nunca marca 100 antes de terminar.
+    progreso: Float? = null,
 ) {
     Button(
         onClick = { if (!cargando) onClick() },
@@ -44,7 +50,17 @@ fun BotonPrimario(
     ) {
         Text(text = texto, style = MaterialTheme.typography.titleLarge)
         Spacer(Modifier.width(16.dp))
-        if (cargando) {
+        if (cargando && progreso != null) {
+            val cuenta by animateFloatAsState(progreso.coerceIn(0f, 1f), spring(dampingRatio = 1f, stiffness = 60f), label = "cuenta")
+            Text(
+                text = "${minOf(99, (cuenta * 100).toInt())}%",
+                // de ancho fijo para que el botón no cambie de tamaño con cada cifra, y sin partirse en dos líneas
+                modifier = Modifier.width(48.dp),
+                style = MaterialTheme.typography.titleMedium.copy(fontFeatureSettings = "tnum"),
+                maxLines = 1,
+                softWrap = false,
+            )
+        } else if (cargando) {
             CircularProgressIndicator(modifier = Modifier.size(24.dp), color = LocalContentColor.current, strokeWidth = 2.dp)
         } else {
             Icon(
