@@ -63,6 +63,20 @@ service cloud.firestore {
         && e.get('suplementos', []) is list && e.get('suplementos', []).size() <= 30;
     }
 
+    // Elemento del banco de comidas y ejercicios del nutriólogo: tipo, nombre, texto y, solo en las comidas, su tiempo de comida.
+    // Los topes son los de ItemBanco y los de los campos del plan (500 caracteres).
+    function bancoValido(d) {
+      return d.keys().hasOnly(['tipo', 'momento', 'nombre', 'texto', 'creadoEn', 'actualizadoEn'])
+        && d.keys().hasAll(['tipo', 'nombre', 'texto', 'creadoEn', 'actualizadoEn'])
+        && d.tipo in ['COMIDA', 'EJERCICIO']
+        && ((d.tipo == 'COMIDA' && 'momento' in d.keys() && d.momento in ['DESAYUNO', 'COMIDA', 'CENA'])
+            || (d.tipo == 'EJERCICIO' && !('momento' in d.keys())))
+        && d.nombre is string && d.nombre.size() >= 1 && d.nombre.size() <= 80
+        && d.texto is string && d.texto.size() >= 1 && d.texto.size() <= 500
+        && d.creadoEn is int
+        && d.actualizadoEn is int;
+    }
+
     // Perfil de cuenta. ADMIN se da de alta a mano en la consola: nadie puede asignárselo al registrarse.
     match /usuarios/{uid} {
       allow read: if request.auth != null && request.auth.uid == uid;
@@ -90,6 +104,26 @@ service cloud.firestore {
         && getAfter(verificacionRef(uid)).data.estado == 'APROBADA';
 
       allow delete: if false;
+    }
+
+    // Banco personal del nutriólogo: comidas y ejercicios que reutiliza al armar planes. Solo lo ve y lo edita su dueño. Un
+    // elemento ya guardado no cambia de tipo ni de fecha de creación.
+    match /usuarios/{uid}/banco/{itemId} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+
+      allow create: if request.auth != null
+        && request.auth.uid == uid
+        && rolDe(uid) == 'NUTRIOLOGO'
+        && bancoValido(request.resource.data);
+
+      allow update: if request.auth != null
+        && request.auth.uid == uid
+        && rolDe(uid) == 'NUTRIOLOGO'
+        && bancoValido(request.resource.data)
+        && request.resource.data.tipo == resource.data.tipo
+        && request.resource.data.creadoEn == resource.data.creadoEn;
+
+      allow delete: if request.auth != null && request.auth.uid == uid;
     }
 
     // Solicitud de verificación del nutriólogo (el id es su uid). La ven él y el ADMIN.
