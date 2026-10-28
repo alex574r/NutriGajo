@@ -60,6 +60,8 @@ fun CitasScreen(
     onActualizar: () -> Unit,
     onCambiar: (Cita, EstadoCita) -> Unit,
     onVolver: () -> Unit,
+    // solo el paciente: pasa su cita vigente a otra hora (abre la agenda de ese nutriólogo)
+    onReagendar: ((Cita) -> Unit)? = null,
 ) {
     val colores = MaterialTheme.colorScheme
     val ahora = remember(estado.citas) { System.currentTimeMillis() }
@@ -78,6 +80,7 @@ fun CitasScreen(
             onCambiar = { nuevo ->
                 if (nuevo == EstadoCita.CONFIRMADA) onCambiar(cita, nuevo) else pendiente = cita to nuevo
             },
+            onReagendar = onReagendar?.let { reagendar -> { reagendar(cita) } },
         )
     }
 
@@ -142,7 +145,7 @@ private fun LazyListScope.seccion(titulo: Int, citas: List<Cita>, contenido: @Co
 }
 
 @Composable
-private fun TarjetaCita(cita: Cita, rol: Rol, ahora: Long, trabajando: Boolean, onCambiar: (EstadoCita) -> Unit) {
+private fun TarjetaCita(cita: Cita, rol: Rol, ahora: Long, trabajando: Boolean, onCambiar: (EstadoCita) -> Unit, onReagendar: (() -> Unit)?) {
     val colores = MaterialTheme.colorScheme
     val forma = RoundedCornerShape(22.dp)
     val vigente = cita.vigente(ahora)
@@ -178,6 +181,8 @@ private fun TarjetaCita(cita: Cita, rol: Rol, ahora: Long, trabajando: Boolean, 
                     BotonCita(R.string.cita_rechazar, principal = false, enabled = !trabajando) { onCambiar(EstadoCita.RECHAZADA) }
                     BotonCita(R.string.cita_confirmar, principal = true, enabled = !trabajando) { onCambiar(EstadoCita.CONFIRMADA) }
                 } else {
+                    // el paciente puede pasar su cita a otra hora o cancelarla; solo tiene una vigente
+                    if (rol == Rol.PACIENTE && onReagendar != null) BotonCita(R.string.cita_reagendar, principal = false, enabled = !trabajando) { onReagendar() }
                     BotonCita(R.string.cita_cancelar, principal = false, enabled = !trabajando) { onCambiar(EstadoCita.CANCELADA) }
                 }
             }

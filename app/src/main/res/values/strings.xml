@@ -627,6 +627,14 @@
     <string name="agendar_enviada_titulo">Solicitud enviada</string>
     <string name="agendar_enviada_ayuda">%1$s la revisará y la confirmará. Te avisaremos cuando lo haga.</string>
     <string name="agendar_listo">listo</string>
+    <string name="agendar_ya_titulo">Ya tienes una cita</string>
+    <string name="agendar_ya_ayuda">Solo puedes tener una cita a la vez. Reagéndala para cambiar la hora, o cancélala para pedir otra con quien quieras.</string>
+    <string name="agendar_reagendar_titulo">Reagendar cita</string>
+    <string name="agendar_reagendar_actual">Ahora: %1$s</string>
+    <string name="agendar_reagendar_enviar">reagendar cita</string>
+    <string name="agendar_reagendar_ayuda">%1$s tendrá que confirmar la nueva hora. Tu hora actual queda libre al reagendar.</string>
+    <string name="agendar_reagendada_titulo">Cita reagendada</string>
+    <string name="agendar_reagendada_ayuda">%1$s confirmará la nueva hora. Te avisaremos cuando lo haga.</string>
 
     <string name="citas_titulo_paciente">Mis citas</string>
     <string name="citas_titulo_nutriologo">Citas</string>
@@ -643,6 +651,7 @@
     <string name="cita_confirmar">confirmar</string>
     <string name="cita_rechazar">rechazar</string>
     <string name="cita_cancelar">cancelar cita</string>
+    <string name="cita_reagendar">reagendar</string>
     <string name="cita_dialogo_rechazar">¿Rechazar la solicitud?</string>
     <string name="cita_dialogo_cancelar">¿Cancelar la cita?</string>
     <string name="cita_dialogo_ayuda">La hora quedará libre para otros pacientes.</string>

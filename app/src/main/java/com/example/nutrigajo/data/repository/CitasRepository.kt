@@ -15,7 +15,9 @@ import kotlinx.coroutines.tasks.await
 // el paciente pide, el nutriólogo confirma o rechaza y cualquiera de los dos cancela.
 // La hora pedida se reserva en directorio/{nutriologoId}/ocupados/{inicio} (sin datos del paciente) en el mismo lote
 // que la cita: si otro paciente ya la tomó, el lote entero falla y la cita no se crea.
-// ponytail: sin límite de citas pendientes por paciente; con abuso, acotarlo en las reglas.
+// Un paciente solo puede tener una cita vigente a la vez: el lote que la crea también pone citasActivas/{uid}, y las reglas
+// no dejan crear otra mientras ese candado exista. Para cambiarla puede reagendarla (otra hora del mismo nutriólogo, que
+// vuelve a esperar su confirmación) o cancelarla, que quita el candado.
 class CitasRepository(
     private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
     private val db: FirebaseFirestore = FirebaseFirestore.getInstance(),
@@ -24,6 +26,8 @@ class CitasRepository(
 
     private fun ocupados(nutriologoId: String) =
         db.collection(FirestorePaths.DIRECTORIO).document(nutriologoId).collection(FirestorePaths.OCUPADOS)
+
+    private fun candado(usuarioId: String) = db.collection(FirestorePaths.CITAS_ACTIVAS).document(usuarioId)
 
     // ---- paciente
 
@@ -35,15 +39,21 @@ class CitasRepository(
             .mapNotNull { it.getLong("inicio") }
             .toSet()
 
-    suspend fun agendar(nutriologo: NutriologoEnMapa, paciente: Perfil, inicio: Long) {
+    // La cita vigente del paciente (la más próxima que no pasó ni se cerró), o null si no tiene: con una, no puede pedir otra.
+    suspend fun citaVigente(): Cita? {
+        val ahora = System.currentTimeMillis()
+        return citas(Rol.PACIENTE).firstOrNull { it.vigente(ahora) }
+    }
+
+    suspend fun agendar(nutriologoId: String, nutriologoNombre: String, paciente: Perfil, inicio: Long) {
         val ahora = System.currentTimeMillis()
         val cita = db.collection(FirestorePaths.CITAS).document()
         db.runBatch { lote ->
             lote.set(
                 cita,
                 mapOf(
-                    "nutriologoId" to nutriologo.id,
-                    "nutriologoNombre" to nutriologo.nombre,
+                    "nutriologoId" to nutriologoId,
+                    "nutriologoNombre" to nutriologoNombre,
                     "usuarioId" to uid,
                     "pacienteNombre" to paciente.nombre,
                     "inicio" to inicio,
@@ -52,7 +62,21 @@ class CitasRepository(
                     "actualizadaEn" to ahora,
                 ),
             )
-            lote.set(ocupados(nutriologo.id).document(inicio.toString()), mapOf("citaId" to cita.id, "inicio" to inicio))
+            lote.set(ocupados(nutriologoId).document(inicio.toString()), mapOf("citaId" to cita.id, "inicio" to inicio))
+            lote.set(candado(uid), mapOf("citaId" to cita.id))
+        }.await()
+    }
+
+    // Pasa la cita a otra hora del mismo nutriólogo: vuelve a esperar su confirmación, la hora nueva se reserva y la vieja se
+    // libera en el mismo lote. Si otro paciente ya tomó la nueva, el lote entero falla y la cita se queda como estaba.
+    suspend fun reagendar(cita: Cita, inicio: Long) {
+        db.runBatch { lote ->
+            lote.update(
+                db.collection(FirestorePaths.CITAS).document(cita.id),
+                mapOf("inicio" to inicio, "estado" to EstadoCita.PENDIENTE.name, "actualizadaEn" to System.currentTimeMillis()),
+            )
+            lote.set(ocupados(cita.nutriologoId).document(inicio.toString()), mapOf("citaId" to cita.id, "inicio" to inicio))
+            lote.delete(ocupados(cita.nutriologoId).document(cita.inicio.toString()))
         }.await()
     }
 
@@ -66,7 +90,8 @@ class CitasRepository(
             .mapNotNull { it.aCita() }
             .sortedBy { it.inicio }
 
-    // Cambia el estado de la cita; si deja de ocupar la hora (rechazada o cancelada), la libera en el mismo lote.
+    // Cambia el estado de la cita; si deja de ocupar la hora (rechazada o cancelada), la libera en el mismo lote, y con ella el
+    // candado del paciente para que pueda pedir otra.
     suspend fun cambiarEstado(cita: Cita, estado: EstadoCita) {
         db.runBatch { lote ->
             lote.update(
@@ -75,6 +100,7 @@ class CitasRepository(
             )
             if (estado == EstadoCita.RECHAZADA || estado == EstadoCita.CANCELADA) {
                 lote.delete(ocupados(cita.nutriologoId).document(cita.inicio.toString()))
+                lote.delete(candado(cita.usuarioId))
             }
         }.await()
     }

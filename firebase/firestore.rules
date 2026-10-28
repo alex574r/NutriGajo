@@ -210,21 +210,33 @@ service cloud.firestore {
     function directorioRef(uid) {
       return /databases/$(database)/documents/directorio/$(uid);
     }
+    // Candado de «una sola cita vigente por paciente» (el id es el uid del paciente).
+    function candadoRef(uid) {
+      return /databases/$(database)/documents/citasActivas/$(uid);
+    }
+    // El paciente puede tomar una cita nueva: no tiene candado, o el que tiene es de una cita que ya pasó, se rechazó o se canceló.
+    function candadoLibre(uid) {
+      return !exists(candadoRef(uid))
+        || get(citaRef(get(candadoRef(uid)).data.citaId)).data.inicio < request.time.toMillis()
+        || get(citaRef(get(candadoRef(uid)).data.citaId)).data.estado in ['RECHAZADA', 'CANCELADA'];
+    }
 
     // Hora ya pedida a un nutriólogo (el id es el inicio en milisegundos). La ve cualquier sesión para no ofrecerla;
     // no lleva datos del paciente. La crea el paciente en el mismo lote que su cita y, al ser el id el inicio, dos
     // pacientes no pueden tomar la misma hora: la segunda creación sería una actualización y se rechaza.
-    // La libera el lote que rechaza o cancela la cita.
+    // La libera el lote que rechaza o cancela la cita, o el que la cambia a otra hora (reagendar).
     match /directorio/{nutriologoId}/ocupados/{inicio} {
       allow read: if request.auth != null;
 
+      // Se crea con la cita nueva o con la cita que cambia de hora: en ese caso la cita ya existe pero no tenía esta hora.
       allow create: if request.auth != null
         && request.resource.data.keys().hasOnly(['citaId', 'inicio'])
         && request.resource.data.keys().hasAll(['citaId', 'inicio'])
         && request.resource.data.citaId is string
         && request.resource.data.inicio is int
         && string(request.resource.data.inicio) == inicio
-        && !exists(citaRef(request.resource.data.citaId))
+        && (!exists(citaRef(request.resource.data.citaId))
+            || get(citaRef(request.resource.data.citaId)).data.inicio != request.resource.data.inicio)
         && getAfter(citaRef(request.resource.data.citaId)).data.nutriologoId == nutriologoId
         && getAfter(citaRef(request.resource.data.citaId)).data.usuarioId == request.auth.uid
         && getAfter(citaRef(request.resource.data.citaId)).data.inicio == request.resource.data.inicio
@@ -232,15 +244,41 @@ service cloud.firestore {
 
       allow update: if false;
 
+      // Se libera cuando la cita se rechaza o se cancela, o cuando el paciente la pasa a otra hora (la hora vieja queda libre).
       allow delete: if request.auth != null
         && (get(citaRef(resource.data.citaId)).data.nutriologoId == request.auth.uid
             || get(citaRef(resource.data.citaId)).data.usuarioId == request.auth.uid)
-        && getAfter(citaRef(resource.data.citaId)).data.estado in ['RECHAZADA', 'CANCELADA'];
+        && (getAfter(citaRef(resource.data.citaId)).data.estado in ['RECHAZADA', 'CANCELADA']
+            || (getAfter(citaRef(resource.data.citaId)).data.estado == 'PENDIENTE'
+                && getAfter(citaRef(resource.data.citaId)).data.inicio != resource.data.inicio));
+    }
+
+    // Candado de una sola cita vigente por paciente (el id es su uid): lo pone el paciente en el mismo lote que su cita nueva y
+    // lo quita el lote que la rechaza o la cancela. Mientras exista, y su cita no haya pasado ni se haya cerrado, el paciente no
+    // puede pedir otra (la regla de crear cita lo exige): puede reagendarla o cancelarla.
+    match /citasActivas/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+
+      allow create, update: if request.auth != null
+        && request.auth.uid == uid
+        && rolDe(uid) == 'PACIENTE'
+        && request.resource.data.keys().hasOnly(['citaId'])
+        && request.resource.data.citaId is string
+        && !exists(citaRef(request.resource.data.citaId))
+        && getAfter(citaRef(request.resource.data.citaId)).data.usuarioId == uid
+        && candadoLibre(uid);
+
+      // Borrar uno que no existe no hace nada (citas de antes del candado).
+      allow delete: if resource == null
+        || (request.auth != null
+            && (request.auth.uid == uid || get(citaRef(resource.data.citaId)).data.nutriologoId == request.auth.uid)
+            && (getAfter(citaRef(resource.data.citaId)).data.estado in ['RECHAZADA', 'CANCELADA']
+                || get(citaRef(resource.data.citaId)).data.inicio < request.time.toMillis()));
     }
 
     // Cita que un paciente pide a un nutriólogo del directorio. La ven los dos. El paciente la crea pendiente, con su
     // nombre y el del consultorio tal como están registrados; el nutriólogo confirma o rechaza lo pendiente y cancela lo
-    // confirmado; el paciente cancela la suya. Solo cambian el estado y la fecha de actualización.
+    // confirmado; el paciente cancela la suya o la reagenda a otra hora. Solo puede tener una vigente (citasActivas/{uid}).
     match /citas/{citaId} {
       allow read: if request.auth != null
         && (resource.data.nutriologoId == request.auth.uid || resource.data.usuarioId == request.auth.uid);
@@ -261,7 +299,10 @@ service cloud.firestore {
         && request.resource.data.inicio % 900000 == 0
         && request.resource.data.creadaEn is int
         && request.resource.data.actualizadaEn is int
-        && existsAfter(/databases/$(database)/documents/directorio/$(request.resource.data.nutriologoId)/ocupados/$(string(request.resource.data.inicio)));
+        && existsAfter(/databases/$(database)/documents/directorio/$(request.resource.data.nutriologoId)/ocupados/$(string(request.resource.data.inicio)))
+        // una sola cita vigente: sin candado (o con uno vencido) y poniendo el de esta cita en el mismo lote
+        && candadoLibre(request.auth.uid)
+        && getAfter(candadoRef(request.auth.uid)).data.citaId == citaId;
 
       allow update: if request.auth != null
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['estado', 'actualizadaEn'])
@@ -272,6 +313,23 @@ service cloud.firestore {
             || (resource.data.usuarioId == request.auth.uid
                 && resource.data.estado in ['PENDIENTE', 'CONFIRMADA']
                 && request.resource.data.estado == 'CANCELADA'));
+
+      // Reagendar: el paciente pasa su cita vigente a otra hora del mismo nutriólogo. Vuelve a PENDIENTE (el nutriólogo la
+      // confirma de nuevo) y la hora nueva se reserva en el mismo lote; la vieja la libera el lote.
+      allow update: if request.auth != null
+        && resource.data.usuarioId == request.auth.uid
+        && resource.data.estado in ['PENDIENTE', 'CONFIRMADA']
+        && resource.data.inicio > request.time.toMillis()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['inicio', 'estado', 'actualizadaEn'])
+        && request.resource.data.estado == 'PENDIENTE'
+        && request.resource.data.inicio is int
+        && request.resource.data.inicio != resource.data.inicio
+        && request.resource.data.inicio > request.time.toMillis()
+        && request.resource.data.inicio <= request.time.toMillis() + 5184000000
+        && request.resource.data.inicio % 900000 == 0
+        && request.resource.data.actualizadaEn is int
+        && existsAfter(/databases/$(database)/documents/directorio/$(resource.data.nutriologoId)/ocupados/$(string(request.resource.data.inicio)))
+        && getAfter(/databases/$(database)/documents/directorio/$(resource.data.nutriologoId)/ocupados/$(string(request.resource.data.inicio))).data.citaId == citaId;
 
       allow delete: if false;
     }

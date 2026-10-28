@@ -113,6 +113,7 @@ fun InicioPacienteScreen(
                 onActualizar = { citasVm.cargar(Rol.PACIENTE) },
                 onCambiar = citasVm::cambiarEstado,
                 onVolver = { enCitas = false },
+                onReagendar = agendaVm::reagendar,
             )
         }
         enPlan && vinculo != null -> PlanPacienteScreen(
@@ -134,13 +135,6 @@ fun InicioPacienteScreen(
                 onVerMas = { mapaVm.abrirFicha(it, cache) },
                 onCerrarFicha = mapaVm::cerrarFicha,
                 onAgendar = agendaVm::abrir,
-            )
-            AgendarCitaSheet(
-                estado = agenda,
-                onDia = agendaVm::elegirDia,
-                onHora = agendaVm::elegirHora,
-                onEnviar = { agendaVm.enviar(perfil) },
-                onCerrar = agendaVm::cerrar,
             )
         }
         vinculo == null || (enExito && !celebrado) -> VincularScreen(
@@ -187,6 +181,21 @@ fun InicioPacienteScreen(
             }
         }
     }
+
+    // la agenda se abre desde el mapa (pedir cita) y desde «Mis citas» (reagendar): va encima de lo que haya
+    AgendarCitaSheet(
+        estado = agenda,
+        onDia = agendaVm::elegirDia,
+        onHora = agendaVm::elegirHora,
+        onEnviar = { agendaVm.enviar(perfil) },
+        onReagendar = agendaVm::reagendar,
+        onCancelarVigente = agendaVm::cancelarVigente,
+        onCerrar = {
+            agendaVm.cerrar()
+            // lo que se pidió, reagendó o canceló desde la hoja se ve en «Mis citas»
+            if (enCitas) citasVm.cargar(Rol.PACIENTE)
+        },
+    )
 }
 
 @Composable

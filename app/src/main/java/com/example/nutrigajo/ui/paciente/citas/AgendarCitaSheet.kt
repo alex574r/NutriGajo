@@ -5,6 +5,7 @@ import android.content.pm.PackageManager
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -28,14 +29,19 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -51,6 +57,8 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import com.example.nutrigajo.R
 import com.example.nutrigajo.domain.Agenda
+import com.example.nutrigajo.domain.model.Cita
+import com.example.nutrigajo.domain.model.EstadoCita
 import com.example.nutrigajo.ui.components.AlertaError
 import com.example.nutrigajo.ui.components.BotonPrimario
 import com.example.nutrigajo.ui.components.Esqueleto
@@ -65,7 +73,8 @@ import java.time.ZoneId
 private const val COLUMNAS_HORAS = 4
 
 // Hoja para pedir una cita: el paciente elige uno de los próximos días y una hora libre del nutriólogo y manda la solicitud.
-// Terminado el envío la misma hoja le dice que el nutriólogo la confirmará.
+// Terminado el envío la misma hoja le dice que el nutriólogo la confirmará. Solo se puede tener una cita vigente: si ya hay una,
+// la hoja la muestra para reagendarla (abre esta misma agenda, para pasarla a otra hora) o cancelarla.
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun AgendarCitaSheet(
@@ -73,9 +82,14 @@ fun AgendarCitaSheet(
     onDia: (LocalDate) -> Unit,
     onHora: (Long) -> Unit,
     onEnviar: () -> Unit,
+    onReagendar: (Cita) -> Unit,
+    onCancelarVigente: () -> Unit,
     onCerrar: () -> Unit,
 ) {
-    val nutriologo = estado.nutriologo ?: return
+    if (estado.nutriologoId == null) return
+    val nombre = estado.nutriologoNombre
+    val reagendando = estado.reagendando
+    val vigente = estado.citaVigente
     val colores = MaterialTheme.colorScheme
     // desde Android 13 los avisos piden permiso: se pide al solicitar la primera cita y la solicitud sigue diga lo que diga
     val contexto = LocalContext.current
@@ -108,15 +122,28 @@ fun AgendarCitaSheet(
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             if (estado.enviada) {
-                Enviada(nutriologo.nombre, onCerrar)
+                Enviada(nombre, reagendada = reagendando != null, onCerrar)
+            } else if (vigente != null) {
+                YaTienesCita(vigente, estado.cancelando, estado.error, onReagendar = { onReagendar(vigente) }, onCancelar = onCancelarVigente)
             } else {
                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text(stringResource(R.string.agendar_titulo), style = MaterialTheme.typography.headlineMedium, color = colores.onBackground)
                     Text(
-                        text = stringResource(R.string.agendar_con, nutriologo.nombre),
+                        text = stringResource(if (reagendando != null) R.string.agendar_reagendar_titulo else R.string.agendar_titulo),
+                        style = MaterialTheme.typography.headlineMedium,
+                        color = colores.onBackground,
+                    )
+                    Text(
+                        text = stringResource(R.string.agendar_con, nombre),
                         style = MaterialTheme.typography.bodyMedium,
                         color = colores.onSurfaceVariant,
                     )
+                    reagendando?.let {
+                        Text(
+                            text = stringResource(R.string.agendar_reagendar_actual, diaYHora(it.inicio)),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = colores.onSurfaceVariant,
+                        )
+                    }
                 }
                 when {
                     estado.cargando -> Cargando()
@@ -145,13 +172,17 @@ fun AgendarCitaSheet(
                 estado.error?.let { AlertaError(stringResource(it)) }
                 estado.hora?.let { Text(diaYHora(it), style = MaterialTheme.typography.titleMedium, color = colores.onBackground) }
                 BotonPrimario(
-                    texto = stringResource(R.string.agendar_enviar),
+                    texto = stringResource(if (reagendando != null) R.string.agendar_reagendar_enviar else R.string.agendar_enviar),
                     onClick = enviar,
                     modifier = Modifier.fillMaxWidth(),
                     enabled = estado.hora != null && !estado.cargando,
                     cargando = estado.enviando,
                 )
-                Text(stringResource(R.string.agendar_ayuda), style = MaterialTheme.typography.bodySmall, color = colores.onSurfaceVariant)
+                Text(
+                    text = if (reagendando != null) stringResource(R.string.agendar_reagendar_ayuda, nombre) else stringResource(R.string.agendar_ayuda),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = colores.onSurfaceVariant,
+                )
             }
         }
     }
@@ -213,7 +244,7 @@ private fun FlowRowScope.HoraChip(hora: String, elegida: Boolean, libre: Boolean
 }
 
 @Composable
-private fun Enviada(nombre: String, onCerrar: () -> Unit) {
+private fun Enviada(nombre: String, reagendada: Boolean, onCerrar: () -> Unit) {
     val colores = MaterialTheme.colorScheme
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -224,17 +255,82 @@ private fun Enviada(nombre: String, onCerrar: () -> Unit) {
             Icon(painterResource(R.drawable.ic_calendario), contentDescription = null, modifier = Modifier.size(32.dp), tint = colores.onPrimaryContainer)
         }
         Text(
-            text = stringResource(R.string.agendar_enviada_titulo),
+            text = stringResource(if (reagendada) R.string.agendar_reagendada_titulo else R.string.agendar_enviada_titulo),
             style = MaterialTheme.typography.headlineMedium,
             color = colores.onBackground,
             textAlign = TextAlign.Center,
         )
         Text(
-            text = stringResource(R.string.agendar_enviada_ayuda, nombre),
+            text = stringResource(if (reagendada) R.string.agendar_reagendada_ayuda else R.string.agendar_enviada_ayuda, nombre),
             style = MaterialTheme.typography.bodyLarge,
             color = colores.onSurfaceVariant,
             textAlign = TextAlign.Center,
         )
         BotonPrimario(texto = stringResource(R.string.agendar_listo), onClick = onCerrar, modifier = Modifier.fillMaxWidth())
+    }
+}
+
+// Ya tiene una cita vigente y solo se puede una a la vez: se muestra para reagendarla (otra hora, con el mismo nutriólogo) o
+// cancelarla (y entonces puede pedir otra, con quien quiera).
+@Composable
+private fun YaTienesCita(cita: Cita, cancelando: Boolean, @StringRes error: Int?, onReagendar: () -> Unit, onCancelar: () -> Unit) {
+    val colores = MaterialTheme.colorScheme
+    var confirmando by remember { mutableStateOf(false) }
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Box(Modifier.size(72.dp).clip(CircleShape).background(colores.primaryContainer), contentAlignment = Alignment.Center) {
+            Icon(painterResource(R.drawable.ic_calendario), contentDescription = null, modifier = Modifier.size(32.dp), tint = colores.onPrimaryContainer)
+        }
+        Text(
+            text = stringResource(R.string.agendar_ya_titulo),
+            style = MaterialTheme.typography.headlineMedium,
+            color = colores.onBackground,
+            textAlign = TextAlign.Center,
+        )
+        Text(
+            text = stringResource(R.string.agendar_ya_ayuda),
+            style = MaterialTheme.typography.bodyLarge,
+            color = colores.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+        )
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(22.dp))
+                .background(colores.surfaceVariant)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Text(cita.nutriologoNombre, style = MaterialTheme.typography.titleMedium, color = colores.onBackground)
+            Text(diaYHora(cita.inicio), style = MaterialTheme.typography.bodyMedium, color = colores.onBackground)
+            Text(
+                text = stringResource(if (cita.estado == EstadoCita.CONFIRMADA) R.string.cita_estado_confirmada else R.string.cita_estado_pendiente),
+                style = MaterialTheme.typography.bodySmall,
+                color = colores.onSurfaceVariant,
+            )
+        }
+        error?.let { AlertaError(stringResource(it)) }
+        BotonPrimario(texto = stringResource(R.string.cita_reagendar), onClick = onReagendar, modifier = Modifier.fillMaxWidth(), enabled = !cancelando)
+        TextButton(onClick = { confirmando = true }, enabled = !cancelando) {
+            Text(stringResource(R.string.cita_cancelar), color = colores.error)
+        }
+    }
+    if (confirmando) {
+        AlertDialog(
+            onDismissRequest = { confirmando = false },
+            containerColor = colores.background,
+            title = { Text(stringResource(R.string.cita_dialogo_cancelar)) },
+            text = { Text(stringResource(R.string.cita_dialogo_ayuda)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmando = false
+                    onCancelar()
+                }) { Text(stringResource(R.string.cita_dialogo_si_cancelar), color = colores.error) }
+            },
+            dismissButton = { TextButton(onClick = { confirmando = false }) { Text(stringResource(R.string.cita_dialogo_volver)) } },
+        )
     }
 }
