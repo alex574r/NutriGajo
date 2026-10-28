@@ -175,6 +175,9 @@
     <string name="expediente_regresar">Regresar</string>
     <string name="expediente_continuar">continuar</string>
     <string name="expediente_terminar">terminar</string>
+    <string name="expediente_guardar">guardar</string>
+    <string name="expediente_modulo">Módulo %1$d de %2$d</string>
+    <string name="resumen_editar_categoria">Editar %1$s</string>
     <string name="expediente_omitir">Prefiero omitir esta pregunta</string>
     <string name="expediente_aceptar">Aceptar</string>
     <string name="expediente_fecha_elegir">Elegir fecha</string>

@@ -42,6 +42,10 @@ fun ResumenScreen(
     nombrePaciente: String,
     expediente: Expediente,
     onEditar: () -> Unit,
+    // el botón de editar de cada categoría: abre el asistente solo con los pasos de esa categoría
+    onEditarCategoria: (List<Int>) -> Unit,
+    // la categoría que se acaba de guardar da un pulso al volver; null si no se vuelve de editar una
+    categoriaGuardada: List<Int>?,
     onVolver: () -> Unit,
     modifier: Modifier = Modifier,
     // solo el nutriólogo: abre el panel del plan de alimentación y ejercicio de este paciente
@@ -107,7 +111,7 @@ fun ResumenScreen(
                     }
                 }
             }
-            CategoriasExpediente(expediente, Modifier.padding(bottom = 8.dp))
+            CategoriasExpediente(expediente, Modifier.padding(bottom = 8.dp), onEditar = onEditarCategoria, resaltada = categoriaGuardada)
         }
         Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             if (onPlan != null) {

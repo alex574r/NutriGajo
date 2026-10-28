@@ -2,8 +2,12 @@ package com.example.nutrigajo.ui.shared.expediente
 
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -20,18 +24,26 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
@@ -41,6 +53,8 @@ import androidx.compose.ui.unit.sp
 import com.example.nutrigajo.R
 import com.example.nutrigajo.domain.model.EjercicioPreferido
 import com.example.nutrigajo.domain.model.Expediente
+import com.example.nutrigajo.ui.components.alPulsar
+import com.example.nutrigajo.ui.components.hundible
 import java.time.LocalDate
 import java.time.Period
 
@@ -58,10 +72,17 @@ fun Expediente.respondidos(): Int = listOf(
     caloriasObjetivo, calidadSueno,
 ).count { it != null }
 
-// El expediente agrupado por categoría: cada una con su foto, cuántos datos tiene y los datos a la vista.
-// Fotos de Pexels (uso libre): salud 6320167 · descanso 7556587; el resto sale de las del onboarding y el inicio.
+// El expediente agrupado por módulo (ModuloExpediente): cada uno con su foto, cuántos datos tiene y los datos a la vista.
+// `onEditar` pone un botón de editar en cada módulo y recibe sus pasos del asistente (en su orden) para editarlo solo.
 @Composable
-fun CategoriasExpediente(expediente: Expediente, modifier: Modifier = Modifier) {
+// `resaltada` son los pasos de la categoría que se acaba de guardar: su tarjeta da un pulso para que se vea qué cambió.
+fun CategoriasExpediente(
+    expediente: Expediente,
+    modifier: Modifier = Modifier,
+    onEditar: ((List<Int>) -> Unit)? = null,
+    resaltada: List<Int>? = null,
+) {
+    fun editar(pasos: List<Int>): (() -> Unit)? = onEditar?.let { { it(pasos) } }
     val objetivo = expediente.objetivo?.let { stringResource(it.etiqueta()) }
     val sexo = expediente.sexo?.let { stringResource(it.etiqueta()) }
     val edad = expediente.fechaNacimiento
@@ -80,12 +101,17 @@ fun CategoriasExpediente(expediente: Expediente, modifier: Modifier = Modifier) 
     val sueno = expediente.calidadSueno
 
     Column(modifier, verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        TarjetaCategoria(R.drawable.onboarding_planes, R.string.dato_objetivo, listOf(objetivo).count { it != null }, 1, BiasAlignment(0f, -0.1f)) {
+        TarjetaCategoria(
+            ModuloExpediente.OBJETIVO, listOf(objetivo).count { it != null },
+            onEditar = editar(ModuloExpediente.OBJETIVO.pasos),
+            resaltada = resaltada == ModuloExpediente.OBJETIVO.pasos,
+        ) {
             ValorGrande(objetivo)
         }
         TarjetaCategoria(
-            R.drawable.onboarding_medidas, R.string.resumen_cat_cuerpo, listOf(sexo, edad, peso, estatura).count { it != null }, 4,
-            BiasAlignment(0f, 0.25f),
+            ModuloExpediente.CUERPO, listOf(sexo, edad, peso, estatura).count { it != null },
+            onEditar = editar(ModuloExpediente.CUERPO.pasos),
+            resaltada = resaltada == ModuloExpediente.CUERPO.pasos,
         ) {
             Row(Modifier.height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Metrica(R.string.dato_sexo, sexo, modifier = Modifier.weight(1f))
@@ -96,15 +122,20 @@ fun CategoriasExpediente(expediente: Expediente, modifier: Modifier = Modifier) 
                 Metrica(R.string.dato_estatura, estatura, "cm", Modifier.weight(1f))
             }
         }
-        TarjetaCategoria(R.drawable.exp_salud, R.string.resumen_cat_salud, listOf(condiciones, alergias).count { it != null }, 2) {
+        TarjetaCategoria(
+            ModuloExpediente.SALUD, listOf(condiciones, alergias).count { it != null },
+            onEditar = editar(ModuloExpediente.SALUD.pasos),
+            resaltada = resaltada == ModuloExpediente.SALUD.pasos,
+        ) {
             Subtitulo(R.string.dato_condiciones)
             Chips(condiciones)
             Subtitulo(R.string.dato_alergias)
             Chips(alergias)
         }
         TarjetaCategoria(
-            R.drawable.onboarding_alimentacion, R.string.resumen_cat_alimentacion, listOf(dieta, calorias, suplementos).count { it != null }, 3,
-            BiasAlignment(0f, 0.5f),
+            ModuloExpediente.ALIMENTACION, listOf(dieta, calorias, suplementos).count { it != null },
+            onEditar = editar(ModuloExpediente.ALIMENTACION.pasos),
+            resaltada = resaltada == ModuloExpediente.ALIMENTACION.pasos,
         ) {
             Row(Modifier.height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Metrica(R.string.dato_dieta, dieta, modifier = Modifier.weight(1f))
@@ -114,7 +145,9 @@ fun CategoriasExpediente(expediente: Expediente, modifier: Modifier = Modifier) 
             Chips(suplementos)
         }
         TarjetaCategoria(
-            R.drawable.inicio_rutina, R.string.resumen_cat_actividad, listOf(nivel, dias, ejercicios).count { it != null }, 3,
+            ModuloExpediente.ACTIVIDAD, listOf(nivel, dias, ejercicios).count { it != null },
+            onEditar = editar(ModuloExpediente.ACTIVIDAD.pasos),
+            resaltada = resaltada == ModuloExpediente.ACTIVIDAD.pasos,
         ) {
             Subtitulo(R.string.dato_actividad)
             if (nivel != null) {
@@ -147,7 +180,11 @@ fun CategoriasExpediente(expediente: Expediente, modifier: Modifier = Modifier) 
                 SinResponder()
             }
         }
-        TarjetaCategoria(R.drawable.exp_descanso, R.string.resumen_cat_descanso, listOf(sueno).count { it != null }, 1) {
+        TarjetaCategoria(
+            ModuloExpediente.DESCANSO, listOf(sueno).count { it != null },
+            onEditar = editar(ModuloExpediente.DESCANSO.pasos),
+            resaltada = resaltada == ModuloExpediente.DESCANSO.pasos,
+        ) {
             if (sueno != null) {
                 // de 1 (insomnio) a 5 (excelente): el enum va de mejor a peor
                 Segmentos(5 - sueno.ordinal, 5)
@@ -163,33 +200,65 @@ fun CategoriasExpediente(expediente: Expediente, modifier: Modifier = Modifier) 
 // Foto de la categoría con su título y cuántos datos tiene; debajo, los datos sobre la superficie gris.
 @Composable
 private fun TarjetaCategoria(
-    @DrawableRes foto: Int,
-    @StringRes titulo: Int,
+    modulo: ModuloExpediente,
     respondidos: Int,
-    total: Int,
-    alineacionFoto: Alignment = Alignment.Center,
+    // null: la tarjeta no se edita suelta
+    onEditar: (() -> Unit)? = null,
+    // acaba de guardarse: da un pulso con el anillo naranja y se pasa un poco de tamaño, y se asienta
+    resaltada: Boolean = false,
     contenido: @Composable () -> Unit,
 ) {
     val colores = MaterialTheme.colorScheme
-    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(RADIO_TARJETA)).background(colores.surfaceVariant)) {
+    val forma = RoundedCornerShape(RADIO_TARJETA)
+    val pulso = remember { Animatable(0f) }
+    LaunchedEffect(resaltada) {
+        if (resaltada) {
+            pulso.snapTo(1f)
+            pulso.animateTo(0f, tween(1100, easing = FastOutSlowInEasing))
+        }
+    }
+    val anillo = colores.primary
+    // se hunde bajo el dedo (el Carousel de Bencho); el pulso va dentro, para que ambos se sumen
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .hundible(forma)
+            .graphicsLayer {
+                val e = 1f + 0.015f * pulso.value
+                scaleX = e
+                scaleY = e
+            }
+            .drawWithContent {
+                drawContent()
+                if (pulso.value > 0.01f) {
+                    drawRoundRect(
+                        color = anillo.copy(alpha = 0.85f * pulso.value),
+                        cornerRadius = CornerRadius(RADIO_TARJETA.toPx()),
+                        style = Stroke(width = 3.dp.toPx()),
+                    )
+                }
+            }
+            .clip(forma)
+            .background(colores.surfaceVariant),
+    ) {
         Box(Modifier.fillMaxWidth().height(ALTO_FOTO)) {
             Image(
-                painter = painterResource(foto),
+                painter = painterResource(modulo.foto),
                 contentDescription = null,
                 modifier = Modifier.matchParentSize(),
                 contentScale = ContentScale.Crop,
-                alignment = alineacionFoto,
+                alignment = modulo.alineacion,
             )
             // el degradado oscuro deja leer el título sobre cualquier foto
             Box(Modifier.matchParentSize().background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.72f)))))
             Text(
-                text = stringResource(titulo),
+                text = stringResource(modulo.titulo),
                 modifier = Modifier.align(Alignment.BottomStart).padding(16.dp),
                 style = MaterialTheme.typography.titleLarge,
                 color = Color.White,
             )
             Text(
-                text = stringResource(R.string.expediente_avance, respondidos, total),
+                text = stringResource(R.string.expediente_avance, respondidos, modulo.pasos.size),
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .padding(12.dp)
@@ -198,6 +267,26 @@ private fun TarjetaCategoria(
                 style = MaterialTheme.typography.labelLarge.copy(fontSize = 12.sp),
                 color = Color.White,
             )
+            if (onEditar != null) {
+                // el área de toque mide 48dp; la pastilla, 36dp
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(4.dp)
+                        .size(48.dp)
+                        .alPulsar(onEditar, minimo = 0.8f),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Box(Modifier.size(36.dp).background(Color.Black.copy(alpha = 0.45f), RoundedCornerShape(11.dp)), contentAlignment = Alignment.Center) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_editar),
+                            contentDescription = stringResource(R.string.resumen_editar_categoria, stringResource(modulo.titulo)),
+                            modifier = Modifier.size(18.dp),
+                            tint = Color.White,
+                        )
+                    }
+                }
+            }
         }
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) { contenido() }
     }
