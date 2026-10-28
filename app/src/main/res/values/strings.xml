@@ -39,7 +39,8 @@
 
     <string name="registro_titulo">Crea tu cuenta</string>
     <string name="registro_subtitulo">Te registras como %1$s.</string>
-    <string name="registro_nombre">Nombre completo</string>
+    <string name="registro_nombre">Nombre(s)</string>
+    <string name="registro_apellidos">Apellidos</string>
     <string name="registro_confirmar">Confirmar contraseña</string>
     <string name="registro_aviso">Acepto el aviso de privacidad</string>
     <string name="registro_registrarme">registrarme</string>

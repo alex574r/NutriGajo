@@ -130,8 +130,8 @@ class MainActivity : ComponentActivity() {
                     Paso.REGISTRO -> RegistroScreen(
                         rol = rol,
                         estado = estado,
-                        onRegistrar = { nombre, correo, contrasena, confirmacion ->
-                            auth.registrar(nombre, correo, contrasena, confirmacion, rol)
+                        onRegistrar = { nombres, apellidos, correo, contrasena, confirmacion ->
+                            auth.registrar(nombres, apellidos, correo, contrasena, confirmacion, rol)
                         },
                         onIniciarSesion = {
                             auth.limpiarError()

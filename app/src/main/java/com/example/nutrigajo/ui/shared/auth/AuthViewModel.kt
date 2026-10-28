@@ -35,6 +35,9 @@ data class AuthEstado(
 
 private const val LARGO_MIN_CONTRASENA = 6 // mínimo de Firebase Auth
 
+// Sin espacios de más: «  Ana   María » queda «Ana María». Lo que se guarda como nombre es "nombres apellidos" así limpios.
+internal fun limpiarEspacios(texto: String): String = texto.trim().replace(Regex("\\s+"), " ")
+
 // ponytail: repositorio por defecto en el constructor; pasa a inyección (Hilt) cuando haya más ViewModels.
 class AuthViewModel(
     private val repo: AuthRepository = AuthRepository(),
@@ -47,14 +50,14 @@ class AuthViewModel(
     fun ingresar(correo: String, contrasena: String) =
         lanzar { repo.ingresar(correo.trim().lowercase(), contrasena) }
 
-    fun registrar(nombre: String, correo: String, contrasena: String, confirmacion: String, rol: Rol) {
+    fun registrar(nombres: String, apellidos: String, correo: String, contrasena: String, confirmacion: String, rol: Rol) {
         val error = when {
             contrasena != confirmacion -> R.string.error_contrasenas_distintas
             contrasena.length < LARGO_MIN_CONTRASENA -> R.string.error_contrasena_debil
             else -> null
         }
         if (error != null) _estado.update { it.copy(error = error) }
-        else lanzar { repo.registrar(nombre.trim(), correo.trim().lowercase(), contrasena, rol) }
+        else lanzar { repo.registrar(limpiarEspacios(nombres), limpiarEspacios(apellidos), correo.trim().lowercase(), contrasena, rol) }
     }
 
     fun cargarPerfil() {

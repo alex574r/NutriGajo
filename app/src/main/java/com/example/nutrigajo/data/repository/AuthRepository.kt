@@ -22,13 +22,17 @@ class AuthRepository(
 
     // Crea la cuenta y su perfil. El rol solo puede ser NUTRIOLOGO o PACIENTE (lo exigen también las reglas);
     // si el perfil falla se borra la cuenta para no dejar una sin rol.
-    suspend fun registrar(nombre: String, correo: String, contrasena: String, rol: Rol) {
+    // `nombre` (nombres y apellidos juntos) es el que usan las demás pantallas y las reglas; nombres y apellidos también se
+    // guardan por separado, porque después no se pueden separar con certeza («María José Hernández Maya»).
+    suspend fun registrar(nombres: String, apellidos: String, correo: String, contrasena: String, rol: Rol) {
         require(rol != Rol.ADMIN) { "ADMIN se da de alta a mano" }
         val usuario = auth.createUserWithEmailAndPassword(correo, contrasena).await().user
             ?: error("Firebase no devolvió el usuario")
         val ahora = System.currentTimeMillis()
         val perfil = mapOf(
-            "nombre" to nombre,
+            "nombre" to "$nombres $apellidos",
+            "nombres" to nombres,
+            "apellidos" to apellidos,
             "correo" to correo,
             "rol" to rol.name,
             "verificado" to false,
