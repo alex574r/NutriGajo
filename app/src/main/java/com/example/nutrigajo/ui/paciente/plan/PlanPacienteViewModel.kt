@@ -20,6 +20,8 @@ data class PlanPacienteEstado(
     val cargando: Boolean = true,
     // el último plan que le envió su nutriólogo; null si aún no tiene
     val plan: PlanEnviado? = null,
+    // todos los que ha recibido, del más nuevo al más viejo: las notificaciones de la campana
+    val planes: List<PlanEnviado> = emptyList(),
     val abriendo: Boolean = false,
     // el PDF del plan ya descargado
     val pdf: File? = null,
@@ -35,8 +37,8 @@ class PlanPacienteViewModel(private val repo: PlanesRepository = PlanesRepositor
         _estado.update { it.copy(cargando = true, error = null) }
         viewModelScope.launch {
             try {
-                val plan = repo.ultimo(pacienteId)
-                _estado.update { it.copy(cargando = false, plan = plan) }
+                val planes = repo.todos(pacienteId)
+                _estado.update { it.copy(cargando = false, plan = planes.firstOrNull(), planes = planes) }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -45,16 +47,18 @@ class PlanPacienteViewModel(private val repo: PlanesRepository = PlanesRepositor
         }
     }
 
-    // Trae el PDF del último plan (si el teléfono ya lo tiene, usa esa copia) y lo deja listo para el visor.
-    fun abrir(pacienteId: String, cache: File) {
+    // Trae el PDF del plan `planId` o, sin él, del último (si el teléfono ya lo tiene, usa esa copia) y lo deja listo para el visor.
+    fun abrir(pacienteId: String, cache: File, planId: String? = null) {
         if (_estado.value.abriendo) return
         _estado.update { it.copy(abriendo = true, error = null) }
         viewModelScope.launch {
             try {
-                // se vuelve a preguntar cuál es el último: puede haber uno más nuevo que el de la última carga
-                val plan = repo.ultimo(pacienteId)
-                val pdf = plan?.let { repo.pdf(pacienteId, it.id, cache) }
-                _estado.update { it.copy(abriendo = false, plan = plan, pdf = pdf, error = if (pdf == null) R.string.plan_paciente_error else null) }
+                // sin id se vuelve a preguntar cuál es el último: puede haber uno más nuevo que el de la última carga
+                val ultimo = if (planId == null) repo.ultimo(pacienteId) else null
+                val pdf = (planId ?: ultimo?.id)?.let { repo.pdf(pacienteId, it, cache) }
+                _estado.update {
+                    it.copy(abriendo = false, plan = if (planId == null) ultimo else it.plan, pdf = pdf, error = if (pdf == null) R.string.plan_paciente_error else null)
+                }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {

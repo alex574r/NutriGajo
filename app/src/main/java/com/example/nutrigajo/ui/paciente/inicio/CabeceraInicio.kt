@@ -3,6 +3,7 @@ package com.example.nutrigajo.ui.paciente.inicio
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -14,6 +15,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -36,13 +38,13 @@ import com.example.nutrigajo.R
 import com.example.nutrigajo.ui.components.AvatarInicial
 import com.example.nutrigajo.ui.components.CLAVE_AVATAR
 import com.example.nutrigajo.ui.components.TransicionPerfil
+import com.example.nutrigajo.ui.components.alPulsar
 import com.example.nutrigajo.ui.components.compartido
+import com.example.nutrigajo.ui.components.cristal
 import com.example.nutrigajo.ui.components.formaAvatar
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
-
-private val CRISTAL = Color(0xFFBDBDBD).copy(alpha = 0.21f)
 
 // Cabecera del inicio: foto con la fecha, la campana, el avatar (abre el perfil) y el saludo.
 // Mide 215 dp bajo la barra de estado (44 más que en el diseño, que se veía pequeño en el teléfono);
@@ -58,6 +60,9 @@ fun CabeceraInicio(
     imagenPortada: ImageBitmap? = null,
     // el avatar viaja al perfil cuando se abre
     transicion: TransicionPerfil? = null,
+    // los planes nuevos que aún no ha visto en sus notificaciones: con alguno la campana lleva un punto
+    sinLeer: Int = 0,
+    onNotificaciones: () -> Unit = {},
 ) {
     val colores = MaterialTheme.colorScheme
     val fecha = remember {
@@ -110,22 +115,34 @@ fun CabeceraInicio(
                 }
             }
         }
-        // ponytail: la campana todavía no abre nada; las notificaciones llegan con FCM
+        // la campana abre las notificaciones; el cuadro de 48 dp es el área de toque y el de 34 el dibujo del diseño
         Box(
             modifier = Modifier
                 .align(Alignment.TopEnd)
                 .statusBarsPadding()
-                .padding(top = 8.dp, end = 19.dp)
-                .size(34.dp)
-                .clip(RoundedCornerShape(10.dp))
-                .background(CRISTAL),
+                .padding(top = 1.dp, end = 12.dp)
+                .size(48.dp)
+                .alPulsar(onNotificaciones),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(
-                painter = painterResource(R.drawable.ic_campana),
-                contentDescription = stringResource(R.string.inicio_notificaciones),
-                tint = Color(0xFFF9F9F9),
-            )
+            Box(Modifier.size(34.dp).cristal(RoundedCornerShape(10.dp)).clip(RoundedCornerShape(10.dp)), contentAlignment = Alignment.Center) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_campana),
+                    contentDescription = if (sinLeer > 0) stringResource(R.string.inicio_notificaciones_sin_leer, sinLeer) else stringResource(R.string.inicio_notificaciones),
+                    tint = Color(0xFFF9F9F9),
+                )
+            }
+            if (sinLeer > 0) {
+                Box(
+                    Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(top = 7.dp, end = 7.dp)
+                        .size(11.dp)
+                        .clip(CircleShape)
+                        .background(colores.primary)
+                        .border(1.5.dp, Color.White, CircleShape),
+                )
+            }
         }
     }
 }

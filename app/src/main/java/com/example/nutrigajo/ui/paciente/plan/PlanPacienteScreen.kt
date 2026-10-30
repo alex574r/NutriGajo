@@ -30,10 +30,10 @@ import com.example.nutrigajo.ui.components.PantallaPdf
 
 // El plan de alimentación y ejercicio que el nutriólogo envió al paciente, en el visor de PDF de la app.
 @Composable
-fun PlanPacienteScreen(pacienteId: String, onVolver: () -> Unit, vm: PlanPacienteViewModel) {
+fun PlanPacienteScreen(pacienteId: String, onVolver: () -> Unit, vm: PlanPacienteViewModel, planId: String? = null) {
     val estado by vm.estado.collectAsState()
     val cache = LocalContext.current.cacheDir
-    LaunchedEffect(pacienteId) { vm.abrir(pacienteId, cache) }
+    LaunchedEffect(pacienteId, planId) { vm.abrir(pacienteId, cache, planId) }
     val salir = {
         vm.cerrar()
         onVolver()
@@ -52,7 +52,7 @@ fun PlanPacienteScreen(pacienteId: String, onVolver: () -> Unit, vm: PlanPacient
                     AlertaError(stringResource(estado.error ?: R.string.error_generico))
                     BotonPrimario(
                         texto = stringResource(R.string.plan_paciente_reintentar),
-                        onClick = { vm.abrir(pacienteId, cache) },
+                        onClick = { vm.abrir(pacienteId, cache, planId) },
                         modifier = Modifier.fillMaxWidth(),
                         cargando = estado.abriendo,
                     )

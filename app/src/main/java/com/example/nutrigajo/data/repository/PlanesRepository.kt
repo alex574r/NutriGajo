@@ -17,6 +17,23 @@ import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
 
+// El Worker sí contestó, pero con un error: la red está bien, así que no se le pide a quien usa la app que revise su conexión.
+class RechazoDelWorker(val codigo: Int) : IOException("El Worker respondió $codigo")
+
+// Qué pasó con la notificación al paciente al enviarle un plan; en cualquier caso el plan ya quedó enviado.
+enum class AvisoPlan {
+    ENVIADO,
+
+    // el paciente no tiene registrado ningún teléfono: nunca abrió la app con su cuenta o cerró sesión
+    SIN_TELEFONO,
+
+    // el teléfono registrado ya no sirve para recibir avisos (app reinstalada o datos borrados)
+    TELEFONO_CADUCO,
+
+    // el Worker o la red fallaron
+    FALLO,
+}
+
 // Planes de alimentación y ejercicio que el nutriólogo envía a un paciente. Cada plan son dos cosas: su PDF, que vive en R2
 // detrás del Worker de Cloudflare (backend/) y solo se sirve a el nutriólogo y al paciente, y su documento en
 // pacientes/{id}/planes/{planId}, con el contenido para partir de él en el siguiente. Un plan enviado no cambia.
@@ -33,9 +50,14 @@ class PlanesRepository(
     suspend fun ultimo(pacienteId: String): PlanEnviado? =
         planes(pacienteId).orderBy("enviadoEn", Query.Direction.DESCENDING).limit(1).get().await().documents.firstOrNull()?.aPlan()
 
+    // Todos los planes que ha recibido ese paciente, del más nuevo al más viejo (las notificaciones del paciente).
+    // ponytail: los últimos 30; si algún día hay más, se pagina.
+    suspend fun todos(pacienteId: String): List<PlanEnviado> =
+        planes(pacienteId).orderBy("enviadoEn", Query.Direction.DESCENDING).limit(30).get().await().documents.mapNotNull { it.aPlan() }
+
     // Sube el PDF, guarda el plan y pide al Worker avisar al paciente. Si solo falla el aviso el plan ya está enviado:
-    // devuelve false y el paciente lo verá al abrir la app.
-    suspend fun enviar(pacienteId: String, nutriologoNombre: String, contenido: PlanContenido, pdf: File): Boolean {
+    // el resultado dice por qué no salió y el paciente lo verá al abrir la app.
+    suspend fun enviar(pacienteId: String, nutriologoNombre: String, contenido: PlanContenido, pdf: File): AvisoPlan {
         val uid = auth.currentUser?.uid ?: error("Sin sesión")
         val ref = planes(pacienteId).document()
         subirPdf(pacienteId, ref.id, pdf)
@@ -51,7 +73,7 @@ class PlanesRepository(
         return try {
             avisar(pacienteId, ref.id)
         } catch (e: IOException) {
-            false
+            AvisoPlan.FALLO
         }
     }
 
@@ -61,7 +83,7 @@ class PlanesRepository(
         if (!destino.exists()) {
             val conexion = abrir("$base/plan/$pacienteId/$planId", "GET")
             try {
-                if (conexion.responseCode != HttpURLConnection.HTTP_OK) throw IOException("El Worker respondió ${conexion.responseCode}")
+                if (conexion.responseCode != HttpURLConnection.HTTP_OK) throw RechazoDelWorker(conexion.responseCode)
                 val parcial = File(cache, "${destino.name}.part")
                 parcial.outputStream().use { salida -> conexion.inputStream.use { it.copyTo(salida) } }
                 parcial.renameTo(destino)
@@ -80,21 +102,28 @@ class PlanesRepository(
         }
         try {
             pdf.inputStream().use { entrada -> conexion.outputStream.use { entrada.copyTo(it) } }
-            if (conexion.responseCode != HttpURLConnection.HTTP_OK) throw IOException("El Worker respondió ${conexion.responseCode}")
+            if (conexion.responseCode != HttpURLConnection.HTTP_OK) throw RechazoDelWorker(conexion.responseCode)
         } finally {
             conexion.disconnect()
         }
     }
 
-    private suspend fun avisar(pacienteId: String, planId: String): Boolean = withContext(Dispatchers.IO) {
+    private suspend fun avisar(pacienteId: String, planId: String): AvisoPlan = withContext(Dispatchers.IO) {
         val conexion = abrir("$base/planes/notificar", "POST").apply {
             doOutput = true
             setRequestProperty("Content-Type", "application/json")
         }
         try {
             conexion.outputStream.use { it.write(JSONObject().put("pacienteId", pacienteId).put("planId", planId).toString().toByteArray()) }
-            if (conexion.responseCode != HttpURLConnection.HTTP_OK) throw IOException("El Worker respondió ${conexion.responseCode}")
-            JSONObject(conexion.inputStream.bufferedReader().readText()).optBoolean("enviado")
+            if (conexion.responseCode != HttpURLConnection.HTTP_OK) throw RechazoDelWorker(conexion.responseCode)
+            val respuesta = JSONObject(conexion.inputStream.bufferedReader().readText())
+            // los motivos son los textos de `enviado: false` en backend/src/routes/plan.ts
+            when {
+                respuesta.optBoolean("enviado") -> AvisoPlan.ENVIADO
+                respuesta.optString("motivo") == "sin dispositivo" -> AvisoPlan.SIN_TELEFONO
+                respuesta.optString("motivo") == "dispositivo caducado" -> AvisoPlan.TELEFONO_CADUCO
+                else -> AvisoPlan.FALLO
+            }
         } finally {
             conexion.disconnect()
         }

@@ -30,14 +30,15 @@ object Avisos {
         gestor.createNotificationChannel(NotificationChannel(CANAL_PLANES, contexto.getString(R.string.aviso_canal_planes), NotificationManager.IMPORTANCE_HIGH))
     }
 
+    // Desde Android 13 los avisos piden permiso y la app no lo trae concedido: sin él el sistema descarta tanto los que muestra FCM
+    // como los de `mostrar`. Se pide al abrir el inicio del paciente y al solicitar una cita.
+    fun sinPermiso(contexto: Context): Boolean =
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(contexto, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+
     // `datos` son los de la notificación de FCM: viajan en la intención, como cuando FCM muestra el aviso por su cuenta.
     fun mostrar(contexto: Context, titulo: String, texto: String, datos: Map<String, String> = emptyMap()) {
-        // desde Android 13 el permiso se pide al agendar la primera cita; sin él no se avisa
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-            ContextCompat.checkSelfPermission(contexto, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
-        ) {
-            return
-        }
+        if (sinPermiso(contexto)) return
         crearCanales(contexto)
         val abrir = PendingIntent.getActivity(
             contexto,

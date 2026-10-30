@@ -80,6 +80,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.nutrigajo.R
 import com.example.nutrigajo.data.pdf.GeneradorPlanPdf
+import com.example.nutrigajo.data.repository.AvisoPlan
 import com.example.nutrigajo.domain.model.Equivalentes
 import com.example.nutrigajo.domain.model.GrupoAlimento
 import com.example.nutrigajo.domain.model.ItemBanco
@@ -180,7 +181,13 @@ fun PlanScreen(
             containerColor = MaterialTheme.colorScheme.background,
             title = { Text(stringResource(R.string.plan_enviado_titulo)) },
             text = {
-                Text(stringResource(if (estado.avisado) R.string.plan_enviado_avisado else R.string.plan_enviado_sin_aviso, nombrePaciente))
+                val texto = when (estado.aviso) {
+                    AvisoPlan.ENVIADO -> R.string.plan_enviado_avisado
+                    AvisoPlan.SIN_TELEFONO -> R.string.plan_enviado_sin_telefono
+                    AvisoPlan.TELEFONO_CADUCO -> R.string.plan_enviado_telefono_caducado
+                    AvisoPlan.FALLO -> R.string.plan_enviado_sin_aviso
+                }
+                Text(stringResource(texto, nombrePaciente))
             },
             confirmButton = { TextButton(onClick = onSalir) { Text(stringResource(R.string.plan_enviado_listo)) } },
         )

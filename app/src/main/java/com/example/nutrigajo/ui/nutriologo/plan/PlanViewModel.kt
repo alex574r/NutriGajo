@@ -6,9 +6,11 @@ import androidx.lifecycle.viewModelScope
 import com.example.nutrigajo.R
 import com.example.nutrigajo.data.pdf.DatosPlanPdf
 import com.example.nutrigajo.data.pdf.GeneradorPlanPdf
+import com.example.nutrigajo.data.repository.AvisoPlan
 import com.example.nutrigajo.data.repository.DirectorioRepository
 import com.example.nutrigajo.data.repository.ExpedienteRepository
 import com.example.nutrigajo.data.repository.PlanesRepository
+import com.example.nutrigajo.data.repository.RechazoDelWorker
 import com.example.nutrigajo.domain.model.Expediente
 import com.example.nutrigajo.domain.model.Objetivo
 import com.example.nutrigajo.domain.model.PlanContenido
@@ -41,9 +43,9 @@ data class PlanEstado(
     val enviando: Boolean = false,
     // PDF de la vista previa abierto
     val previa: File? = null,
-    // el plan se envió; `avisado` dice si la notificación al paciente también salió
+    // el plan se envió; `aviso` dice si la notificación al paciente también salió y, si no, por qué
     val enviado: Boolean = false,
-    val avisado: Boolean = false,
+    val aviso: AvisoPlan = AvisoPlan.FALLO,
     @param:StringRes val error: Int? = null,
 )
 
@@ -120,12 +122,17 @@ class PlanViewModel(
             val pdf = generarPdf(generador, cache) ?: return@launch
             _estado.update { it.copy(generando = false, enviando = true) }
             try {
-                val avisado = planes.enviar(pacienteId, nutriologo, _estado.value.contenido.limpio(), pdf)
-                _estado.update { it.copy(enviando = false, previa = null, enviado = true, avisado = avisado) }
+                val aviso = planes.enviar(pacienteId, nutriologo, _estado.value.contenido.limpio(), pdf)
+                _estado.update { it.copy(enviando = false, previa = null, enviado = true, aviso = aviso) }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                _estado.update { it.copy(enviando = false, error = if (e is IOException) R.string.plan_error_enviar else mensajeDeFirestore(e)) }
+                val error = when (e) {
+                    is RechazoDelWorker -> R.string.plan_error_servidor
+                    is IOException -> R.string.plan_error_enviar
+                    else -> mensajeDeFirestore(e)
+                }
+                _estado.update { it.copy(enviando = false, error = error) }
             }
         }
     }

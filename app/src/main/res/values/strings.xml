@@ -67,6 +67,11 @@
     <string name="inicio_avance">Avance %1$d%%</string>
     <string name="inicio_plan">Pro</string>
     <string name="inicio_notificaciones">Notificaciones</string>
+    <string name="inicio_notificaciones_sin_leer">Notificaciones, %1$d sin leer</string>
+    <string name="avisos_vacio">Aún no tienes notificaciones. Cuando tu nutriólogo te envíe un plan, lo verás aquí y podrás abrirlo cuando quieras.</string>
+    <string name="avisos_nuevo">Nuevo</string>
+    <string name="avisos_plan_titulo">Plan del %1$s</string>
+    <string name="avisos_plan_de">De %1$s</string>
     <string name="inicio_abrir_perfil">Abrir mi perfil</string>
     <string name="inicio_menu_expediente">Mi expediente</string>
     <string name="inicio_ver_todas">Ver todas</string>
@@ -415,6 +420,7 @@
 
     <!-- Panel del plan del nutriólogo -->
     <string name="plan_boton_crear">crear plan</string>
+    <string name="plan_boton_editar">editar plan y reenviar</string>
     <string name="plan_titulo">Plan de %1$s</string>
     <string name="plan_intro">Arma su plan de alimentación y de ejercicio. El PDF solo lleva lo que llenes; lo verás completo antes de enviarlo.</string>
     <string name="plan_ultimo_envio">Último plan enviado: %1$s. Partes de él para el siguiente.</string>
@@ -542,10 +548,13 @@
     <string name="plan_enviado_titulo">Plan enviado</string>
     <string name="plan_enviado_avisado">%1$s recibió una notificación para ver su plan.</string>
     <string name="plan_enviado_sin_aviso">El plan quedó enviado, pero no se pudo mandar la notificación. %1$s lo verá al abrir la app.</string>
+    <string name="plan_enviado_sin_telefono">El plan quedó enviado, pero %1$s no tiene ningún teléfono registrado para recibir avisos: aún no abre la app con su cuenta o cerró sesión. Lo verá al abrir la app.</string>
+    <string name="plan_enviado_telefono_caducado">El plan quedó enviado, pero el teléfono que %1$s tenía registrado ya no recibe avisos (reinstaló la app o borró sus datos). Lo verá al abrir la app con su cuenta.</string>
     <string name="plan_enviado_listo">Listo</string>
     <string name="plan_error_vacio">Llena al menos una sección para generar el plan.</string>
     <string name="plan_error_pdf">No se pudo armar el PDF. Inténtalo de nuevo.</string>
     <string name="plan_error_enviar">No pudimos enviar el plan. Revisa tu conexión e inténtalo de nuevo.</string>
+    <string name="plan_error_servidor">El servidor no pudo guardar el plan. Inténtalo de nuevo en unos minutos.</string>
 
     <!-- Plan en el teléfono del paciente -->
     <string name="visor_pdf_cargando">Abriendo el PDF…</string>

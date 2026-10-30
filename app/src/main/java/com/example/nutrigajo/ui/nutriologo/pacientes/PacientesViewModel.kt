@@ -5,6 +5,7 @@ import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.nutrigajo.data.repository.FotoPerfilRepository
+import com.example.nutrigajo.data.repository.PlanesRepository
 import com.example.nutrigajo.data.repository.VinculacionRepository
 import com.example.nutrigajo.domain.model.CodigoVinculacion
 import com.example.nutrigajo.domain.model.PacienteResumen
@@ -29,6 +30,7 @@ data class PacientesEstado(
 class PacientesViewModel(
     private val repo: VinculacionRepository = VinculacionRepository(),
     private val fotos: FotoPerfilRepository = FotoPerfilRepository(),
+    private val planes: PlanesRepository = PlanesRepository(),
 ) : ViewModel() {
     private val _estado = MutableStateFlow(PacientesEstado())
     val estado: StateFlow<PacientesEstado> = _estado.asStateFlow()
@@ -36,6 +38,23 @@ class PacientesViewModel(
     // foto de perfil de cada paciente que tiene una, por el id de su cuenta
     private val _fotos = MutableStateFlow<Map<String, Bitmap>>(emptyMap())
     val fotosPacientes: StateFlow<Map<String, Bitmap>> = _fotos.asStateFlow()
+
+    // ids de los pacientes que ya recibieron un plan: su expediente ofrece editarlo y reenviarlo en vez de crearlo
+    private val _conPlan = MutableStateFlow<Set<String>>(emptySet())
+    val pacientesConPlan: StateFlow<Set<String>> = _conPlan.asStateFlow()
+
+    // Mira si ese paciente ya tiene un plan enviado; si la consulta falla el botón se queda como "crear plan".
+    fun cargarPlan(pacienteId: String) {
+        viewModelScope.launch {
+            try {
+                val hay = planes.ultimo(pacienteId) != null
+                _conPlan.update { if (hay) it + pacienteId else it - pacienteId }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+            }
+        }
+    }
 
     // Pide las fotos de los pacientes de la lista, de a una para no saturar la conexión; las que fallan se quedan con la inicial.
     fun cargarFotos(cache: File, pacientes: List<PacienteResumen>) {
