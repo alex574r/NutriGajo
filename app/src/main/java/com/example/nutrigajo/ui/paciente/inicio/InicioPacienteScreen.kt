@@ -21,6 +21,7 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -109,6 +110,11 @@ fun InicioPacienteScreen(
     var metrica by rememberSaveable { mutableStateOf<Metrica?>(null) }
     // «Ver todas» de las métricas: la cuadrícula se queda abierta debajo de la pantalla de la métrica que se abre desde ella
     var todasMetricas by rememberSaveable { mutableStateOf(false) }
+    // «Dieta & nutrición»: -1 abre Mis comidas y desde 0 la comida (su lugar en `platos`) cuya tarjeta se tocó; lo que se agrega
+    // a mano vive mientras la app esté abierta (ponytail: de muestra, como el resto de la sección)
+    var dietaAbierta by rememberSaveable { mutableStateOf(false) }
+    var dietaInicio by rememberSaveable { mutableIntStateOf(-1) }
+    val comidasAgregadas = remember { mutableStateListOf<Comida>() }
     var aguaMl by rememberSaveable { mutableIntStateOf(resumenDia.hidratacionMl) }
     // la hoja de las metas diarias, abierta desde el engrane de las pantallas de métricas
     var metasAbiertas by rememberSaveable { mutableStateOf(false) }
@@ -248,6 +254,13 @@ fun InicioPacienteScreen(
             onAbrir = { metrica = it },
             onVolver = { todasMetricas = false },
         )
+        // las pantallas de «Dieta & nutrición»
+        dietaAbierta && vinculo != null -> DietaFlujo(
+            inicio = dietaInicio,
+            agregadas = comidasAgregadas,
+            onAgregar = { comidasAgregadas.add(it) },
+            onSalir = { dietaAbierta = false },
+        )
         vinculo == null && enMapa -> {
             BackHandler { enMapa = false }
             val cache = LocalContext.current.cacheDir
@@ -318,6 +331,10 @@ fun InicioPacienteScreen(
                     aguaMl = aguaMl,
                     onMetrica = { metrica = it },
                     onVerTodasMetricas = { todasMetricas = true },
+                    onDieta = {
+                        dietaInicio = it
+                        dietaAbierta = true
+                    },
                 )
             }
         }
@@ -378,6 +395,8 @@ private fun InicioPaciente(
     aguaMl: Int,
     onMetrica: (Metrica) -> Unit,
     onVerTodasMetricas: () -> Unit,
+    // abre Mis comidas (-1) o la comida que se tocó (su lugar en `platos`)
+    onDieta: (Int) -> Unit,
     // misma clave que el flujo del expediente: la tarjeta refleja lo que se guarda ahí
     expedienteVm: ExpedienteViewModel = viewModel(key = "expediente-${vinculo.pacienteId}-${Rol.PACIENTE.name}"),
 ) {
@@ -426,7 +445,7 @@ private fun InicioPaciente(
             }
             item { MetricasFitness(resumenDia.copy(hidratacionMl = aguaMl.coerceAtMost(vinculo.metas.aguaMl)), onMetrica, onVerTodasMetricas) }
             item { RutinaDeHoy(rutinaDeHoy) }
-            item { DietaNutricion(comidas) }
+            item { DietaNutricion(comidas, onVerTodas = { onDieta(-1) }, onComida = { onDieta(platos.indexOf(it)) }) }
             item { ActividadReciente() }
             item {
                 // las etiquetas dicen qué trae el plan que aún no ha visto

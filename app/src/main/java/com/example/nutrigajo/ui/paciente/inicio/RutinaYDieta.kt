@@ -33,6 +33,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.nutrigajo.R
+import com.example.nutrigajo.ui.components.alPulsar
 import com.example.nutrigajo.ui.components.cristal
 
 private val TEXTO_SOBRE_FOTO = Color(0xFFD0D0D0)
@@ -119,21 +120,22 @@ fun RutinaDeHoy(rutina: Rutina, modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun DietaNutricion(comidas: List<Comida>, modifier: Modifier = Modifier) {
+fun DietaNutricion(comidas: List<Comida>, onVerTodas: () -> Unit, onComida: (Comida) -> Unit, modifier: Modifier = Modifier) {
     Column(modifier) {
-        EncabezadoSeccion(stringResource(R.string.inicio_dieta), verTodas = true)
+        EncabezadoSeccion(stringResource(R.string.inicio_dieta), verTodas = true, onVerTodas = onVerTodas)
         Spacer(Modifier.height(12.dp))
         LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-            items(comidas) { TarjetaComida(it) }
+            items(comidas) { comida -> TarjetaComida(comida, onClick = { onComida(comida) }) }
         }
     }
 }
 
+// Toda la tarjeta abre la comida, no solo la flecha.
 @Composable
-private fun TarjetaComida(comida: Comida) {
+private fun TarjetaComida(comida: Comida, onClick: () -> Unit) {
     val colores = MaterialTheme.colorScheme
     val tipos = MaterialTheme.typography
-    Box(Modifier.size(283.dp, 233.dp).clip(RoundedCornerShape(28.dp)).background(colores.surfaceVariant)) {
+    Box(Modifier.size(283.dp, 233.dp).alPulsar(onClick, minimo = 0.97f).clip(RoundedCornerShape(28.dp)).background(colores.surfaceVariant)) {
         // el plato sobresale por arriba y por la derecha: la tarjeta lo recorta
         Image(
             painter = painterResource(comida.foto),
