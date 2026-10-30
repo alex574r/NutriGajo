@@ -65,10 +65,17 @@ class MainActivity : ComponentActivity() {
 
     private fun Intent?.esAvisoDePlan() = this?.getStringExtra("tipo") == Avisos.TIPO_PLAN_NUEVO
 
+    // se tocó el aviso de un mensaje nuevo: el inicio abre ese chat (el id del paciente de la conversación)
+    private var abrirChat by mutableStateOf<String?>(null)
+
+    private fun Intent?.chatDelAviso(): String? =
+        this?.takeIf { it.getStringExtra("tipo") == Avisos.TIPO_MENSAJE_NUEVO }?.getStringExtra("pacienteId")
+
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
         if (intent.esAvisoDePlan()) abrirPlan = true
+        intent.chatDelAviso()?.let { abrirChat = it }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -76,6 +83,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         // al girar la pantalla la intención es la misma de antes: solo cuenta la de un arranque nuevo
         if (savedInstanceState == null && intent.esAvisoDePlan()) abrirPlan = true
+        if (savedInstanceState == null) intent.chatDelAviso()?.let { abrirChat = it }
         enableEdgeToEdge()
         // CameraUpdateFactory (usado antes de que el mapa exista) falla si el SDK de Maps no está inicializado
         MapsInitializer.initialize(applicationContext)
@@ -163,12 +171,19 @@ class MainActivity : ComponentActivity() {
                         when {
                             perfil == null && estado.perfilFallo -> PerfilNoDisponible(auth::cargarPerfil, cerrarSesion)
                             perfil == null -> PantallaCarga()
-                            perfil.rol == Rol.NUTRIOLOGO -> InicioNutriologoScreen(perfil, cerrarSesion)
+                            perfil.rol == Rol.NUTRIOLOGO -> InicioNutriologoScreen(
+                                perfil,
+                                cerrarSesion,
+                                abrirChat = abrirChat,
+                                onChatConsumido = { abrirChat = null },
+                            )
                             perfil.rol == Rol.PACIENTE -> InicioPacienteScreen(
                                 perfil,
                                 cerrarSesion,
                                 abrirPlan = abrirPlan,
                                 onPlanConsumido = { abrirPlan = false },
+                                abrirChat = abrirChat,
+                                onChatConsumido = { abrirChat = null },
                             )
                             // ADMIN
                             else -> InicioAdminScreen(perfil, cerrarSesion)

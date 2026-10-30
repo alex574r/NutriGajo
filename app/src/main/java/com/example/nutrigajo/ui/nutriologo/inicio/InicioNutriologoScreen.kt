@@ -14,12 +14,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.nutrigajo.R
@@ -38,7 +41,12 @@ import com.example.nutrigajo.ui.nutriologo.verificacion.VerificacionScreen
 import com.example.nutrigajo.ui.nutriologo.verificacion.VerificacionViewModel
 import com.example.nutrigajo.ui.shared.citas.CitasScreen
 import com.example.nutrigajo.ui.shared.citas.CitasViewModel
+import com.example.nutrigajo.ui.shared.chat.ChatScreen
+import com.example.nutrigajo.ui.shared.chat.chatVistoHasta
+import com.example.nutrigajo.ui.shared.chat.sinLeer
 import com.example.nutrigajo.ui.shared.expediente.ExpedienteFlujo
+import com.example.nutrigajo.ui.shared.metas.MetasScreen
+import com.example.nutrigajo.ui.shared.metas.MetasViewModel
 
 private enum class Pestana { INICIO, PACIENTES, PERFIL }
 
@@ -54,10 +62,16 @@ fun InicioNutriologoScreen(
     // clave propia: dos ViewModels con la misma clave se pisarían
     verificacionVm: VerificacionViewModel = viewModel(key = "verificacion-${perfil.uid}"),
     citasVm: CitasViewModel = viewModel(key = "citas-${perfil.uid}"),
+    // se tocó el aviso de un mensaje nuevo (el id del paciente de la conversación): se abre ese chat
+    abrirChat: String? = null,
+    onChatConsumido: () -> Unit = {},
+    metasVm: MetasViewModel = viewModel(key = "metas-${perfil.uid}"),
 ) {
     val estado by vm.estado.collectAsState()
+    val metasEstado by metasVm.estado.collectAsState()
     val citas by citasVm.estado.collectAsState()
     val fotosPacientes by vm.fotosPacientes.collectAsState()
+    val pacientesConPlan by vm.pacientesConPlan.collectAsState()
     // las fotos de los pacientes se piden cada vez que la lista cambia (al abrir y al actualizar)
     val cache = LocalContext.current.cacheDir
     LaunchedEffect(estado.pacientes) { vm.cargarFotos(cache, estado.pacientes) }
@@ -70,8 +84,35 @@ fun InicioNutriologoScreen(
     var pacienteAbierto by rememberSaveable { mutableStateOf<String?>(null) }
     // el panel del plan se abre desde el expediente del paciente abierto
     var planAbierto by rememberSaveable { mutableStateOf(false) }
-    // al cerrar al paciente, el panel también
-    LaunchedEffect(pacienteAbierto) { if (pacienteAbierto == null) planAbierto = false }
+    // el chat con el paciente abierto, también desde su expediente
+    var chatAbierto by rememberSaveable { mutableStateOf(false) }
+    // las metas diarias del paciente abierto, también desde su expediente
+    var metasAbiertas by rememberSaveable { mutableStateOf(false) }
+    // sube al volver del chat para que los puntos de «sin leer» se calculen de nuevo
+    var chatVersion by remember { mutableIntStateOf(0) }
+    val contexto = LocalContext.current
+    // al cerrar al paciente, el panel y el chat también
+    LaunchedEffect(pacienteAbierto) {
+        if (pacienteAbierto == null) {
+            planAbierto = false
+            chatAbierto = false
+            metasAbiertas = false
+        }
+    }
+    // el aviso de un mensaje abre el chat de ese paciente en cuanto la lista de pacientes está cargada
+    LaunchedEffect(abrirChat, estado.pacientes) {
+        val id = abrirChat
+        if (id != null && estado.pacientes.any { it.id == id }) {
+            pacienteAbierto = id
+            planAbierto = false
+            chatAbierto = true
+            onChatConsumido()
+        }
+    }
+    // al abrir un expediente, y al volver del panel (tras enviar un plan), se mira si ese paciente ya tiene plan
+    LaunchedEffect(pacienteAbierto, planAbierto) {
+        pacienteAbierto?.takeIf { !planAbierto }?.let(vm::cargarPlan)
+    }
     LaunchedEffect(Unit) {
         vm.cargar()
         verificacionVm.cargar()
@@ -109,6 +150,33 @@ fun InicioNutriologoScreen(
                 onVolver = { enCitas = false },
             )
         }
+        // el chat con el paciente; al volver se leen otra vez los pacientes, que traen su último mensaje
+        abierto != null && chatAbierto -> ChatScreen(
+            pacienteId = abierto.id,
+            nombre = abierto.nombre,
+            subtitulo = stringResource(R.string.chat_subtitulo_paciente),
+            onVolver = {
+                chatAbierto = false
+                chatVersion++
+                vm.cargar()
+            },
+        )
+        // las metas del paciente; al guardar se vuelve al expediente y se leen otra vez los pacientes, que las traen
+        abierto != null && metasAbiertas -> MetasScreen(
+            nombrePaciente = abierto.nombre,
+            metas = abierto.metas,
+            estado = metasEstado,
+            onGuardar = { metasVm.guardar(abierto.id, it, Rol.NUTRIOLOGO) },
+            onGuardado = {
+                metasVm.limpiar()
+                metasAbiertas = false
+                vm.cargar()
+            },
+            onVolver = {
+                metasVm.limpiar()
+                metasAbiertas = false
+            },
+        )
         abierto != null && planAbierto -> PlanScreen(
             pacienteId = abierto.id,
             nombrePaciente = abierto.nombre,
@@ -121,6 +189,13 @@ fun InicioNutriologoScreen(
             editor = Rol.NUTRIOLOGO,
             onSalir = { pacienteAbierto = null },
             onPlan = { planAbierto = true },
+            planEnviado = abierto.id in pacientesConPlan,
+            onChat = { chatAbierto = true },
+            onMetas = {
+                metasVm.limpiar()
+                metasAbiertas = true
+            },
+            chatSinLeer = chatVersion.let { abierto.ultimoMensaje.sinLeer(perfil.uid, chatVistoHasta(contexto, perfil.uid, abierto.id)) },
         )
         enFormulario -> {
             BackHandler { enFormulario = false }
@@ -169,6 +244,7 @@ fun InicioNutriologoScreen(
                                 onActualizar = actualizar,
                                 onCodigo = { codigoAbierto = true },
                                 fotos = fotosPacientes,
+                                sinLeer = { p -> chatVersion.let { p.ultimoMensaje.sinLeer(perfil.uid, chatVistoHasta(contexto, perfil.uid, p.id)) } },
                             )
                             Pestana.PERFIL -> TabPerfil(
                                 perfil = perfil,

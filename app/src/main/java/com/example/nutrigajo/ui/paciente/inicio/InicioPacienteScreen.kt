@@ -1,6 +1,9 @@
 package com.example.nutrigajo.ui.paciente.inicio
 
+import android.Manifest
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.WindowInsets
@@ -16,6 +19,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -25,6 +30,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.nutrigajo.data.push.Avisos
+import com.example.nutrigajo.data.repository.ChatRepository
 import com.example.nutrigajo.domain.model.Perfil
 import com.example.nutrigajo.domain.model.Rol
 import com.example.nutrigajo.domain.model.Vinculo
@@ -40,6 +47,13 @@ import com.example.nutrigajo.R
 import com.example.nutrigajo.domain.model.PlanEnviado
 import com.example.nutrigajo.ui.components.FilaAjuste
 import com.example.nutrigajo.ui.nutriologo.inicio.fechaMedia
+import com.example.nutrigajo.ui.shared.chat.ChatScreen
+import com.example.nutrigajo.ui.shared.chat.chatVistoHasta
+import com.example.nutrigajo.ui.shared.chat.sinLeer
+import com.example.nutrigajo.ui.shared.chat.vistaPreviaChat
+import com.example.nutrigajo.ui.paciente.avisos.NotificacionesScreen
+import com.example.nutrigajo.ui.paciente.avisos.marcarVisto
+import com.example.nutrigajo.ui.paciente.avisos.vistoHasta
 import com.example.nutrigajo.ui.paciente.citas.AgendaViewModel
 import com.example.nutrigajo.ui.paciente.plan.PlanPacienteScreen
 import com.example.nutrigajo.ui.paciente.plan.PlanPacienteViewModel
@@ -51,12 +65,15 @@ import com.example.nutrigajo.ui.shared.citas.CitasViewModel
 import com.example.nutrigajo.ui.shared.expediente.ExpedienteEstado
 import com.example.nutrigajo.ui.shared.expediente.ExpedienteFlujo
 import com.example.nutrigajo.ui.shared.expediente.ExpedienteViewModel
+import com.example.nutrigajo.ui.shared.metas.MetasSheet
+import com.example.nutrigajo.ui.shared.metas.MetasViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 
 private const val PAUSA_EXITO_MS = 1400L
 
 // Entrada del paciente: sin nutriólogo pide el código (o deja buscarlo en el mapa); con uno, abre su inicio.
-// ponytail: las secciones del inicio salvo el expediente y el coach usan datos de muestra (DatosMuestra.kt).
+// ponytail: las secciones del inicio salvo el expediente, el plan y el coach usan datos de muestra (DatosMuestra.kt).
 @Composable
 fun InicioPacienteScreen(
     perfil: Perfil,
@@ -67,30 +84,88 @@ fun InicioPacienteScreen(
     agendaVm: AgendaViewModel = viewModel(key = "agenda-${perfil.uid}"),
     citasVm: CitasViewModel = viewModel(key = "citas-${perfil.uid}"),
     planVm: PlanPacienteViewModel = viewModel(key = "plan-${perfil.uid}"),
+    metasVm: MetasViewModel = viewModel(key = "metas-${perfil.uid}"),
     // se tocó la notificación de un plan nuevo: se abre directo; `onPlanConsumido` avisa que ya se atendió
     abrirPlan: Boolean = false,
     onPlanConsumido: () -> Unit = {},
+    // se tocó el aviso de un mensaje nuevo (el id del paciente de la conversación): se abre el chat con su nutriólogo
+    abrirChat: String? = null,
+    onChatConsumido: () -> Unit = {},
 ) {
     val estado by vm.estado.collectAsState()
     val mapa by mapaVm.estado.collectAsState()
     val agenda by agendaVm.estado.collectAsState()
     val citas by citasVm.estado.collectAsState()
     val plan by planVm.estado.collectAsState()
+    val metasEstado by metasVm.estado.collectAsState()
     var enMapa by rememberSaveable { mutableStateOf(false) }
     var enExpediente by rememberSaveable { mutableStateOf(false) }
     var enPerfil by rememberSaveable { mutableStateOf(false) }
     var enCitas by rememberSaveable { mutableStateOf(false) }
     var enPlan by rememberSaveable { mutableStateOf(false) }
+    var enAvisos by rememberSaveable { mutableStateOf(false) }
+    var enChat by rememberSaveable { mutableStateOf(false) }
+    // la pantalla de métricas abierta desde las tarjetas y el agua de hoy, que sube con el + y se ve también en la tarjeta
+    var metrica by rememberSaveable { mutableStateOf<Metrica?>(null) }
+    // «Ver todas» de las métricas: la cuadrícula se queda abierta debajo de la pantalla de la métrica que se abre desde ella
+    var todasMetricas by rememberSaveable { mutableStateOf(false) }
+    var aguaMl by rememberSaveable { mutableIntStateOf(resumenDia.hidratacionMl) }
+    // la hoja de las metas diarias, abierta desde el engrane de las pantallas de métricas
+    var metasAbiertas by rememberSaveable { mutableStateOf(false) }
+    // sube al volver del chat para que los pendientes de la tarjeta se cuenten de nuevo
+    var chatVersion by remember { mutableIntStateOf(0) }
+    // el plan que se abrió desde las notificaciones; sin él se abre el último
+    var planAbierto by rememberSaveable { mutableStateOf<String?>(null) }
+    // hasta qué plan ha visto en sus notificaciones (guardado en el teléfono); `vistoAlAbrir` congela ese valor mientras se ve la
+    // lista, para que los puntos de «nuevo» no desaparezcan en cuanto se abre
+    val contexto = LocalContext.current
+    // sus planes le llegan por aviso: desde Android 13 el permiso se pide al abrir su inicio, no solo al agendar una cita
+    val pedirAvisos = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
+    LaunchedEffect(Unit) { if (Avisos.sinPermiso(contexto)) pedirAvisos.launch(Manifest.permission.POST_NOTIFICATIONS) }
+    var visto by remember(perfil.uid) { mutableLongStateOf(vistoHasta(contexto, perfil.uid)) }
+    var vistoAlAbrir by rememberSaveable { mutableLongStateOf(0L) }
+    LaunchedEffect(enAvisos, enPlan, plan.planes) {
+        val masNuevo = plan.planes.firstOrNull()?.enviadoEn
+        if ((enAvisos || enPlan) && masNuevo != null && masNuevo > visto) {
+            visto = masNuevo
+            marcarVisto(contexto, perfil.uid, masNuevo)
+        }
+    }
     LaunchedEffect(Unit) { vm.cargar() }
     LaunchedEffect(enMapa) { if (enMapa) mapaVm.cargar() }
     LaunchedEffect(enCitas) { if (enCitas) citasVm.cargar(Rol.PACIENTE) }
 
     val vinculo = estado.vinculo
     LaunchedEffect(vinculo?.pacienteId) { vinculo?.let { planVm.cargar(it.pacienteId) } }
+    // los mensajes de su nutriólogo que aún no ha visto, para la tarjeta del chat; solo se consultan si el último resumen es suyo y nuevo
+    val chats = remember { ChatRepository() }
+    var chatPendientes by remember { mutableIntStateOf(0) }
+    LaunchedEffect(vinculo?.ultimoMensaje, chatVersion) {
+        val v = vinculo ?: return@LaunchedEffect
+        val chatVisto = chatVistoHasta(contexto, perfil.uid, v.pacienteId)
+        chatPendientes = when {
+            !v.ultimoMensaje.sinLeer(perfil.uid, chatVisto) -> 0
+            // sin red, al menos se sabe que hay uno
+            else -> try {
+                chats.pendientes(v.pacienteId, chatVisto)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                1
+            }
+        }
+    }
     LaunchedEffect(abrirPlan, vinculo) {
         if (abrirPlan && vinculo != null) {
+            planAbierto = null
             enPlan = true
             onPlanConsumido()
+        }
+    }
+    LaunchedEffect(abrirChat, vinculo) {
+        if (abrirChat != null && vinculo != null) {
+            enChat = true
+            onChatConsumido()
         }
     }
     // al canjear el código se deja ver el acierto un momento antes de abrir el inicio
@@ -103,6 +178,7 @@ fun InicioPacienteScreen(
             celebrado = true
         }
     }
+    val metricaAbierta = metrica
     when {
         estado.cargando -> PantallaCarga(conCabecera = true)
         enCitas -> {
@@ -120,10 +196,57 @@ fun InicioPacienteScreen(
             pacienteId = vinculo.pacienteId,
             onVolver = {
                 enPlan = false
-                // volver al inicio refresca la tarjeta del plan (pudo llegar uno nuevo)
+                planAbierto = null
+                // volver refresca la tarjeta del plan y las notificaciones (pudo llegar uno nuevo)
                 planVm.cargar(vinculo.pacienteId)
             },
             vm = planVm,
+            planId = planAbierto,
+        )
+        // las notificaciones: cada plan recibido se puede abrir de nuevo; al volver del PDF se regresa a la lista
+        enAvisos && vinculo != null -> {
+            BackHandler { enAvisos = false }
+            NotificacionesScreen(
+                planes = plan.planes,
+                cargando = plan.cargando,
+                error = plan.error,
+                vistoAlAbrir = vistoAlAbrir,
+                onActualizar = { planVm.cargar(vinculo.pacienteId) },
+                onPlan = {
+                    planAbierto = it.id
+                    enPlan = true
+                },
+                onVolver = { enAvisos = false },
+            )
+        }
+        // el chat con su nutriólogo; al volver se lee otra vez el vínculo, que trae el último mensaje
+        enChat && vinculo != null -> ChatScreen(
+            pacienteId = vinculo.pacienteId,
+            nombre = vinculo.nutriologoNombre,
+            subtitulo = stringResource(R.string.chat_subtitulo_nutriologo),
+            onVolver = {
+                enChat = false
+                chatVersion++
+                vm.refrescar()
+            },
+        )
+        // las pantallas de «Métricas fitness»
+        metricaAbierta != null && vinculo != null -> MetricaScreen(
+            metrica = metricaAbierta,
+            resumen = resumenDia.copy(hidratacionMl = aguaMl.coerceAtMost(vinculo.metas.aguaMl)),
+            metas = vinculo.metas,
+            onAgregarAgua = { delta -> aguaMl = (aguaMl.coerceAtMost(vinculo.metas.aguaMl) + delta).coerceIn(0, vinculo.metas.aguaMl) },
+            onAbrir = { metrica = it },
+            onAjustes = {
+                metasVm.limpiar()
+                metasAbiertas = true
+            },
+            onVolver = { metrica = null },
+        )
+        todasMetricas && vinculo != null -> TodasLasMetricasScreen(
+            resumen = resumenDia.copy(hidratacionMl = aguaMl.coerceAtMost(vinculo.metas.aguaMl)),
+            onAbrir = { metrica = it },
+            onVolver = { todasMetricas = false },
         )
         vinculo == null && enMapa -> {
             BackHandler { enMapa = false }
@@ -176,10 +299,46 @@ fun InicioPacienteScreen(
                     onPerfil = { enPerfil = true },
                     transicion = transicion,
                     plan = plan.plan,
-                    onPlan = { enPlan = true },
+                    onPlan = {
+                        planAbierto = null
+                        enPlan = true
+                    },
+                    sinLeer = plan.planes.count { it.enviadoEn > visto },
+                    onNotificaciones = {
+                        vistoAlAbrir = visto
+                        planVm.cargar(vinculo.pacienteId)
+                        enAvisos = true
+                    },
+                    onActualizarPlan = {
+                        planVm.cargar(vinculo.pacienteId)
+                        vm.refrescar()
+                    },
+                    chatPendientes = chatPendientes,
+                    onChat = { enChat = true },
+                    aguaMl = aguaMl,
+                    onMetrica = { metrica = it },
+                    onVerTodasMetricas = { todasMetricas = true },
                 )
             }
         }
+    }
+
+    // las metas se ajustan en una hoja encima de la pantalla de métricas; al guardar se vuelve a leer el vínculo, que las trae
+    if (metasAbiertas && vinculo != null) {
+        MetasSheet(
+            metas = vinculo.metas,
+            estado = metasEstado,
+            onGuardar = { metasVm.guardar(vinculo.pacienteId, it, Rol.PACIENTE) },
+            onGuardado = {
+                metasVm.limpiar()
+                metasAbiertas = false
+                vm.refrescar()
+            },
+            onCerrar = {
+                metasVm.limpiar()
+                metasAbiertas = false
+            },
+        )
     }
 
     // la agenda se abre desde el mapa (pedir cita) y desde «Mis citas» (reagendar): va encima de lo que haya
@@ -208,6 +367,17 @@ private fun InicioPaciente(
     // el último plan que le envió su nutriólogo, si lo hay
     plan: PlanEnviado?,
     onPlan: () -> Unit,
+    // los planes nuevos que aún no ha visto: la campana lleva un punto y abre las notificaciones
+    sinLeer: Int,
+    onNotificaciones: () -> Unit,
+    onActualizarPlan: () -> Unit,
+    // cuántos mensajes de su nutriólogo no ha visto: la tarjeta del coach los cuenta y abre el chat
+    chatPendientes: Int,
+    onChat: () -> Unit,
+    // el agua de hoy (la tarjeta de hidratación la muestra) y la apertura de la pantalla de cada métrica
+    aguaMl: Int,
+    onMetrica: (Metrica) -> Unit,
+    onVerTodasMetricas: () -> Unit,
     // misma clave que el flujo del expediente: la tarjeta refleja lo que se guarda ahí
     expedienteVm: ExpedienteViewModel = viewModel(key = "expediente-${vinculo.pacienteId}-${Rol.PACIENTE.name}"),
 ) {
@@ -223,10 +393,13 @@ private fun InicioPaciente(
     }
     BarraEstadoClara(sobreFoto)
 
-    // deslizar hacia abajo vuelve a pedir el expediente, lo único del inicio que no es de muestra
+    // deslizar hacia abajo vuelve a pedir el expediente, el plan y el último mensaje, lo único del inicio que no es de muestra
     ActualizarAlDeslizar(
         refrescando = expediente.cargando,
-        onActualizar = { expedienteVm.cargar(vinculo.pacienteId) },
+        onActualizar = {
+            expedienteVm.cargar(vinculo.pacienteId)
+            onActualizarPlan()
+        },
         modifier = Modifier.fillMaxSize(),
     ) {
         LazyColumn(
@@ -235,7 +408,7 @@ private fun InicioPaciente(
             contentPadding = WindowInsets.navigationBars.asPaddingValues(),
             verticalArrangement = Arrangement.spacedBy(24.dp),
         ) {
-            item { CabeceraInicio(perfil.nombre, resumenDia, onPerfil, imagenAvatar = rememberFotoAvatar(perfil), imagenPortada = rememberFotoPortada(perfil), transicion = transicion) }
+            item { CabeceraInicio(perfil.nombre, resumenDia, onPerfil, imagenAvatar = rememberFotoAvatar(perfil), imagenPortada = rememberFotoPortada(perfil), transicion = transicion, sinLeer = sinLeer, onNotificaciones = onNotificaciones) }
             // una vez completo, el expediente se consulta desde el perfil
             if (expediente.cargando || !expediente.expediente.completo) {
                 item { TarjetaExpediente(expediente, onExpediente, Modifier.padding(horizontal = 16.dp)) }
@@ -251,11 +424,22 @@ private fun InicioPaciente(
                     )
                 }
             }
-            item { MetricasFitness(resumenDia) }
+            item { MetricasFitness(resumenDia.copy(hidratacionMl = aguaMl.coerceAtMost(vinculo.metas.aguaMl)), onMetrica, onVerTodasMetricas) }
             item { RutinaDeHoy(rutinaDeHoy) }
             item { DietaNutricion(comidas) }
             item { ActividadReciente() }
-            item { TarjetaCoach(vinculo.nutriologoNombre) }
+            item {
+                // las etiquetas dicen qué trae el plan que aún no ha visto
+                val nuevo = if (sinLeer > 0) plan?.contenido else null
+                TarjetaCoach(
+                    nutriologo = vinculo.nutriologoNombre,
+                    pendientes = chatPendientes,
+                    ultimo = vistaPreviaChat(vinculo.ultimoMensaje, perfil.uid, stringResource(R.string.chat_entrada_vacia)),
+                    nuevaRutina = nuevo?.sesiones?.isNotEmpty() == true,
+                    nuevaDieta = nuevo?.let { it.calorias != null || it.equivalentes.isNotEmpty() || it.opciones.isNotEmpty() } == true,
+                    onChat = onChat,
+                )
+            }
             item { EjerciciosExtra(ejerciciosExtra) }
         }
     }
