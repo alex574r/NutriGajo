@@ -44,6 +44,18 @@ class VinculoViewModel(private val repo: VinculacionRepository = VinculacionRepo
         }
     }
 
+    // Vuelve a leer el vínculo sin tapar la pantalla con la carga: al volver del chat, para el punto de «sin leer».
+    fun refrescar() {
+        viewModelScope.launch {
+            try {
+                repo.vinculoActual()?.let { vinculo -> _estado.update { it.copy(vinculo = vinculo) } }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+            }
+        }
+    }
+
     fun canjear(codigo: String, paciente: Perfil) {
         if (_estado.value.canjeando) return
         _estado.update { it.copy(canjeando = true, error = null) }

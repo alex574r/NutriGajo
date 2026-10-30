@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
@@ -31,6 +32,7 @@ import com.example.nutrigajo.R
 import com.example.nutrigajo.domain.model.Expediente
 import com.example.nutrigajo.domain.model.Rol
 import com.example.nutrigajo.ui.components.BotonPrimario
+import com.example.nutrigajo.ui.components.PuntoNuevo
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -50,6 +52,13 @@ fun ResumenScreen(
     modifier: Modifier = Modifier,
     // solo el nutriólogo: abre el panel del plan de alimentación y ejercicio de este paciente
     onPlan: (() -> Unit)? = null,
+    // el paciente ya recibió un plan: el botón pasa de crearlo a editarlo y reenviarlo (el panel parte del último enviado)
+    planEnviado: Boolean = false,
+    // solo el nutriólogo: abre el chat con este paciente; el punto marca un mensaje suyo sin leer
+    onChat: (() -> Unit)? = null,
+    chatSinLeer: Boolean = false,
+    // solo el nutriólogo: fija las metas diarias de este paciente (agua, pasos, calorías y minutos de movimiento)
+    onMetas: (() -> Unit)? = null,
 ) {
     BackHandler(onBack = onVolver)
     val colores = MaterialTheme.colorScheme
@@ -114,8 +123,32 @@ fun ResumenScreen(
             CategoriasExpediente(expediente, Modifier.padding(bottom = 8.dp), onEditar = onEditarCategoria, resaltada = categoriaGuardada)
         }
         Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (onChat != null) {
+                Box {
+                    BotonPrimario(
+                        // solo el primer nombre: el botón es de una línea
+                        texto = stringResource(R.string.chat_boton, nombrePaciente.substringBefore(' ')),
+                        onClick = onChat,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(containerColor = colores.surfaceVariant, contentColor = colores.onBackground),
+                    )
+                    if (chatSinLeer) PuntoNuevo(Modifier.align(Alignment.TopEnd).offset(x = (-6).dp, y = 6.dp))
+                }
+            }
+            if (onMetas != null) {
+                BotonPrimario(
+                    texto = stringResource(R.string.metas_boton, nombrePaciente.substringBefore(' ')),
+                    onClick = onMetas,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = colores.surfaceVariant, contentColor = colores.onBackground),
+                )
+            }
             if (onPlan != null) {
-                BotonPrimario(texto = stringResource(R.string.plan_boton_crear), onClick = onPlan, modifier = Modifier.fillMaxWidth())
+                BotonPrimario(
+                    texto = stringResource(if (planEnviado) R.string.plan_boton_editar else R.string.plan_boton_crear),
+                    onClick = onPlan,
+                    modifier = Modifier.fillMaxWidth(),
+                )
             }
             BotonPrimario(
                 texto = stringResource(if (expediente.completo) R.string.expediente_editar else R.string.expediente_completar),

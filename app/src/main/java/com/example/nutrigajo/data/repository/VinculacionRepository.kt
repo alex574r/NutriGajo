@@ -86,6 +86,8 @@ class VinculacionRepository(
                     nombre = d.getString("nombre").orEmpty(),
                     correo = d.getString("correoVinculacion").orEmpty(),
                     fechaAlta = d.getLong("fechaAlta") ?: 0L,
+                    ultimoMensaje = d.aUltimoMensaje(),
+                    metas = d.aMetas(),
                 )
             }
             .sortedByDescending { it.fechaAlta }
@@ -98,7 +100,7 @@ class VinculacionRepository(
             .limit(1)
             .get().await().documents
             .firstOrNull()
-            ?.let { Vinculo(it.id, it.getString("nutriologoNombre").orEmpty()) }
+            ?.let { Vinculo(it.id, it.getString("nutriologoNombre").orEmpty(), it.aUltimoMensaje(), it.aMetas()) }
 
     // Canjea el código y crea el registro del paciente en un solo lote: o pasan las dos escrituras o ninguna.
     suspend fun canjear(codigoEscrito: String, paciente: Perfil): Vinculo {

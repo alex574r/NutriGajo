@@ -7,7 +7,21 @@ data class CodigoVinculacion(val codigo: String, val expiraEn: Long) {
 
 // Fila de la lista de pacientes de un nutriólogo.
 // `usuarioId` es la cuenta del paciente: con él se encuentra su foto de perfil.
-data class PacienteResumen(val id: String, val usuarioId: String, val nombre: String, val correo: String, val fechaAlta: Long)
+// `ultimoMensaje` es el último del chat con él, para el punto de «sin leer»; `metas` son sus metas diarias.
+data class PacienteResumen(
+    val id: String,
+    val usuarioId: String,
+    val nombre: String,
+    val correo: String,
+    val fechaAlta: Long,
+    val ultimoMensaje: UltimoMensaje? = null,
+    val metas: MetasDiarias = MetasDiarias(),
+)
 
-// Lo que el paciente necesita saber de su nutriólogo.
-data class Vinculo(val pacienteId: String, val nutriologoNombre: String)
+// Lo que el paciente necesita saber de su nutriólogo; `ultimoMensaje` es el último del chat con él y `metas` sus metas diarias.
+data class Vinculo(
+    val pacienteId: String,
+    val nutriologoNombre: String,
+    val ultimoMensaje: UltimoMensaje? = null,
+    val metas: MetasDiarias = MetasDiarias(),
+)

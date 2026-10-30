@@ -24,6 +24,13 @@ fun ExpedienteFlujo(
     onSalir: () -> Unit,
     // el nutriólogo puede pasar del expediente al panel del plan de su paciente; el paciente no lo tiene
     onPlan: (() -> Unit)? = null,
+    // ese paciente ya recibió un plan (solo lo sabe el nutriólogo): el botón del plan dice "editar y reenviar"
+    planEnviado: Boolean = false,
+    // el nutriólogo abre el chat con su paciente; `chatSinLeer`: hay un mensaje de ese paciente que aún no ha visto
+    onChat: (() -> Unit)? = null,
+    chatSinLeer: Boolean = false,
+    // el nutriólogo abre las metas diarias de su paciente
+    onMetas: (() -> Unit)? = null,
     // clave propia: la tarjeta del inicio del paciente comparte este ViewModel
     vm: ExpedienteViewModel = viewModel(key = "expediente-$pacienteId-${editor.name}"),
 ) {
@@ -89,6 +96,10 @@ fun ExpedienteFlujo(
             categoriaGuardada = guardada,
             onVolver = onSalir,
             onPlan = onPlan,
+            planEnviado = planEnviado,
+            onChat = onChat,
+            chatSinLeer = chatSinLeer,
+            onMetas = onMetas,
         )
     }
 }
