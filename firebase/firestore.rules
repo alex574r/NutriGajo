@@ -63,6 +63,19 @@ service cloud.firestore {
         && e.get('suplementos', []) is list && e.get('suplementos', []).size() <= 30;
     }
 
+    // Metas diarias del paciente (mapa dentro de pacientes/{id}): agua en ml, pasos, calorías y minutos de movimiento, con quién
+    // las dejó puestas (`por`) y cuándo. Los topes son los de la pantalla donde se ajustan (MetasDiarias).
+    function metasValidas(m) {
+      return m.keys().hasOnly(['aguaMl', 'pasos', 'kcal', 'minutos', 'por', 'actualizadoEn'])
+        && m.keys().hasAll(['aguaMl', 'pasos', 'kcal', 'minutos', 'por', 'actualizadoEn'])
+        && m.aguaMl is int && m.aguaMl >= 250 && m.aguaMl <= 6000
+        && m.pasos is int && m.pasos >= 1000 && m.pasos <= 50000
+        && m.kcal is int && m.kcal >= 200 && m.kcal <= 5000
+        && m.minutos is int && m.minutos >= 5 && m.minutos <= 300
+        && m.por in ['NUTRIOLOGO', 'PACIENTE']
+        && m.actualizadoEn is int;
+    }
+
     // Elemento del banco de comidas y ejercicios del nutriólogo: tipo, nombre, texto y, solo en las comidas, su tiempo de comida.
     // Los topes son los de ItemBanco y los de los campos del plan (500 caracteres).
     function bancoValido(d) {
@@ -388,8 +401,50 @@ service cloud.firestore {
         && ((resource.data.usuarioId == request.auth.uid && request.resource.data.expediente.actualizadoPor == 'PACIENTE')
             || (resource.data.nutriologoId == request.auth.uid && request.resource.data.expediente.actualizadoPor == 'NUTRIOLOGO'));
 
+      // Chat: el último mensaje queda resumido en el registro (autor, hora y un trozo del texto) para pintar el punto de «sin leer» y
+      // la vista previa sin leer la conversación. Lo escribe quien envía el mensaje, en el mismo lote que el mensaje; no abre nada más.
+      allow update: if request.auth != null
+        && (resource.data.nutriologoId == request.auth.uid || resource.data.usuarioId == request.auth.uid)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['ultimoMensaje'])
+        && request.resource.data.ultimoMensaje.keys().hasOnly(['autorId', 'enviadoEn', 'texto', 'foto'])
+        && request.resource.data.ultimoMensaje.keys().hasAll(['autorId', 'enviadoEn', 'texto', 'foto'])
+        && request.resource.data.ultimoMensaje.autorId == request.auth.uid
+        && request.resource.data.ultimoMensaje.enviadoEn is int
+        && request.resource.data.ultimoMensaje.texto is string && request.resource.data.ultimoMensaje.texto.size() <= 120
+        && request.resource.data.ultimoMensaje.foto is bool;
+
+      // Metas diarias: las fija el nutriólogo del paciente y el propio paciente puede ajustarlas, cada uno firmando con su rol;
+      // la última escritura manda y `por` dice de quién fue. No se toca nada más del registro.
+      allow update: if request.auth != null
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['metas'])
+        && metasValidas(request.resource.data.metas)
+        && ((resource.data.usuarioId == request.auth.uid && request.resource.data.metas.por == 'PACIENTE')
+            || (resource.data.nutriologoId == request.auth.uid && request.resource.data.metas.por == 'NUTRIOLOGO'));
+
       // Sin baja por ahora (llega con el archivado).
       allow delete: if false;
+    }
+
+    // Mensajes del chat entre el nutriólogo y su paciente: los ven y los escriben los dos, cada uno firmando con su cuenta. Un mensaje
+    // lleva texto, foto (el archivo vive en R2, detrás del Worker) o las dos cosas, y ya no cambia ni se borra. `notificadaEn` lo
+    // escribe el Worker al avisar a la otra persona.
+    match /pacientes/{pacienteId}/mensajes/{mensajeId} {
+      allow read: if request.auth != null
+        && (get(/databases/$(database)/documents/pacientes/$(pacienteId)).data.nutriologoId == request.auth.uid
+            || get(/databases/$(database)/documents/pacientes/$(pacienteId)).data.usuarioId == request.auth.uid);
+
+      allow create: if request.auth != null
+        && (get(/databases/$(database)/documents/pacientes/$(pacienteId)).data.nutriologoId == request.auth.uid
+            || get(/databases/$(database)/documents/pacientes/$(pacienteId)).data.usuarioId == request.auth.uid)
+        && request.resource.data.keys().hasOnly(['autorId', 'texto', 'foto', 'enviadoEn'])
+        && request.resource.data.keys().hasAll(['autorId', 'texto', 'enviadoEn'])
+        && request.resource.data.autorId == request.auth.uid
+        && request.resource.data.texto is string && request.resource.data.texto.size() <= 2000
+        && request.resource.data.enviadoEn is int
+        && request.resource.data.get('foto', false) is bool
+        && (request.resource.data.texto.size() > 0 || request.resource.data.get('foto', false) == true);
+
+      allow update, delete: if false;
     }
 
     // Plan de alimentación y ejercicio que un nutriólogo envía a su paciente (el PDF vive en R2, detrás del Worker; aquí quedan
