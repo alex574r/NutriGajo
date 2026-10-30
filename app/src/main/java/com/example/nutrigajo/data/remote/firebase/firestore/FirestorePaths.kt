@@ -12,6 +12,7 @@ package com.example.nutrigajo.data.remote.firebase.firestore
  *   └─ ocupados/{inicio}              hora ya pedida (citaId, inicio); sin datos del paciente, la ve cualquier sesión
  * citas/{citaId}                      cita que un paciente pide a un nutriólogo (estado PENDIENTE|CONFIRMADA|RECHAZADA|CANCELADA)
  * citasActivas/{usuarioId}            candado de «una sola cita vigente por paciente» (citaId); se pone con la cita y se quita al cerrarla
+ * comentarios/{id}                    comentario que alguien envía desde Configuración (usuarioId, rol, areas[], mensaje); solo lo lee el ADMIN
  * pacientes/{pacienteId}              nutriologoId, usuarioId, correoVinculacion…
  *   ├─ mediciones/{id}
  *   ├─ planes/{id}                    plan de alimentación y ejercicio enviado (enviadoPor, enviadoEn, contenido…); su PDF vive en R2
@@ -34,6 +35,7 @@ object FirestorePaths {
     const val OCUPADOS = "ocupados"
     const val CITAS = "citas"
     const val CITAS_ACTIVAS = "citasActivas"
+    const val COMENTARIOS = "comentarios"
     const val PACIENTES = "pacientes"
     const val MEDICIONES = "mediciones"
     const val PLANES = "planes"

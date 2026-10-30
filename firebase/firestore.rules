@@ -468,6 +468,26 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    // Comentarios que la gente envía desde Configuración (Enviar comentarios): cada quien escribe los suyos, firmados con su rol, y solo
+    // el ADMIN los lee. Llevan las partes de la app de las que hablan (hasta 8) y un texto de hasta 1000 caracteres; uno de los dos al
+    // menos. No se editan ni se borran.
+    match /comentarios/{comentarioId} {
+      allow create: if request.auth != null
+        && request.resource.data.keys().hasOnly(['usuarioId', 'rol', 'areas', 'mensaje', 'versionApp', 'creadoEn'])
+        && request.resource.data.keys().hasAll(['usuarioId', 'rol', 'areas', 'mensaje', 'versionApp', 'creadoEn'])
+        && request.resource.data.usuarioId == request.auth.uid
+        && request.resource.data.rol == rolDe(request.auth.uid)
+        && request.resource.data.areas is list && request.resource.data.areas.size() <= 8
+        && request.resource.data.mensaje is string && request.resource.data.mensaje.size() <= 1000
+        && request.resource.data.versionApp is string && request.resource.data.versionApp.size() <= 40
+        && request.resource.data.creadoEn is int
+        && (request.resource.data.areas.size() > 0 || request.resource.data.mensaje.size() > 0);
+
+      allow read: if esAdmin();
+
+      allow update, delete: if false;
+    }
+
     // Todo lo demás, denegado hasta definir sus reglas (mediciones, rutinas…).
     match /{document=**} {
       allow read, write: if false;

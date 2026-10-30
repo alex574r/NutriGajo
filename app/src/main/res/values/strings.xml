@@ -465,6 +465,85 @@
     <string name="perfil_contrasena_enviado">Revisa %1$s: ahí está el enlace para cambiar tu contraseña.</string>
     <string name="perfil_listo">Listo</string>
 
+    <!-- Configuración, ajustes y ayuda -->
+    <string name="ajustes_general">General</string>
+    <string name="ajustes_seguridad_grupo">Seguridad y privacidad</string>
+    <string name="ajustes_ayuda_grupo">Ayuda y soporte</string>
+    <string name="ajustes_info_personal">Información personal</string>
+    <string name="ajustes_modo_oscuro">Modo oscuro</string>
+    <string name="ajustes_seguridad">Seguridad</string>
+    <string name="ajustes_biometria">Huella o rostro al abrir</string>
+    <string name="ajustes_acerca">Acerca de Nutri Gajo</string>
+    <string name="ajustes_centro_ayuda">Centro de ayuda</string>
+    <string name="ajustes_comentarios">Enviar comentarios</string>
+
+    <string name="bloqueo_titulo">Desbloquea Nutri Gajo</string>
+    <string name="bloqueo_texto">Usa tu huella, rostro o PIN para continuar.</string>
+    <string name="bloqueo_boton">desbloquear</string>
+
+    <string name="info_titulo">Información personal</string>
+    <string name="info_ayuda">Así te ven tu nutriólogo y las personas que atiendes.</string>
+    <string name="info_nombres">Nombres</string>
+    <string name="info_apellidos">Apellidos</string>
+    <string name="info_correo">Correo</string>
+    <string name="info_correo_ayuda">El correo es el de tu cuenta y no se cambia desde aquí.</string>
+    <string name="info_guardar">guardar cambios</string>
+    <string name="info_guardado">Listo, tus datos se guardaron.</string>
+    <string name="info_error">No se pudieron guardar tus datos. Inténtalo de nuevo.</string>
+
+    <string name="notif_titulo">Notificaciones</string>
+    <string name="notif_apagadas">Las notificaciones de Nutri Gajo están apagadas en tu teléfono, así que no te llegará ningún aviso.</string>
+    <string name="notif_apagadas_titulo">Avisos apagados</string>
+    <string name="notif_tipos">Tipos de aviso</string>
+    <string name="notif_ayuda">Android es quien decide cómo se muestran: tocar un tipo abre sus ajustes en el teléfono (sonido, vibración, silenciarlo).</string>
+    <string name="notif_planes_desc">Cuando tu nutriólogo te envía un plan</string>
+    <string name="notif_mensajes_desc">Mensajes nuevos del chat</string>
+    <string name="notif_citas_desc">Confirmaciones y cambios de tus citas</string>
+
+    <string name="seguridad_titulo">Seguridad</string>
+    <string name="seguridad_contrasena_desc">Te enviamos un correo con el enlace</string>
+    <string name="seguridad_biometria_desc">Pide tu huella, rostro o PIN al abrir la app y al volver tras unos segundos fuera</string>
+    <string name="seguridad_no_disponible">Para usar esto registra una huella, un rostro o un PIN en los ajustes de tu teléfono.</string>
+    <string name="seguridad_confirma">Confirma que eres tú para activarlo.</string>
+
+    <string name="acerca_titulo">Acerca de</string>
+    <string name="acerca_descripcion">Seguimiento nutricional que conecta a pacientes con su nutriólogo: expediente, plan de alimentación, citas, chat y métricas.</string>
+
+    <string name="ayuda_titulo">Centro de ayuda</string>
+    <string name="ayuda_buscar">Buscar en las preguntas</string>
+    <string name="ayuda_sin_resultados">No encontramos preguntas con eso. Prueba con otra palabra.</string>
+    <string name="faq_1_p">¿Qué es Nutri Gajo?</string>
+    <string name="faq_1_r">Es una app de seguimiento nutricional que conecta a pacientes con su nutriólogo: expediente, plan de alimentación, citas, chat y métricas del día.</string>
+    <string name="faq_2_p">¿Cómo me vinculo con mi nutriólogo?</string>
+    <string name="faq_2_r">Tu nutriólogo te da un código de 4 dígitos; escríbelo la primera vez que abres la app con tu cuenta. También puedes buscar nutriólogos en el mapa y pedirles una cita.</string>
+    <string name="faq_3_p">¿Dónde veo mi plan de alimentación?</string>
+    <string name="faq_3_r">Cuando tu nutriólogo te lo envía te llega un aviso. Lo abres desde la tarjeta «Tu plan nutricional» del inicio o desde la campana de notificaciones, donde quedan todos los que has recibido.</string>
+    <string name="faq_4_p">¿Cómo cambio mis metas diarias?</string>
+    <string name="faq_4_r">Tu nutriólogo fija tus metas de agua, pasos, calorías y movimiento, y tú puedes ajustarlas: en Hidratación, Calorías o Pasos toca el engrane de arriba a la derecha.</string>
+    <string name="faq_5_p">¿Cómo agendo o cambio una cita?</string>
+    <string name="faq_5_r">Pides la cita desde el mapa de nutriólogos. En «Mis citas» puedes reagendarla o cancelarla; solo puedes tener una cita vigente a la vez.</string>
+    <string name="faq_6_p">¿Mis datos están seguros?</string>
+    <string name="faq_6_r">Tu expediente, tu plan y tus mensajes solo los ven tú y tu nutriólogo, y las reglas de la base de datos lo exigen. Además puedes pedir tu huella o rostro al abrir la app desde Configuración.</string>
+    <string name="faq_7_p">¿Cómo cambio mi contraseña?</string>
+    <string name="faq_7_r">En Configuración, Seguridad, toca «Cambiar contraseña»: te enviamos un correo con un enlace para elegir una nueva.</string>
+    <string name="faq_8_p">No me llegan los avisos, ¿qué hago?</string>
+    <string name="faq_8_r">Revisa en Configuración, Notificaciones, que los avisos estén activos en tu teléfono y que ningún tipo esté silenciado. Los avisos llegan al teléfono donde iniciaste sesión por última vez.</string>
+
+    <string name="comentarios_titulo">Enviar comentarios</string>
+    <string name="comentarios_pregunta">¿Qué parte necesita mejorar?</string>
+    <string name="comentarios_area_rendimiento">Rendimiento</string>
+    <string name="comentarios_area_plan">Plan</string>
+    <string name="comentarios_area_chat">Chat</string>
+    <string name="comentarios_area_citas">Citas</string>
+    <string name="comentarios_area_metricas">Métricas</string>
+    <string name="comentarios_area_diseno">Diseño</string>
+    <string name="comentarios_area_errores">Errores</string>
+    <string name="comentarios_area_otro">Otro</string>
+    <string name="comentarios_mensaje">Cuéntanos más</string>
+    <string name="comentarios_enviar">enviar comentarios</string>
+    <string name="comentarios_gracias">¡Gracias! Recibimos tu comentario.</string>
+    <string name="comentarios_error">No se pudo enviar. Inténtalo de nuevo.</string>
+
     <string name="aviso_canal_citas">Citas</string>
     <string name="aviso_canal_planes">Planes</string>
     <string name="aviso_canal_mensajes">Mensajes</string>

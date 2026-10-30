@@ -1,7 +1,5 @@
 package com.example.nutrigajo.ui.shared.perfil
 
-import android.content.Intent
-import android.provider.Settings
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -50,6 +48,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.nutrigajo.R
+import com.example.nutrigajo.data.local.AjustesApp
 import com.example.nutrigajo.data.repository.FotoPerfil
 import com.example.nutrigajo.domain.model.Perfil
 import com.example.nutrigajo.ui.components.AccionPerfil
@@ -58,6 +57,10 @@ import com.example.nutrigajo.ui.components.AlertaError
 import com.example.nutrigajo.ui.components.FilaAjuste
 import com.example.nutrigajo.ui.components.PerfilCabecera
 import com.example.nutrigajo.ui.components.SelectorPestanas
+import com.example.nutrigajo.ui.shared.ajustes.Ajuste
+import com.example.nutrigajo.ui.shared.ajustes.AjustePantalla
+import com.example.nutrigajo.ui.shared.ajustes.GrupoAjustes
+import com.example.nutrigajo.ui.shared.ajustes.alternarBloqueo
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -140,105 +143,83 @@ fun PerfilScreen(
     // las filas solo se animan al cambiar de pestaña, no al abrir el perfil
     var huboCambio by remember { mutableStateOf(false) }
     var cambiandoContrasena by rememberSaveable { mutableStateOf(false) }
+    // la pantalla de ajustes abierta desde Configuración; cubre el perfil sin perder su pestaña ni su desplazamiento
+    var ajuste by rememberSaveable { mutableStateOf<Ajuste?>(null) }
     val version = remember { runCatching { contexto.packageManager.getPackageInfo(contexto.packageName, 0).versionName }.getOrNull().orEmpty() }
 
-    LazyColumn(
-        modifier = modifier.fillMaxSize().background(colores.background),
-        contentPadding = PaddingValues(bottom = espacioInferior + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 24.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        item {
-            PerfilCabecera(
-                nombre = perfil.nombre,
-                correo = perfil.correo,
-                rol = rol,
-                verificado = verificado,
-                estadisticas = estadisticas,
-                principal = principal,
-                secundaria = secundaria,
-                onVolver = onVolver,
-                imagenPortada = portada.imagen?.asImageBitmap(),
-                subiendoPortada = portada.subiendo,
-                onCambiarPortada = { elegirPortada.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
-                imagenAvatar = imagenAvatar,
-                subiendoAvatar = avatar.subiendo,
-                onCambiarAvatar = { elegirAvatar.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
-                transicion = transicion,
-            )
-        }
-        (portada.error ?: avatar.error)?.let { item { AlertaError(stringResource(it), Modifier.padding(horizontal = MARGEN)) } }
-        item {
-            SelectorPestanas(
-                PESTANAS,
-                pestana,
-                {
-                    huboCambio = true
-                    pestana = it
-                },
-                Modifier.padding(horizontal = MARGEN, vertical = 8.dp),
-            )
-        }
-        // El contenido de la pestaña entra desde el lado hacia el que se va (y el anterior sale al contrario) y sus filas
-        // aparecen una tras otra; al abrir el perfil las filas ya salen puestas.
-        item {
-            AnimatedContent(
-                targetState = pestana,
-                transitionSpec = {
-                    val sentido = if (targetState > initialState) 1 else -1
-                    (slideInHorizontally(tween(320, easing = FastOutSlowInEasing)) { sentido * it / 5 } + fadeIn(tween(220, delayMillis = 30))) togetherWith
-                        (slideOutHorizontally(tween(220, easing = FastOutSlowInEasing)) { -sentido * it / 5 } + fadeOut(tween(120)))
-                },
-                label = "pestana",
-            ) { actual ->
-                Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    if (actual == 0) {
-                        datos.forEachIndexed { indice, dato ->
-                            Aparece(indice, huboCambio) {
-                                FilaAjuste(dato.icono, titulo = dato.valor, modifier = Modifier.padding(horizontal = MARGEN), etiqueta = stringResource(dato.etiqueta))
+    Box(modifier.fillMaxSize()) {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize().background(colores.background),
+            contentPadding = PaddingValues(bottom = espacioInferior + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 24.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            item {
+                PerfilCabecera(
+                    nombre = perfil.nombre,
+                    correo = perfil.correo,
+                    rol = rol,
+                    verificado = verificado,
+                    estadisticas = estadisticas,
+                    principal = principal,
+                    secundaria = secundaria,
+                    onVolver = onVolver,
+                    imagenPortada = portada.imagen?.asImageBitmap(),
+                    subiendoPortada = portada.subiendo,
+                    onCambiarPortada = { elegirPortada.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
+                    imagenAvatar = imagenAvatar,
+                    subiendoAvatar = avatar.subiendo,
+                    onCambiarAvatar = { elegirAvatar.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
+                    transicion = transicion,
+                )
+            }
+            (portada.error ?: avatar.error)?.let { item { AlertaError(stringResource(it), Modifier.padding(horizontal = MARGEN)) } }
+            item {
+                SelectorPestanas(
+                    PESTANAS,
+                    pestana,
+                    {
+                        huboCambio = true
+                        pestana = it
+                    },
+                    Modifier.padding(horizontal = MARGEN, vertical = 8.dp),
+                )
+            }
+            // El contenido de la pestaña entra desde el lado hacia el que se va (y el anterior sale al contrario) y sus filas
+            // aparecen una tras otra; al abrir el perfil las filas ya salen puestas.
+            item {
+                AnimatedContent(
+                    targetState = pestana,
+                    transitionSpec = {
+                        val sentido = if (targetState > initialState) 1 else -1
+                        (slideInHorizontally(tween(320, easing = FastOutSlowInEasing)) { sentido * it / 5 } + fadeIn(tween(220, delayMillis = 30))) togetherWith
+                            (slideOutHorizontally(tween(220, easing = FastOutSlowInEasing)) { -sentido * it / 5 } + fadeOut(tween(120)))
+                    },
+                    label = "pestana",
+                ) { actual ->
+                    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        if (actual == 0) {
+                            datos.forEachIndexed { indice, dato ->
+                                Aparece(indice, huboCambio) {
+                                    FilaAjuste(dato.icono, titulo = dato.valor, modifier = Modifier.padding(horizontal = MARGEN), etiqueta = stringResource(dato.etiqueta))
+                                }
                             }
-                        }
-                        Aparece(datos.size, huboCambio) { datosExtra() }
-                    } else {
-                        Aparece(0, huboCambio) {
-                            FilaAjuste(
-                                icono = R.drawable.ic_campana,
-                                titulo = stringResource(R.string.inicio_notificaciones),
-                                modifier = Modifier.padding(horizontal = MARGEN),
-                                onClick = {
-                                    contexto.startActivity(
-                                        Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, contexto.packageName),
-                                    )
-                                },
-                            )
-                        }
-                        Aparece(1, huboCambio) {
-                            FilaAjuste(
-                                icono = R.drawable.ic_lock,
-                                titulo = stringResource(R.string.perfil_contrasena_titulo),
-                                modifier = Modifier.padding(horizontal = MARGEN),
-                                onClick = { cambiandoContrasena = true },
-                            )
-                        }
-                        Aparece(2, huboCambio) {
-                            FilaAjuste(
-                                icono = R.drawable.ic_informacion,
-                                titulo = version,
-                                modifier = Modifier.padding(horizontal = MARGEN),
-                                etiqueta = stringResource(R.string.perfil_version),
-                            )
-                        }
-                        Aparece(3, huboCambio) {
-                            FilaAjuste(
-                                icono = R.drawable.ic_flecha_atras,
-                                titulo = stringResource(R.string.inicio_cerrar_sesion),
-                                modifier = Modifier.padding(horizontal = MARGEN),
-                                destructiva = true,
-                                onClick = onCerrarSesion,
-                            )
+                            Aparece(datos.size, huboCambio) { datosExtra() }
+                        } else {
+                            Configuracion(huboCambio, onAjuste = { ajuste = it }, onCerrarSesion = onCerrarSesion)
                         }
                     }
                 }
             }
+        }
+        ajuste?.let {
+            AjustePantalla(
+                ajuste = it,
+                perfil = perfil,
+                versionApp = version,
+                onCambiarContrasena = { cambiandoContrasena = true },
+                onVolver = { ajuste = null },
+                espacioInferior = espacioInferior,
+            )
         }
     }
 
@@ -272,5 +253,65 @@ fun PerfilScreen(
                 if (!estado.enviado) TextButton(onClick = cerrar) { Text(stringResource(R.string.verificacion_cancelar)) }
             },
         )
+    }
+}
+
+// La pestaña Configuración en grupos, como el diseño: General, Seguridad y privacidad, Ayuda y soporte y la sesión. Las filas con
+// flecha abren su pantalla; las de interruptor cambian al tocarlas.
+@Composable
+private fun Configuracion(animar: Boolean, onAjuste: (Ajuste) -> Unit, onCerrarSesion: () -> Unit) {
+    val contexto = LocalContext.current
+    val oscuro by AjustesApp.oscuro
+    val bloqueo by AjustesApp.bloqueo
+    val margen = Modifier.padding(horizontal = MARGEN)
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        GrupoAjustes(stringResource(R.string.ajustes_general), margen)
+        Aparece(0, animar) {
+            FilaAjuste(R.drawable.ic_campana, stringResource(R.string.inicio_notificaciones), margen, onClick = { onAjuste(Ajuste.NOTIFICACIONES) })
+        }
+        Aparece(1, animar) {
+            FilaAjuste(R.drawable.ic_person, stringResource(R.string.ajustes_info_personal), margen, onClick = { onAjuste(Ajuste.INFORMACION) })
+        }
+        Aparece(2, animar) {
+            FilaAjuste(
+                R.drawable.ic_luna,
+                stringResource(R.string.ajustes_modo_oscuro),
+                margen,
+                activa = oscuro,
+                onActivaChange = { AjustesApp.cambiarOscuro(contexto, it) },
+            )
+        }
+        GrupoAjustes(stringResource(R.string.ajustes_seguridad_grupo), margen)
+        Aparece(3, animar) {
+            FilaAjuste(R.drawable.ic_lock, stringResource(R.string.ajustes_seguridad), margen, onClick = { onAjuste(Ajuste.SEGURIDAD) })
+        }
+        Aparece(4, animar) {
+            FilaAjuste(
+                R.drawable.ic_verificado,
+                stringResource(R.string.ajustes_biometria),
+                margen,
+                activa = bloqueo,
+                onActivaChange = { alternarBloqueo(contexto, it) },
+            )
+        }
+        GrupoAjustes(stringResource(R.string.ajustes_ayuda_grupo), margen)
+        Aparece(5, animar) {
+            FilaAjuste(R.drawable.ic_informacion, stringResource(R.string.ajustes_acerca), margen, onClick = { onAjuste(Ajuste.ACERCA) })
+        }
+        Aparece(6, animar) {
+            FilaAjuste(R.drawable.ic_bombilla, stringResource(R.string.ajustes_centro_ayuda), margen, onClick = { onAjuste(Ajuste.AYUDA) })
+        }
+        Aparece(7, animar) {
+            FilaAjuste(R.drawable.ic_mensaje, stringResource(R.string.ajustes_comentarios), margen, onClick = { onAjuste(Ajuste.COMENTARIOS) })
+        }
+        Aparece(8, animar) {
+            FilaAjuste(
+                icono = R.drawable.ic_flecha_atras,
+                titulo = stringResource(R.string.inicio_cerrar_sesion),
+                modifier = margen.padding(top = 8.dp),
+                destructiva = true,
+                onClick = onCerrarSesion,
+            )
+        }
     }
 }

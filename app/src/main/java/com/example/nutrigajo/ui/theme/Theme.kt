@@ -1,9 +1,12 @@
 package com.example.nutrigajo.ui.theme
 
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 
 // Tema claro: formularios, evaluación y dashboard.
 private val LightColorScheme = lightColorScheme(
@@ -95,3 +98,10 @@ fun NutriGajoTheme(
         content = content
     )
 }
+
+// El «negro» de las tarjetas, cabeceras y botones oscuros del diseño (lo que en el tema claro es `onBackground`). En el oscuro
+// `onBackground` es blanco, así que ahí es un gris oscuro que se sigue distinguiendo del fondo; el texto encima es siempre blanco.
+val ColorScheme.negro: Color get() = if (background.luminance() < 0.5f) Gray80 else Gray100
+
+// El gris medio de las tarjetas de color (calorías): no cambia con el tema, para que el blanco de encima se lea siempre.
+val ColorScheme.grisTarjeta: Color get() = Gray60

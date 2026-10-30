@@ -12,4 +12,7 @@ data class Perfil(
     val portadaVersion: Long? = null,
     // versión de la foto de perfil en R2; null si no ha puesto una
     val avatarVersion: Long? = null,
+    // `nombre` es estos dos juntos; las cuentas más viejas solo lo traen junto y aquí quedan vacíos
+    val nombres: String = "",
+    val apellidos: String = "",
 )

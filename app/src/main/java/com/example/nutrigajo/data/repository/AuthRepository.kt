@@ -53,7 +53,31 @@ class AuthRepository(
         val uid = auth.currentUser?.uid ?: return null
         val doc = db.collection(FirestorePaths.USUARIOS).document(uid).get().await()
         val rol = doc.getString("rol")?.let { runCatching { Rol.valueOf(it) }.getOrNull() } ?: return null
-        return Perfil(uid, doc.getString("nombre").orEmpty(), doc.getString("correo").orEmpty(), rol, doc.getLong("fechaAlta"), doc.getLong("portadaVersion"), doc.getLong("avatarVersion"))
+        return Perfil(
+            uid = uid,
+            nombre = doc.getString("nombre").orEmpty(),
+            correo = doc.getString("correo").orEmpty(),
+            rol = rol,
+            fechaAlta = doc.getLong("fechaAlta"),
+            portadaVersion = doc.getLong("portadaVersion"),
+            avatarVersion = doc.getLong("avatarVersion"),
+            nombres = doc.getString("nombres").orEmpty(),
+            apellidos = doc.getString("apellidos").orEmpty(),
+        )
+    }
+
+    // Cambia el nombre de la cuenta: `nombre` es nombres y apellidos juntos, como al registrarse. Los nombres que ya se copiaron a
+    // otros documentos (la lista de pacientes de un nutriólogo, por ejemplo) se quedan como estaban.
+    suspend fun actualizarNombre(nombres: String, apellidos: String) {
+        val uid = auth.currentUser?.uid ?: error("Sin sesión")
+        db.collection(FirestorePaths.USUARIOS).document(uid).update(
+            mapOf(
+                "nombre" to "$nombres $apellidos".trim(),
+                "nombres" to nombres,
+                "apellidos" to apellidos,
+                "ultimaModificacion" to System.currentTimeMillis(),
+            ),
+        ).await()
     }
 
     // Firebase manda el correo con el enlace para elegir una contraseña nueva.

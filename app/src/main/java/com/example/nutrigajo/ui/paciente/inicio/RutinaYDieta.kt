@@ -145,7 +145,7 @@ private fun TarjetaComida(comida: Comida) {
                 .align(Alignment.BottomStart)
                 .fillMaxWidth()
                 .height(137.dp)
-                .background(Brush.verticalGradient(listOf(Color.White.copy(alpha = 0f), Color.White.copy(alpha = 0.7f)))),
+                .background(Brush.verticalGradient(listOf(MaterialTheme.colorScheme.background.copy(alpha = 0f), MaterialTheme.colorScheme.background.copy(alpha = 0.7f)))),
         )
         Column(Modifier.padding(start = 23.dp, top = 26.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
             Macro(stringResource(R.string.dieta_gramos, comida.proteinaG), stringResource(R.string.dieta_proteina))
@@ -181,7 +181,7 @@ private fun TarjetaComida(comida: Comida) {
 private fun Macro(valor: String, nombre: String) {
     val tipos = MaterialTheme.typography
     Column(
-        modifier = Modifier.size(52.dp, 47.dp).background(Color.White, RoundedCornerShape(10.dp)),
+        modifier = Modifier.size(52.dp, 47.dp).background(MaterialTheme.colorScheme.background, RoundedCornerShape(10.dp)),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {

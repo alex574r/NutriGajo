@@ -2,7 +2,7 @@ package com.example.nutrigajo
 
 import android.content.Intent
 import android.os.Bundle
-import androidx.activity.ComponentActivity
+import android.os.SystemClock
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Arrangement
@@ -15,6 +15,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -22,16 +23,22 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.core.view.WindowCompat
+import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.nutrigajo.data.local.AjustesApp
+import com.example.nutrigajo.data.local.Biometria
 import com.example.nutrigajo.data.push.Avisos
 import com.example.nutrigajo.domain.model.Rol
 import com.example.nutrigajo.ui.admin.inicio.InicioAdminScreen
 import com.example.nutrigajo.ui.components.PantallaCarga
 import com.example.nutrigajo.ui.nutriologo.inicio.InicioNutriologoScreen
 import com.example.nutrigajo.ui.paciente.inicio.InicioPacienteScreen
+import com.example.nutrigajo.ui.shared.ajustes.PantallaBloqueo
 import com.example.nutrigajo.ui.shared.auth.AuthViewModel
 import com.example.nutrigajo.ui.shared.login.LoginScreen
 import com.example.nutrigajo.ui.shared.motivacion.MotivacionScreen
@@ -53,7 +60,11 @@ private enum class Paso { SPLASH, MOTIVACION, BIENVENIDA, ONBOARDING, ROL, REGIS
 // Pasos previos a la sesión: con una sesión activa no tiene sentido seguir en ellos.
 private val PASOS_DE_ACCESO = setOf(Paso.BIENVENIDA, Paso.ONBOARDING, Paso.ROL, Paso.REGISTRO, Paso.LOGIN)
 
-class MainActivity : ComponentActivity() {
+// Con la huella o el rostro al abrir, la app se tapa al abrirla y al volver tras más de este tiempo fuera.
+private const val ESPERA_BLOQUEO_MS = 30_000L
+
+// FragmentActivity porque la ventana de huella del sistema (BiometricPrompt) la exige; en lo demás es la ComponentActivity de siempre.
+class MainActivity : FragmentActivity() {
     // ponytail: bandera en SharedPreferences; pasa a DataStore cuando haya más preferencias locales
     private val prefs by lazy { getSharedPreferences("nutrigajo", MODE_PRIVATE) }
     private val onboardingVisto get() = prefs.getBoolean(CLAVE_ONBOARDING_VISTO, false)
@@ -78,9 +89,44 @@ class MainActivity : ComponentActivity() {
         intent.chatDelAviso()?.let { abrirChat = it }
     }
 
+    // la última vez que la app salió de la pantalla; estático para que girar el teléfono (que recrea la actividad) no cuente como salir
+    private companion object {
+        var ultimaActividad = Long.MIN_VALUE / 2
+    }
+
+    override fun onStart() {
+        super.onStart()
+        if (!AjustesApp.bloqueo.value || FirebaseAuth.getInstance().currentUser == null) return
+        if (!Biometria.disponible(this)) {
+            // ya no hay huella, rostro ni PIN con qué desbloquear: se quita el bloqueo para no dejar la app cerrada
+            AjustesApp.cambiarBloqueo(this, false)
+        } else if (SystemClock.elapsedRealtime() - ultimaActividad > ESPERA_BLOQUEO_MS) {
+            AjustesApp.bloqueada.value = true
+        }
+    }
+
+    override fun onStop() {
+        ultimaActividad = SystemClock.elapsedRealtime()
+        super.onStop()
+    }
+
+    private fun pedirDesbloqueo() {
+        Biometria.pedir(
+            actividad = this,
+            titulo = getString(R.string.bloqueo_titulo),
+            subtitulo = getString(R.string.bloqueo_texto),
+            alExito = {
+                ultimaActividad = SystemClock.elapsedRealtime()
+                AjustesApp.bloqueada.value = false
+            },
+            alFallar = {},
+        )
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
         super.onCreate(savedInstanceState)
+        AjustesApp.iniciar(this)
         // al girar la pantalla la intención es la misma de antes: solo cuenta la de un arranque nuevo
         if (savedInstanceState == null && intent.esAvisoDePlan()) abrirPlan = true
         if (savedInstanceState == null) intent.chatDelAviso()?.let { abrirChat = it }
@@ -95,7 +141,16 @@ class MainActivity : ComponentActivity() {
             emuladorConectado = true
         }
         setContent {
-            NutriGajoTheme {
+            val oscuro by AjustesApp.oscuro
+            NutriGajoTheme(darkTheme = oscuro) {
+                // los iconos de la barra de estado siguen al tema de la app, no al del sistema
+                val vista = LocalView.current
+                SideEffect {
+                    WindowCompat.getInsetsController(window, vista).apply {
+                        isAppearanceLightStatusBars = !oscuro
+                        isAppearanceLightNavigationBars = !oscuro
+                    }
+                }
                 val auth: AuthViewModel = viewModel()
                 val estado by auth.estado.collectAsState()
                 // ponytail: pasos locales; el NavHost por rol los reemplaza cuando existan las pantallas de cada rol
@@ -189,6 +244,19 @@ class MainActivity : ComponentActivity() {
                             else -> InicioAdminScreen(perfil, cerrarSesion)
                         }
                     }
+                }
+                // con el bloqueo puesto, la ventana de huella sale sola y esta pantalla tapa la app hasta desbloquear
+                val bloqueada by AjustesApp.bloqueada
+                LaunchedEffect(bloqueada) { if (bloqueada) pedirDesbloqueo() }
+                if (bloqueada) {
+                    PantallaBloqueo(
+                        onDesbloquear = ::pedirDesbloqueo,
+                        onCerrarSesion = {
+                            auth.cerrarSesion()
+                            AjustesApp.bloqueada.value = false
+                            paso = Paso.LOGIN
+                        },
+                    )
                 }
             }
         }

@@ -125,7 +125,7 @@ internal fun SelectorRango(rango: Rango, onRango: (Rango) -> Unit, modifier: Mod
         modifier = modifier
             .fillMaxWidth()
             .height(39.dp)
-            .background(Color.White, RoundedCornerShape(15.dp))
+            .background(colores.background, RoundedCornerShape(15.dp))
             .padding(4.dp),
     ) {
         Rango.entries.forEach { opcion ->

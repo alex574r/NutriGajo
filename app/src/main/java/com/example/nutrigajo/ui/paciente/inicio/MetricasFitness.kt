@@ -42,6 +42,8 @@ import com.example.nutrigajo.R
 import com.example.nutrigajo.domain.model.GrupoAlimento
 import com.example.nutrigajo.ui.components.alPulsar
 import com.example.nutrigajo.ui.theme.color
+import com.example.nutrigajo.ui.theme.grisTarjeta
+import com.example.nutrigajo.ui.theme.negro
 import java.util.Locale
 
 private val ALTURAS_SCORE = listOf(15, 26, 51, 74, 65, 28, 43)
@@ -175,7 +177,7 @@ private fun TarjetaDeMetrica(metrica: Metrica, resumen: ResumenDia, onClick: () 
             )
         }
         Metrica.CALORIAS -> TarjetaMetrica(
-            fondo = colores.onSurfaceVariant,
+            fondo = colores.grisTarjeta,
             titulo = stringResource(R.string.metrica_calorias),
             icono = null,
             valor = String.format(Locale.getDefault(), "%,d", resumen.calorias),
@@ -191,7 +193,7 @@ private fun TarjetaDeMetrica(metrica: Metrica, resumen: ResumenDia, onClick: () 
             }
         }
         Metrica.IMC -> TarjetaMetrica(
-            fondo = colores.onBackground,
+            fondo = colores.negro,
             titulo = stringResource(R.string.metrica_imc),
             icono = null,
             valor = String.format(Locale.getDefault(), "%.1f", IMC_MUESTRA),

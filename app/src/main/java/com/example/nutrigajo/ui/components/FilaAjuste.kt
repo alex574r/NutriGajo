@@ -20,6 +20,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -27,6 +29,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
@@ -36,17 +39,22 @@ import com.example.nutrigajo.R
 
 // Fila del perfil: tarjeta blanca con borde fino. Sin `onClick` es un dato (la etiqueta pequeña arriba y el valor en `titulo`,
 // con el icono en un cuadro gris); con `onClick` es un ajuste (icono en un cuadro naranja suave, flecha en un círculo y un
-// resorte que la encoge al pulsarla), y `destructiva` la tiñe de rojo como la acción de borrar del diseño.
+// resorte que la encoge al pulsarla), y `destructiva` la tiñe de rojo como la acción de borrar del diseño. Con `activa` es un
+// interruptor: tocar la fila lo cambia y, en vez de la flecha, lleva el Switch. `descripcion` va bajo el título.
 @Composable
 fun FilaAjuste(
     @DrawableRes icono: Int,
     titulo: String,
     modifier: Modifier = Modifier,
     etiqueta: String? = null,
+    descripcion: String? = null,
     destructiva: Boolean = false,
+    activa: Boolean? = null,
+    onActivaChange: ((Boolean) -> Unit)? = null,
     onClick: (() -> Unit)? = null,
 ) {
     val colores = MaterialTheme.colorScheme
+    val accion = onClick ?: if (activa != null && onActivaChange != null) ({ onActivaChange(!activa) }) else null
     val forma = RoundedCornerShape(22.dp)
     val interaccion = remember { MutableInteractionSource() }
     val pulsada by interaccion.collectIsPressedAsState()
@@ -57,12 +65,12 @@ fun FilaAjuste(
     )
     val fondoIcono = when {
         destructiva -> colores.background
-        onClick != null -> colores.primaryContainer
+        accion != null -> colores.primaryContainer
         else -> colores.surfaceVariant
     }
     val colorIcono = when {
         destructiva -> colores.error
-        onClick != null -> colores.onPrimaryContainer
+        accion != null -> colores.onPrimaryContainer
         else -> colores.onBackground
     }
     Row(
@@ -76,8 +84,13 @@ fun FilaAjuste(
             .background(if (destructiva) colores.errorContainer else colores.background)
             .border(1.dp, if (destructiva) colores.error.copy(alpha = 0.35f) else colores.outlineVariant, forma)
             .then(
-                if (onClick != null) {
-                    Modifier.clickable(interactionSource = interaccion, indication = LocalIndication.current, role = Role.Button, onClick = onClick)
+                if (accion != null) {
+                    Modifier.clickable(
+                        interactionSource = interaccion,
+                        indication = LocalIndication.current,
+                        role = if (activa != null) Role.Switch else Role.Button,
+                        onClick = accion,
+                    )
                 } else {
                     Modifier
                 },
@@ -101,8 +114,22 @@ fun FilaAjuste(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
+            descripcion?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = colores.onSurfaceVariant, maxLines = 3) }
         }
-        if (onClick != null && !destructiva) {
+        if (activa != null) {
+            // la fila entera es la zona de toque: el Switch solo muestra el estado
+            Switch(
+                checked = activa,
+                onCheckedChange = null,
+                colors = SwitchDefaults.colors(
+                    checkedTrackColor = colores.primary,
+                    checkedThumbColor = Color.White,
+                    uncheckedTrackColor = colores.surfaceVariant,
+                    uncheckedThumbColor = colores.outline,
+                    uncheckedBorderColor = colores.outline,
+                ),
+            )
+        } else if (onClick != null && !destructiva) {
             Box(Modifier.size(32.dp).clip(CircleShape).background(colores.surfaceVariant), contentAlignment = Alignment.Center) {
                 Icon(painterResource(R.drawable.ic_arrow_forward), contentDescription = null, modifier = Modifier.size(16.dp), tint = colores.onBackground)
             }
