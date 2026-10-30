@@ -79,32 +79,7 @@ fun ActividadReciente(modifier: Modifier = Modifier) {
                 .background(colores.surfaceVariant)
                 .padding(15.dp),
         ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(39.dp)
-                    .background(Color.White, RoundedCornerShape(15.dp))
-                    .padding(4.dp),
-            ) {
-                Rango.entries.forEach { opcion ->
-                    val activa = opcion == rango
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxHeight()
-                            .clip(RoundedCornerShape(9.dp))
-                            .background(if (activa) colores.onBackground else Color.Transparent)
-                            .selectable(selected = activa, role = Role.Tab, onClick = { rango = opcion }),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(
-                            text = stringResource(opcion.etiqueta),
-                            style = tipos.labelLarge,
-                            color = if (activa) colores.background else colores.onSurfaceVariant,
-                        )
-                    }
-                }
-            }
+            SelectorRango(rango, onRango = { rango = it })
             Spacer(Modifier.height(14.dp))
             GraficaKcal(serie.valores, seleccion, onSeleccion = { seleccion = it })
             Spacer(Modifier.height(24.dp))
@@ -141,9 +116,42 @@ fun ActividadReciente(modifier: Modifier = Modifier) {
     }
 }
 
+// El grupo de pestañas de rango (1d … Todo): la activa en negro sobre una pastilla blanca. Lo comparten Actividades y las
+// pantallas de métricas.
+@Composable
+internal fun SelectorRango(rango: Rango, onRango: (Rango) -> Unit, modifier: Modifier = Modifier) {
+    val colores = MaterialTheme.colorScheme
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(39.dp)
+            .background(Color.White, RoundedCornerShape(15.dp))
+            .padding(4.dp),
+    ) {
+        Rango.entries.forEach { opcion ->
+            val activa = opcion == rango
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+                    .clip(RoundedCornerShape(9.dp))
+                    .background(if (activa) colores.onBackground else Color.Transparent)
+                    .selectable(selected = activa, role = Role.Tab, onClick = { onRango(opcion) }),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = stringResource(opcion.etiqueta),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = if (activa) colores.background else colores.onSurfaceVariant,
+                )
+            }
+        }
+    }
+}
+
 // Línea suave por los valores, con la cuadrícula punteada y una burbuja sobre el punto elegido (toque o arrastre).
 @Composable
-private fun GraficaKcal(valores: List<Float>, seleccion: Int, onSeleccion: (Int) -> Unit, modifier: Modifier = Modifier) {
+internal fun GraficaKcal(valores: List<Float>, seleccion: Int, onSeleccion: (Int) -> Unit, modifier: Modifier = Modifier) {
     val colores = MaterialTheme.colorScheme
     val medidor = rememberTextMeasurer()
     val estiloEje = MaterialTheme.typography.labelLarge.copy(fontSize = 11.sp, color = colores.outline)

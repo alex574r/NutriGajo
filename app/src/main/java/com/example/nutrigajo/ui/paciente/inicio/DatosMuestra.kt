@@ -83,3 +83,39 @@ val ejerciciosExtra = listOf(
 )
 
 const val FRASE_DEL_DIA = "El dolor que sientes hoy será la fuerza que sentirás mañana"
+
+// ---- pantallas de métricas
+
+// lo que suma el «+» del agua; la meta del día es la de MetasDiarias
+const val VASO_ML = 250
+
+const val IMC_MUESTRA = 29.8f
+
+// 5 semanas de lunes a domingo: 0 sin dato, 1..3 sobrepeso (de menos a más), 4 bajo peso, 5 normal
+val mapaImc = listOf(
+    0, 0, 4, 1, 0, 0, 2,
+    1, 2, 2, 3, 1, 2, 3,
+    2, 3, 3, 3, 3, 2, 3,
+    1, 2, 3, 2, 1, 5, 0,
+    1, 1, 2, 1, 0, 0, 0,
+)
+
+// porcentaje y gramos del mes por macronutriente
+data class Macro(@StringRes val nombre: Int, val porcentaje: Int, val gramos: Int, @DrawableRes val icono: Int)
+
+val macros = listOf(
+    Macro(R.string.macro_grasas, 20, 34, R.drawable.ic_corazon),
+    Macro(R.string.macro_proteinas, 30, 116, R.drawable.ic_corredor),
+    Macro(R.string.macro_carbohidratos, 40, 155, R.drawable.ic_llama),
+    Macro(R.string.macro_fibra, 10, 15, R.drawable.ic_montana),
+)
+
+// lo que lleva el paciente hoy; sus anillos son el avance de cada cifra hacia su meta (MetasDiarias)
+data class Pasos(val total: Int, val kcal: Int, val km: Float, val minutos: Int)
+
+val pasosMuestra = Pasos(total = 2574, kcal = 578, km = 1.9f, minutos = 25)
+
+// lo que resume la pantalla de score tras una sesión
+data class SesionCompletada(val scoreSumado: Int, val minutos: Int, val kcal: Int, val kg: Int, val sugerencias: Int)
+
+val sesionMuestra = SesionCompletada(scoreSumado = 8, minutos = 25, kcal = 158, kg = 30, sugerencias = 12)
