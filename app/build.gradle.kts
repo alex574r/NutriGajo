@@ -39,6 +39,18 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        // llave del release: ruta y contraseñas en local.properties (fuera de git); sin ellas el release sale sin firmar
+        localProperties.getProperty("KEYSTORE_FILE")?.let { archivo ->
+            create("release") {
+                storeFile = file(archivo)
+                storePassword = localProperties.getProperty("KEYSTORE_PASSWORD")
+                keyAlias = localProperties.getProperty("KEY_ALIAS")
+                keyPassword = localProperties.getProperty("KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         debug {
             // ./gradlew installDebug -PemuladorFirebase=true apunta Auth y Firestore a los emuladores locales
@@ -47,6 +59,7 @@ android {
         }
         release {
             buildConfigField("boolean", "USAR_EMULADOR", "false")
+            signingConfig = signingConfigs.findByName("release")
             optimization {
                 enable = false
             }
