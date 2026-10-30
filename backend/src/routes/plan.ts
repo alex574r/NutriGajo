@@ -38,7 +38,8 @@ export async function subirPlan(req: Request, env: Env, uid: string, pacienteId:
 
     await env.FOTOS.put(clave(pacienteId, planId), cuerpo, { httpMetadata: { contentType: "application/pdf" } });
     return Response.json({ ok: true });
-  } catch {
+  } catch (e) {
+    console.error("subirPlan:", String(e));
     return new Response("No se pudo guardar el plan", { status: 502 });
   }
 }
@@ -62,7 +63,8 @@ export async function leerPlan(env: Env, uid: string, pacienteId: string, planId
         "X-Content-Type-Options": "nosniff",
       },
     });
-  } catch {
+  } catch (e) {
+    console.error("leerPlan:", String(e));
     return new Response("No se pudo leer el plan", { status: 502 });
   }
 }
@@ -106,7 +108,8 @@ export async function avisarPlan(req: Request, env: Env, uid: string): Promise<R
 
     await escribir(env, token, `pacientes/${pacienteId}/planes/${planId}`, ["notificadaEn"], { notificadaEn: { integerValue: String(Date.now()) } });
     return Response.json({ enviado: true });
-  } catch {
+  } catch (e) {
+    console.error("avisarPlan:", String(e));
     return new Response("No se pudo avisar", { status: 502 });
   }
 }

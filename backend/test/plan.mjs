@@ -58,6 +58,11 @@ const pushes = () => llamadas.filter((l) => l.url.includes("/messages:send"));
 preparar();
 assert.equal((await subir(PDF, "image/png")).status, 415, "tipo de archivo");
 assert.equal((await subir(PDF, "application/pdf", "nutri1", "plan2", { ...env, FIREBASE_SERVICE_ACCOUNT: undefined })).status, 503, "sin clave");
+// el secreto guardado desde un archivo UTF-8 con BOM (PowerShell) empieza con ﻿: la clave debe leerse igual (antes daba 502)
+// va antes de cualquier otra llamada con clave porque el token de servicio se guarda en memoria
+const conBom = { ...env, FIREBASE_SERVICE_ACCOUNT: "﻿" + cuenta };
+assert.equal((await subir(PDF, "application/pdf", "nutri1", "planBom", conBom)).status, 200, "clave con BOM");
+objetos.clear();
 assert.equal((await subir(PDF, "application/pdf", "otro")).status, 403, "paciente de otro nutriólogo");
 assert.equal((await subir(PDF, "application/pdf", "cuentaPac1")).status, 403, "el paciente no sube su propio plan");
 assert.equal((await subir(PDF, "application/pdf", "nutri1", "plan1")).status, 409, "un plan enviado no se sobrescribe");

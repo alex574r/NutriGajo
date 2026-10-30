@@ -13,7 +13,8 @@ let guardado: { token: string; vence: number } | null = null;
 export async function tokenDeServicio(env: Env): Promise<string> {
   if (guardado && guardado.vence > Date.now() + 60_000) return guardado.token;
 
-  const cuenta = JSON.parse(env.FIREBASE_SERVICE_ACCOUNT ?? "") as CuentaDeServicio;
+  // trim también quita el BOM (﻿) con el que PowerShell guarda los archivos UTF-8: pegado en el secreto rompía el JSON
+  const cuenta = JSON.parse((env.FIREBASE_SERVICE_ACCOUNT ?? "").trim()) as CuentaDeServicio;
   const llave = await importPKCS8(cuenta.private_key, "RS256");
   const ahora = Math.floor(Date.now() / 1000);
   const asercion = await new SignJWT({ scope: "https://www.googleapis.com/auth/cloud-platform" })
