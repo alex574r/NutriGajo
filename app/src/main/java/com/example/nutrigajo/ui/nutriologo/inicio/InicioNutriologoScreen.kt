@@ -39,7 +39,7 @@ import com.example.nutrigajo.ui.nutriologo.plan.PlanScreen
 import com.example.nutrigajo.ui.nutriologo.ubicacion.UbicacionScreen
 import com.example.nutrigajo.ui.nutriologo.verificacion.VerificacionScreen
 import com.example.nutrigajo.ui.nutriologo.verificacion.VerificacionViewModel
-import com.example.nutrigajo.ui.shared.citas.CitasScreen
+import com.example.nutrigajo.ui.shared.agenda.AgendaScreen
 import com.example.nutrigajo.ui.shared.citas.CitasViewModel
 import com.example.nutrigajo.ui.shared.chat.ChatScreen
 import com.example.nutrigajo.ui.shared.chat.chatVistoHasta
@@ -142,7 +142,7 @@ fun InicioNutriologoScreen(
         enMapa -> UbicacionScreen(perfil = perfil, onVolver = { enMapa = false })
         enCitas -> {
             BackHandler { enCitas = false }
-            CitasScreen(
+            AgendaScreen(
                 rol = Rol.NUTRIOLOGO,
                 estado = citas,
                 onActualizar = { citasVm.cargar(Rol.NUTRIOLOGO) },

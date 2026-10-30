@@ -62,6 +62,8 @@ fun CitasScreen(
     onVolver: () -> Unit,
     // solo el paciente: pasa su cita vigente a otra hora (abre la agenda de ese nutriólogo)
     onReagendar: ((Cita) -> Unit)? = null,
+    // la agenda del nutriólogo trae la suya y usa esta lista como una de sus vistas
+    conCabecera: Boolean = true,
 ) {
     val colores = MaterialTheme.colorScheme
     val ahora = remember(estado.citas) { System.currentTimeMillis() }
@@ -90,16 +92,18 @@ fun CitasScreen(
         modifier = Modifier.fillMaxSize().background(colores.background),
     ) {
         Column(Modifier.fillMaxSize()) {
-            Row(
-                modifier = Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                TextButton(onClick = onVolver) { Text(stringResource(R.string.mapa_volver)) }
-                Text(
-                    text = stringResource(if (rol == Rol.NUTRIOLOGO) R.string.citas_titulo_nutriologo else R.string.citas_titulo_paciente),
-                    style = MaterialTheme.typography.titleLarge,
-                    color = colores.onBackground,
-                )
+            if (conCabecera) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    TextButton(onClick = onVolver) { Text(stringResource(R.string.mapa_volver)) }
+                    Text(
+                        text = stringResource(if (rol == Rol.NUTRIOLOGO) R.string.citas_titulo_nutriologo else R.string.citas_titulo_paciente),
+                        style = MaterialTheme.typography.titleLarge,
+                        color = colores.onBackground,
+                    )
+                }
             }
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
@@ -192,7 +196,7 @@ private fun TarjetaCita(cita: Cita, rol: Rol, ahora: Long, trabajando: Boolean, 
 
 // Naranja lleno si está confirmada, naranja suave si espera al nutriólogo y gris cuando ya no hay nada que atender.
 @Composable
-private fun EtiquetaEstado(estado: EstadoCita, vigente: Boolean) {
+internal fun EtiquetaEstado(estado: EstadoCita, vigente: Boolean) {
     val colores = MaterialTheme.colorScheme
     val (texto, fondo, color) = when {
         estado == EstadoCita.CONFIRMADA && vigente -> Triple(R.string.cita_estado_confirmada, colores.primary, colores.onPrimary)
@@ -217,7 +221,7 @@ private fun EtiquetaEstado(estado: EstadoCita, vigente: Boolean) {
 }
 
 @Composable
-private fun RowScope.BotonCita(texto: Int, principal: Boolean, enabled: Boolean, onClick: () -> Unit) {
+internal fun RowScope.BotonCita(texto: Int, principal: Boolean, enabled: Boolean, onClick: () -> Unit) {
     val colores = MaterialTheme.colorScheme
     Button(
         onClick = onClick,
@@ -233,7 +237,7 @@ private fun RowScope.BotonCita(texto: Int, principal: Boolean, enabled: Boolean,
 }
 
 @Composable
-private fun DialogoCambio(rechazar: Boolean, onConfirmar: () -> Unit, onCerrar: () -> Unit) {
+internal fun DialogoCambio(rechazar: Boolean, onConfirmar: () -> Unit, onCerrar: () -> Unit) {
     val colores = MaterialTheme.colorScheme
     AlertDialog(
         onDismissRequest = onCerrar,

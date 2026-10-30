@@ -61,7 +61,7 @@ import com.example.nutrigajo.ui.paciente.plan.PlanPacienteViewModel
 import com.example.nutrigajo.ui.paciente.citas.AgendarCitaSheet
 import com.example.nutrigajo.ui.paciente.mapa.MapaScreen
 import com.example.nutrigajo.ui.paciente.mapa.MapaViewModel
-import com.example.nutrigajo.ui.shared.citas.CitasScreen
+import com.example.nutrigajo.ui.shared.agenda.AgendaScreen
 import com.example.nutrigajo.ui.shared.citas.CitasViewModel
 import com.example.nutrigajo.ui.shared.expediente.ExpedienteEstado
 import com.example.nutrigajo.ui.shared.expediente.ExpedienteFlujo
@@ -189,7 +189,7 @@ fun InicioPacienteScreen(
         estado.cargando -> PantallaCarga(conCabecera = true)
         enCitas -> {
             BackHandler { enCitas = false }
-            CitasScreen(
+            AgendaScreen(
                 rol = Rol.PACIENTE,
                 estado = citas,
                 onActualizar = { citasVm.cargar(Rol.PACIENTE) },
