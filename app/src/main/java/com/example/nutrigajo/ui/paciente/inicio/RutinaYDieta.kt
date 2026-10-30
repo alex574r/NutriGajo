@@ -33,6 +33,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.nutrigajo.R
+import com.example.nutrigajo.ui.components.cristal
 
 private val TEXTO_SOBRE_FOTO = Color(0xFFD0D0D0)
 private val SOMBRA_TEXTO = Shadow(Color.Black.copy(alpha = 0.35f), Offset(0f, 3f), 6f)
@@ -94,7 +95,7 @@ fun RutinaDeHoy(rutina: Rutina, modifier: Modifier = Modifier) {
                     Text(
                         text = rutina.intensidad,
                         modifier = Modifier
-                            .background(Color(0xFFBDBDBD).copy(alpha = 0.35f), RoundedCornerShape(7.dp))
+                            .cristal(RoundedCornerShape(7.dp))
                             .padding(horizontal = 10.dp, vertical = 2.dp),
                         style = tipos.labelLarge,
                         color = Color.White,
@@ -106,8 +107,9 @@ fun RutinaDeHoy(rutina: Rutina, modifier: Modifier = Modifier) {
                     .align(Alignment.BottomEnd)
                     .padding(end = 18.dp, bottom = 21.dp)
                     .size(36.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(Color(0xFFFF974E).copy(alpha = 0.3f)),
+                    // el botón de jugar es cristal teñido de naranja
+                    .cristal(RoundedCornerShape(12.dp), velo = Color(0xFFFF974E))
+                    .clip(RoundedCornerShape(12.dp)),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(painterResource(R.drawable.ic_play), contentDescription = stringResource(R.string.rutina_iniciar), tint = Color.White)

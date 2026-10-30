@@ -74,8 +74,8 @@ fun TarjetaDestacada(
                     .align(Alignment.TopEnd)
                     .padding(top = 12.dp, end = 12.dp)
                     .size(40.dp)
+                    .cristal(CircleShape)
                     .clip(CircleShape)
-                    .background(Color.White.copy(alpha = 0.25f))
                     .clickable(enabled = it.habilitada, onClickLabel = it.descripcion, role = Role.Button, onClick = it.onClick),
                 contentAlignment = Alignment.Center,
             ) {

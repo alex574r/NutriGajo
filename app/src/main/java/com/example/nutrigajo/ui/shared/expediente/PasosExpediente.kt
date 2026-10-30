@@ -2,7 +2,6 @@ package com.example.nutrigajo.ui.shared.expediente
 
 import androidx.annotation.StringRes
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -40,11 +39,13 @@ import com.example.nutrigajo.domain.model.EjercicioPreferido
 import com.example.nutrigajo.domain.model.Expediente
 import com.example.nutrigajo.domain.model.Objetivo
 import com.example.nutrigajo.domain.model.Sexo
+import com.example.nutrigajo.ui.components.ContadorRodante
 import com.example.nutrigajo.ui.components.OpcionLista
 import com.example.nutrigajo.ui.components.OpcionTarjeta
 import com.example.nutrigajo.ui.components.Regla
 import com.example.nutrigajo.ui.components.SelectorEtiquetas
 import com.example.nutrigajo.ui.components.SelectorNumerico
+import com.example.nutrigajo.ui.components.repetirAlMantener
 import java.time.Instant
 import java.time.LocalDate
 import java.time.Period
@@ -336,21 +337,25 @@ private fun PasoEjercicios(expediente: Expediente, cambiar: Cambiar) {
 private fun PasoCalorias(expediente: Expediente, cambiar: Cambiar) {
     val colores = MaterialTheme.colorScheme
     val calorias = expediente.caloriasObjetivo
-    fun mover(delta: Int) = cambiar { it.copy(caloriasObjetivo = ((it.caloriasObjetivo ?: CALORIAS_INICIALES) + delta).coerceIn(800, 6000)) }
+    // `pasos` son pasos de PASO_CALORIAS, con signo: lo mandan los botones (que se repiten al mantenerlos) y el arrastre del número
+    fun mover(pasos: Int) = cambiar { it.copy(caloriasObjetivo = ((it.caloriasObjetivo ?: CALORIAS_INICIALES) + pasos * PASO_CALORIAS).coerceIn(800, 6000)) }
 
     Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
         Spacer(Modifier.height(24.dp))
-        Text(
-            text = "%,d".format(calorias ?: CALORIAS_INICIALES),
-            style = MaterialTheme.typography.displayLarge,
+        // el número rueda como un odómetro; también se puede tomar y arrastrar hacia arriba o abajo
+        ContadorRodante(
+            valor = calorias ?: CALORIAS_INICIALES,
+            onPasos = { mover(it) },
+            digitos = 4,
             // en gris mientras sea solo la sugerencia
             color = if (calorias == null) colores.outline else colores.onBackground,
         )
         Text(stringResource(R.string.expediente_calorias_dia), style = MaterialTheme.typography.titleMedium, color = colores.onSurfaceVariant)
         Spacer(Modifier.height(32.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            BotonCalorias("−", colores.surfaceVariant, colores.onBackground) { mover(-PASO_CALORIAS) }
-            BotonCalorias("+", colores.primary, colores.onPrimary) { mover(PASO_CALORIAS) }
+            // el rango tiene un centenar de pasos de 50: tras 1.5 s mantenido, de dos en dos
+            BotonCalorias("−", colores.surfaceVariant, colores.onBackground, Modifier.repetirAlMantener(-1, aceleracion = 2) { mover(it) })
+            BotonCalorias("+", colores.primary, colores.onPrimary, Modifier.repetirAlMantener(1, aceleracion = 2) { mover(it) })
         }
         Spacer(Modifier.height(16.dp))
         Text(
@@ -363,12 +368,11 @@ private fun PasoCalorias(expediente: Expediente, cambiar: Cambiar) {
 }
 
 @Composable
-private fun BotonCalorias(signo: String, fondo: androidx.compose.ui.graphics.Color, color: androidx.compose.ui.graphics.Color, onClick: () -> Unit) {
+private fun BotonCalorias(signo: String, fondo: androidx.compose.ui.graphics.Color, color: androidx.compose.ui.graphics.Color, modifier: Modifier) {
     Box(
-        modifier = Modifier
+        modifier = modifier
             .size(width = 96.dp, height = 56.dp)
-            .background(fondo, RoundedCornerShape(19.dp))
-            .clickable(onClick = onClick),
+            .background(fondo, RoundedCornerShape(19.dp)),
         contentAlignment = Alignment.Center,
     ) {
         Text(signo, style = MaterialTheme.typography.headlineMedium, color = color)

@@ -43,7 +43,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.nutrigajo.R
 
-private val CRISTAL = Color(0xFFBDBDBD).copy(alpha = 0.21f)
 private val AVATAR = 96.dp
 private val ALTO_PORTADA = 220.dp
 private val SALIENTE_INSIGNIA = 14.dp
@@ -108,8 +107,8 @@ fun PerfilCabecera(
                         .statusBarsPadding()
                         .padding(start = 19.dp, top = 8.dp)
                         .size(34.dp)
+                        .cristal(RoundedCornerShape(10.dp))
                         .clip(RoundedCornerShape(10.dp))
-                        .background(CRISTAL)
                         .clickable(role = Role.Button, onClick = onVolver),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -127,8 +126,8 @@ fun PerfilCabecera(
                         .align(Alignment.BottomEnd)
                         .padding(end = 19.dp, bottom = 16.dp)
                         .size(40.dp)
+                        .cristal(RoundedCornerShape(12.dp))
                         .clip(RoundedCornerShape(12.dp))
-                        .background(CRISTAL)
                         .clickable(enabled = !subiendoPortada, role = Role.Button, onClick = onCambiarPortada),
                     contentAlignment = Alignment.Center,
                 ) {
