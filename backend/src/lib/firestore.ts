@@ -4,7 +4,7 @@ import type { Env } from "../index";
 // y mandar mensajes de FCM. Cada ruta comprueba antes, con lo que lee, que quien pide tiene derecho a lo que pide.
 
 // Firestore devuelve cada campo con su tipo: { stringValue } o { integerValue }.
-export type Documento = { fields?: Record<string, { stringValue?: string; integerValue?: string }> };
+export type Documento = { fields?: Record<string, { stringValue?: string; integerValue?: string; booleanValue?: boolean }> };
 
 export const ID = /^[A-Za-z0-9_-]{1,128}$/;
 
@@ -32,7 +32,7 @@ export async function escribir(env: Env, token: string, ruta: string, campos: st
 export interface Push {
   dispositivo: string;
   // canal de notificaciones de la app (se crean en Avisos.crearCanales)
-  canal: "citas" | "planes";
+  canal: "citas" | "planes" | "mensajes";
   titulo: string;
   cuerpo: string;
   // FCM solo acepta textos

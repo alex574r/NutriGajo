@@ -8,10 +8,10 @@ import { enviarPush, escribir, ID, leer, texto } from "../lib/firestore";
 const MAX_BYTES = 8 * 1024 * 1024;
 const clave = (pacienteId: string, planId: string) => `planes/${pacienteId}/${planId}.pdf`;
 
-type Relacion = "nutriologo" | "paciente" | null;
+export type Relacion = "nutriologo" | "paciente" | null;
 
 // Quién es `uid` respecto al paciente: su nutriólogo, el propio paciente o nadie; null en `paciente` si no existe.
-async function relacion(env: Env, token: string, pacienteId: string, uid: string) {
+export async function relacion(env: Env, token: string, pacienteId: string, uid: string) {
   const paciente = await leer(env, token, `pacientes/${pacienteId}`);
   let quien: Relacion = null;
   if (texto(paciente, "nutriologoId") === uid) quien = "nutriologo";

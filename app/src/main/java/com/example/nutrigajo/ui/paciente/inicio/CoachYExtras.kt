@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -27,15 +28,27 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.nutrigajo.R
+import com.example.nutrigajo.data.repository.TOPE_PENDIENTES
 import com.example.nutrigajo.ui.components.Etiqueta
+import com.example.nutrigajo.ui.components.alPulsar
 
-// ponytail: los mensajes pendientes son de muestra y el botón no abre nada; el chat con el nutriólogo llega después.
-// La foto del coach es la del diseño; se sustituye por la del nutriólogo cuando exista el almacenamiento de fotos.
+// La entrada al chat con el nutriólogo: toda la tarjeta lo abre. Cuenta sus mensajes sin leer o, si no hay, muestra el último;
+// las etiquetas salen del plan que aún no ha visto (la campana lleva el punto mientras tanto).
+// ponytail: la foto del coach es la del diseño, no la del nutriólogo; los tres puntos del encabezado no abren nada.
 @Composable
-fun TarjetaCoach(nutriologo: String, modifier: Modifier = Modifier) {
+fun TarjetaCoach(
+    nutriologo: String,
+    pendientes: Int,
+    ultimo: String,
+    nuevaRutina: Boolean,
+    nuevaDieta: Boolean,
+    onChat: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val colores = MaterialTheme.colorScheme
     val tipos = MaterialTheme.typography
     Column(modifier) {
@@ -46,6 +59,7 @@ fun TarjetaCoach(nutriologo: String, modifier: Modifier = Modifier) {
                 .padding(horizontal = 16.dp)
                 .fillMaxWidth()
                 .height(227.dp)
+                .alPulsar(onChat, minimo = 0.97f)
                 .clip(RoundedCornerShape(29.dp))
                 .background(colores.primary),
         ) {
@@ -62,12 +76,21 @@ fun TarjetaCoach(nutriologo: String, modifier: Modifier = Modifier) {
                 ),
             )
             Column(Modifier.padding(start = 16.dp, top = 18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Etiqueta(stringResource(R.string.coach_nueva_rutina))
-                Etiqueta(stringResource(R.string.coach_nueva_dieta))
+                if (nuevaRutina) Etiqueta(stringResource(R.string.coach_nueva_rutina))
+                if (nuevaDieta) Etiqueta(stringResource(R.string.coach_nueva_dieta))
             }
-            Column(Modifier.align(Alignment.BottomStart).padding(start = 16.dp, bottom = 16.dp)) {
-                Text("5+", style = tipos.headlineLarge, color = Color.White)
-                Text(stringResource(R.string.coach_mensajes), style = tipos.titleLarge, color = Color.White)
+            // el ancho se queda de este lado de la foto y del botón
+            Column(Modifier.align(Alignment.BottomStart).padding(start = 16.dp, bottom = 16.dp).widthIn(max = 180.dp)) {
+                if (pendientes > 0) {
+                    Text(
+                        text = if (pendientes >= TOPE_PENDIENTES) "${TOPE_PENDIENTES - 1}+" else pendientes.toString(),
+                        style = tipos.headlineLarge,
+                        color = Color.White,
+                    )
+                    Text(stringResource(if (pendientes == 1) R.string.coach_mensaje else R.string.coach_mensajes), style = tipos.titleLarge, color = Color.White)
+                } else {
+                    Text(ultimo, style = tipos.titleLarge, color = Color.White, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                }
             }
             Box(
                 modifier = Modifier

@@ -10,7 +10,8 @@
     "check": "tsc --noEmit",
     "test": "node test/humo.mjs",
     "test:aviso": "node test/aviso.mjs",
-    "test:plan": "node test/plan.mjs"
+    "test:plan": "node test/plan.mjs",
+    "test:chat": "node test/chat.mjs"
   },
   "dependencies": {
     "jose": "^6.2.13"

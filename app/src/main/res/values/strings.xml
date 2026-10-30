@@ -100,6 +100,7 @@
     <string name="inicio_coach">Coach</string>
     <string name="coach_nueva_rutina">Nueva rutina</string>
     <string name="coach_nueva_dieta">Nueva dieta</string>
+    <string name="coach_mensaje">Mensaje pendiente</string>
     <string name="coach_mensajes">Mensajes pendientes</string>
     <string name="coach_abrir_mensajes">Abrir mensajes</string>
     <string name="inicio_extra">Más ejercicios extra</string>
@@ -417,6 +418,31 @@
 
     <string name="aviso_canal_citas">Citas</string>
     <string name="aviso_canal_planes">Planes</string>
+    <string name="aviso_canal_mensajes">Mensajes</string>
+
+    <!-- Chat entre el nutriólogo y su paciente -->
+    <string name="chat_hoy">Hoy</string>
+    <string name="chat_ayer">Ayer</string>
+    <string name="chat_enviando">enviando…</string>
+    <string name="chat_foto">Foto del mensaje</string>
+    <string name="chat_foto_error">No se pudo cargar la foto. Toca para intentarlo de nuevo.</string>
+    <string name="chat_cerrar_foto">Cerrar foto</string>
+    <string name="chat_vacio_titulo">Aún no hay mensajes</string>
+    <string name="chat_vacio_texto">Escríbele a %1$s para empezar la conversación.</string>
+    <string name="chat_escribe">Escribe un mensaje</string>
+    <string name="chat_adjuntar">Adjuntar foto</string>
+    <string name="chat_enviar">Enviar mensaje</string>
+    <string name="chat_foto_lista">Foto lista para enviar</string>
+    <string name="chat_quitar_foto">Quitar foto</string>
+    <string name="chat_error_red">No se pudo enviar el mensaje. Revisa tu conexión e inténtalo de nuevo.</string>
+    <string name="chat_error_servidor">El servidor no pudo guardar la foto. Inténtalo de nuevo en unos minutos.</string>
+    <string name="chat_error_foto">No se pudo preparar esa foto. Prueba con otra.</string>
+    <string name="chat_subtitulo_nutriologo">Tu nutriólogo</string>
+    <string name="chat_subtitulo_paciente">Paciente</string>
+    <string name="chat_entrada_vacia">Escríbele a tu nutriólogo</string>
+    <string name="chat_vista_foto">Foto</string>
+    <string name="chat_vista_yo">Tú: %1$s</string>
+    <string name="chat_boton">chat con %1$s</string>
 
     <!-- Panel del plan del nutriólogo -->
     <string name="plan_boton_crear">crear plan</string>

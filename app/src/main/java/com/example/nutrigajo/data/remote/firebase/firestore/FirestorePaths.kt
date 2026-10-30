@@ -15,6 +15,8 @@ package com.example.nutrigajo.data.remote.firebase.firestore
  * pacientes/{pacienteId}              nutriologoId, usuarioId, correoVinculacion…
  *   ├─ mediciones/{id}
  *   ├─ planes/{id}                    plan de alimentación y ejercicio enviado (enviadoPor, enviadoEn, contenido…); su PDF vive en R2
+ *   ├─ mensajes/{id}                  chat con el nutriólogo (autorId, texto, foto, enviadoEn); la foto vive en R2. El último queda
+ *   │                                 resumido en pacientes/{id}.ultimoMensaje para el punto de «sin leer»
  *   ├─ rutinas/{id}                   ejercicios[] embebidos
  *   ├─ fotos/{id}                     solo metadatos; el archivo vive en R2
  *   └─ cumplimientos/{id}
@@ -35,6 +37,7 @@ object FirestorePaths {
     const val PACIENTES = "pacientes"
     const val MEDICIONES = "mediciones"
     const val PLANES = "planes"
+    const val MENSAJES = "mensajes"
     const val RUTINAS = "rutinas"
     const val FOTOS = "fotos"
     const val CUMPLIMIENTOS = "cumplimientos"

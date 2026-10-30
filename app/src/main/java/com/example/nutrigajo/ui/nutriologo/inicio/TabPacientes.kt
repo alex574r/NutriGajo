@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -44,6 +45,7 @@ import com.example.nutrigajo.R
 import com.example.nutrigajo.domain.model.PacienteResumen
 import com.example.nutrigajo.ui.components.ALTO_BARRA_INFERIOR
 import com.example.nutrigajo.ui.components.AlertaError
+import com.example.nutrigajo.ui.components.PuntoNuevo
 import com.example.nutrigajo.ui.nutriologo.pacientes.PacientesEstado
 
 // Lista completa de pacientes vinculados; tocar uno abre su expediente.
@@ -54,6 +56,8 @@ fun TabPacientes(
     onActualizar: () -> Unit,
     onCodigo: () -> Unit,
     fotos: Map<String, Bitmap>,
+    // ese paciente le escribió algo que aún no ha visto: su fila lleva un punto
+    sinLeer: (PacienteResumen) -> Boolean = { false },
     modifier: Modifier = Modifier,
 ) {
     val colores = MaterialTheme.colorScheme
@@ -107,7 +111,7 @@ fun TabPacientes(
             items(estado.pacientes, key = { it.id }) { paciente ->
                 // el mapa trae Bitmap; se convierte una vez por foto y no en cada recomposición de la fila
                 val foto = fotos[paciente.usuarioId]
-                FilaPaciente(paciente, remember(foto) { foto?.asImageBitmap() }, onClick = { onPaciente(paciente) })
+                FilaPaciente(paciente, remember(foto) { foto?.asImageBitmap() }, sinLeer = sinLeer(paciente), onClick = { onPaciente(paciente) })
             }
         }
     }
@@ -115,7 +119,7 @@ fun TabPacientes(
 
 // Fila del diseño de "mis rutinas": miniatura a la izquierda, nombre con su etiqueta y los datos debajo.
 @Composable
-private fun FilaPaciente(paciente: PacienteResumen, foto: ImageBitmap?, onClick: () -> Unit) {
+private fun FilaPaciente(paciente: PacienteResumen, foto: ImageBitmap?, sinLeer: Boolean, onClick: () -> Unit) {
     val colores = MaterialTheme.colorScheme
     Row(
         modifier = Modifier
@@ -127,20 +131,24 @@ private fun FilaPaciente(paciente: PacienteResumen, foto: ImageBitmap?, onClick:
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(
-            modifier = Modifier.size(64.dp).clip(RoundedCornerShape(18.dp)).background(colores.primaryContainer),
-            contentAlignment = Alignment.Center,
-        ) {
-            // su foto de perfil si la tiene; mientras llega, o si no la tiene, la inicial
-            if (foto != null) {
-                Image(bitmap = foto, contentDescription = null, modifier = Modifier.matchParentSize(), contentScale = ContentScale.Crop)
-            } else {
-                Text(
-                    text = paciente.nombre.firstOrNull()?.uppercase().orEmpty(),
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = colores.primary,
-                )
+        Box {
+            Box(
+                modifier = Modifier.size(64.dp).clip(RoundedCornerShape(18.dp)).background(colores.primaryContainer),
+                contentAlignment = Alignment.Center,
+            ) {
+                // su foto de perfil si la tiene; mientras llega, o si no la tiene, la inicial
+                if (foto != null) {
+                    Image(bitmap = foto, contentDescription = null, modifier = Modifier.matchParentSize(), contentScale = ContentScale.Crop)
+                } else {
+                    Text(
+                        text = paciente.nombre.firstOrNull()?.uppercase().orEmpty(),
+                        style = MaterialTheme.typography.headlineMedium,
+                        color = colores.primary,
+                    )
+                }
             }
+            // un mensaje suyo sin leer: el punto va sobre la esquina de su foto
+            if (sinLeer) PuntoNuevo(Modifier.align(Alignment.TopEnd).offset(x = 4.dp, y = (-4).dp))
         }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {

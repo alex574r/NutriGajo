@@ -20,14 +20,23 @@ object Avisos {
     // los mismos canales que pide el Worker (channel_id); el de citas es también el del manifiesto (default_notification_channel_id)
     const val CANAL_CITAS = "citas"
     const val CANAL_PLANES = "planes"
+    const val CANAL_MENSAJES = "mensajes"
 
     // `tipo` de los datos del aviso de un plan nuevo; al tocarlo, la app abre el plan
     const val TIPO_PLAN_NUEVO = "PLAN_NUEVO"
+
+    // `tipo` del aviso de un mensaje nuevo del chat; lleva el `pacienteId` de la conversación y, al tocarlo, la app abre ese chat
+    const val TIPO_MENSAJE_NUEVO = "MENSAJE_NUEVO"
+
+    // La conversación que está a la vista (su pacienteId): lo que llega a ese chat no se avisa, ya se está viendo.
+    @Volatile
+    var chatAbierto: String? = null
 
     fun crearCanales(contexto: Context) {
         val gestor = contexto.getSystemService(NotificationManager::class.java)
         gestor.createNotificationChannel(NotificationChannel(CANAL_CITAS, contexto.getString(R.string.aviso_canal_citas), NotificationManager.IMPORTANCE_HIGH))
         gestor.createNotificationChannel(NotificationChannel(CANAL_PLANES, contexto.getString(R.string.aviso_canal_planes), NotificationManager.IMPORTANCE_HIGH))
+        gestor.createNotificationChannel(NotificationChannel(CANAL_MENSAJES, contexto.getString(R.string.aviso_canal_mensajes), NotificationManager.IMPORTANCE_HIGH))
     }
 
     // Desde Android 13 los avisos piden permiso y la app no lo trae concedido: sin él el sistema descarta tanto los que muestra FCM
@@ -46,7 +55,12 @@ object Avisos {
             Intent(contexto, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP).apply { datos.forEach { (k, v) -> putExtra(k, v) } },
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
-        val aviso = NotificationCompat.Builder(contexto, if (datos["tipo"] == TIPO_PLAN_NUEVO) CANAL_PLANES else CANAL_CITAS)
+        val canal = when (datos["tipo"]) {
+            TIPO_PLAN_NUEVO -> CANAL_PLANES
+            TIPO_MENSAJE_NUEVO -> CANAL_MENSAJES
+            else -> CANAL_CITAS
+        }
+        val aviso = NotificationCompat.Builder(contexto, canal)
             .setSmallIcon(R.drawable.ic_logo_mono)
             .setColor(contexto.getColor(R.color.pulse_orange_50))
             .setContentTitle(titulo)

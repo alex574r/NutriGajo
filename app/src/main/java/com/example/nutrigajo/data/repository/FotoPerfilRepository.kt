@@ -42,13 +42,16 @@ class FotoPerfilRepository(
     private val base: String = BuildConfig.WORKER_URL,
 ) {
     // Reduce la foto elegida a su tamaño (recortándola al centro si es cuadrada) y la pasa a JPEG: el Worker no acepta más de 3 MB.
-    suspend fun preparar(resolver: ContentResolver, uri: Uri, foto: FotoPerfil): ByteArray = withContext(Dispatchers.IO) {
+    suspend fun preparar(resolver: ContentResolver, uri: Uri, foto: FotoPerfil): ByteArray = preparar(resolver, uri, foto.ladoMaximo, foto.cuadrada)
+
+    // Lo mismo para cualquier otra imagen que sube la app (las del chat): `ladoMaximo` es el lado más largo, o el más corto si es cuadrada.
+    suspend fun preparar(resolver: ContentResolver, uri: Uri, ladoMaximo: Int, cuadrada: Boolean): ByteArray = withContext(Dispatchers.IO) {
         val bitmap = ImageDecoder.decodeBitmap(ImageDecoder.createSource(resolver, uri)) { decoder, info, _ ->
             decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
             val ancho = info.size.width
             val alto = info.size.height
-            if (foto.cuadrada) {
-                val escala = min(1f, foto.ladoMaximo.toFloat() / min(ancho, alto))
+            if (cuadrada) {
+                val escala = min(1f, ladoMaximo.toFloat() / min(ancho, alto))
                 val destinoAncho = (ancho * escala).roundToInt()
                 val destinoAlto = (alto * escala).roundToInt()
                 decoder.setTargetSize(destinoAncho, destinoAlto)
@@ -57,7 +60,7 @@ class FotoPerfilRepository(
                 val arriba = (destinoAlto - lado) / 2
                 decoder.setCrop(Rect(izquierda, arriba, izquierda + lado, arriba + lado))
             } else {
-                val escala = foto.ladoMaximo.toFloat() / max(ancho, alto)
+                val escala = ladoMaximo.toFloat() / max(ancho, alto)
                 if (escala < 1f) decoder.setTargetSize((ancho * escala).roundToInt(), (alto * escala).roundToInt())
             }
         }

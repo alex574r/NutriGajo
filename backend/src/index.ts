@@ -1,4 +1,5 @@
 import { verificarSesion } from "./auth/firebase";
+import { avisarMensaje, leerFotoChat, subirFotoChat } from "./routes/chat";
 import { avisarConfirmacion } from "./routes/cita";
 import { leerFoto, subirFoto, type Tipo } from "./routes/foto";
 import { avisarPlan, leerPlan, subirPlan } from "./routes/plan";
@@ -46,6 +47,19 @@ export default {
       const uid = await verificarSesion(req, env.FIREBASE_PROJECT_ID);
       if (!uid) return new Response("No autorizado", { status: 401 });
       return avisarPlan(req, env, uid);
+    }
+
+    // chat entre nutriólogo y paciente: la foto de un mensaje (solo las dos personas del chat) y el aviso a la otra persona
+    const chat = pathname.match(/^\/chat\/([A-Za-z0-9_-]{1,128})\/([A-Za-z0-9_-]{1,128})$/);
+    if (chat && (req.method === "GET" || req.method === "PUT")) {
+      const uid = await verificarSesion(req, env.FIREBASE_PROJECT_ID);
+      if (!uid) return new Response("No autorizado", { status: 401 });
+      return req.method === "PUT" ? subirFotoChat(req, env, uid, chat[1], chat[2]) : leerFotoChat(env, uid, chat[1], chat[2]);
+    }
+    if (req.method === "POST" && pathname === "/mensajes/notificar") {
+      const uid = await verificarSesion(req, env.FIREBASE_PROJECT_ID);
+      if (!uid) return new Response("No autorizado", { status: 401 });
+      return avisarMensaje(req, env, uid);
     }
 
     return new Response("No encontrado", { status: 404 });

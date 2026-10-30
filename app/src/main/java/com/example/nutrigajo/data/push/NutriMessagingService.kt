@@ -19,6 +19,8 @@ class NutriMessagingService : FirebaseMessagingService() {
     }
 
     override fun onMessageReceived(mensaje: RemoteMessage) {
+        // un mensaje del chat que se está viendo ya está en pantalla: no se avisa
+        if (mensaje.data["tipo"] == Avisos.TIPO_MENSAJE_NUEVO && mensaje.data["pacienteId"] == Avisos.chatAbierto) return
         mensaje.notification?.let { Avisos.mostrar(this, it.title.orEmpty(), it.body.orEmpty(), mensaje.data) }
     }
 
