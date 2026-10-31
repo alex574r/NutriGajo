@@ -36,8 +36,8 @@ import com.example.nutrigajo.R
 import com.example.nutrigajo.ui.components.alPulsar
 import com.example.nutrigajo.ui.components.cristal
 
-private val TEXTO_SOBRE_FOTO = Color(0xFFD0D0D0)
-private val SOMBRA_TEXTO = Shadow(Color.Black.copy(alpha = 0.35f), Offset(0f, 3f), 6f)
+internal val TEXTO_SOBRE_FOTO = Color(0xFFD0D0D0)
+internal val SOMBRA_TEXTO = Shadow(Color.Black.copy(alpha = 0.35f), Offset(0f, 3f), 6f)
 
 // ponytail: los botones de reproducir y de la comida no abren nada todavía; el detalle llega con las rutinas y los planes.
 @Composable

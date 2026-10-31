@@ -461,13 +461,7 @@ private fun InicioPaciente(
             item { MetricasFitness(resumenDia.copy(hidratacionMl = aguaMl.coerceAtMost(vinculo.metas.aguaMl)), onMetrica, onVerTodasMetricas) }
             item {
                 val fase = RastreoRuta.global.estado.collectAsState().value.fase
-                FilaAjuste(
-                    icono = R.drawable.ic_correr,
-                    titulo = stringResource(R.string.carrera_titulo),
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                    etiqueta = stringResource(if (fase == Fase.CORRIENDO || fase == Fase.PAUSADA) R.string.carrera_entrada_en_curso else R.string.carrera_entrada_etiqueta),
-                    onClick = onCarrera,
-                )
+                TarjetaCarrera(enCurso = fase == Fase.CORRIENDO || fase == Fase.PAUSADA, onAbrir = onCarrera)
             }
             item { RutinaDeHoy(rutinaDeHoy) }
             item { DietaNutricion(comidas, onVerTodas = { onDieta(-1) }, onComida = { onDieta(platos.indexOf(it)) }) }
