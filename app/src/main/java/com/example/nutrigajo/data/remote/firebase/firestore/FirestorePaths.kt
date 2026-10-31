@@ -4,7 +4,9 @@ package com.example.nutrigajo.data.remote.firebase.firestore
  * Espejo de Room en Cloud Firestore. El id del documento es el id de la entidad.
  *
  * usuarios/{uid}                      rol, verificado, activo… (ADMIN se crea a mano en la consola)
- *   └─ banco/{id}                     comida o ejercicio que el nutriólogo guarda para reutilizar en sus planes; solo lo ve él
+ *   ├─ banco/{id}                     comida o ejercicio que el nutriólogo guarda para reutilizar en sus planes; solo lo ve él
+ *   ├─ carreras/{id}                  carrera o caminata del modo carrera (tipo, inicio, duracionSeg, distanciaM, kcal, ruta[]); solo la ve su dueño
+ *   └─ modoCarrera/plan               plan de caminata que sigue (plan, inicio); solo lo ve su dueño
  * codigosVinculacion/{codigo}         nutriologoId, expiraEn, usado, canjeadoPor… (el id es el código)
  * verificaciones/{uid}                solicitud de verificación del nutriólogo (cédula, estado PENDIENTE|APROBADA|RECHAZADA)
  * cedulas/{numero}                    reserva de una cédula por un nutriólogo (una cédula, una cuenta)
@@ -28,6 +30,8 @@ package com.example.nutrigajo.data.remote.firebase.firestore
 object FirestorePaths {
     const val USUARIOS = "usuarios"
     const val BANCO = "banco"
+    const val CARRERAS = "carreras"
+    const val MODO_CARRERA = "modoCarrera"
     const val CODIGOS_VINCULACION = "codigosVinculacion"
     const val VERIFICACIONES = "verificaciones"
     const val CEDULAS = "cedulas"

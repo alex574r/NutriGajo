@@ -31,6 +31,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.nutrigajo.data.carrera.Fase
+import com.example.nutrigajo.data.carrera.RastreoRuta
 import com.example.nutrigajo.data.push.Avisos
 import com.example.nutrigajo.data.repository.ChatRepository
 import com.example.nutrigajo.domain.model.Perfil
@@ -55,6 +57,8 @@ import com.example.nutrigajo.ui.shared.chat.vistaPreviaChat
 import com.example.nutrigajo.ui.paciente.avisos.NotificacionesScreen
 import com.example.nutrigajo.ui.paciente.avisos.marcarVisto
 import com.example.nutrigajo.ui.paciente.avisos.vistoHasta
+import com.example.nutrigajo.ui.paciente.carrera.CarreraFlujo
+import com.example.nutrigajo.ui.paciente.carrera.CarreraViewModel
 import com.example.nutrigajo.ui.paciente.citas.AgendaViewModel
 import com.example.nutrigajo.ui.paciente.plan.PlanPacienteScreen
 import com.example.nutrigajo.ui.paciente.plan.PlanPacienteViewModel
@@ -86,6 +90,7 @@ fun InicioPacienteScreen(
     citasVm: CitasViewModel = viewModel(key = "citas-${perfil.uid}"),
     planVm: PlanPacienteViewModel = viewModel(key = "plan-${perfil.uid}"),
     metasVm: MetasViewModel = viewModel(key = "metas-${perfil.uid}"),
+    carreraVm: CarreraViewModel = viewModel(key = "carrera-${perfil.uid}"),
     // se tocó la notificación de un plan nuevo: se abre directo; `onPlanConsumido` avisa que ya se atendió
     abrirPlan: Boolean = false,
     onPlanConsumido: () -> Unit = {},
@@ -106,6 +111,7 @@ fun InicioPacienteScreen(
     var enPlan by rememberSaveable { mutableStateOf(false) }
     var enAvisos by rememberSaveable { mutableStateOf(false) }
     var enChat by rememberSaveable { mutableStateOf(false) }
+    var enCarrera by rememberSaveable { mutableStateOf(false) }
     // la pantalla de métricas abierta desde las tarjetas y el agua de hoy, que sube con el + y se ve también en la tarjeta
     var metrica by rememberSaveable { mutableStateOf<Metrica?>(null) }
     // «Ver todas» de las métricas: la cuadrícula se queda abierta debajo de la pantalla de la métrica que se abre desde ella
@@ -187,6 +193,12 @@ fun InicioPacienteScreen(
     val metricaAbierta = metrica
     when {
         estado.cargando -> PantallaCarga(conCabecera = true)
+        // el modo carrera: la ruta en el mapa, el historial y los planes de caminata (el peso del expediente afina las calorías)
+        enCarrera && vinculo != null -> {
+            val expedienteVm: ExpedienteViewModel = viewModel(key = "expediente-${vinculo.pacienteId}-${Rol.PACIENTE.name}")
+            val expediente by expedienteVm.estado.collectAsState()
+            CarreraFlujo(pesoKg = expediente.expediente.pesoKg, onSalir = { enCarrera = false }, vm = carreraVm)
+        }
         enCitas -> {
             BackHandler { enCitas = false }
             AgendaScreen(
@@ -331,6 +343,7 @@ fun InicioPacienteScreen(
                     aguaMl = aguaMl,
                     onMetrica = { metrica = it },
                     onVerTodasMetricas = { todasMetricas = true },
+                    onCarrera = { enCarrera = true },
                     onDieta = {
                         dietaInicio = it
                         dietaAbierta = true
@@ -395,6 +408,8 @@ private fun InicioPaciente(
     aguaMl: Int,
     onMetrica: (Metrica) -> Unit,
     onVerTodasMetricas: () -> Unit,
+    // abre el modo carrera
+    onCarrera: () -> Unit,
     // abre Mis comidas (-1) o la comida que se tocó (su lugar en `platos`)
     onDieta: (Int) -> Unit,
     // misma clave que el flujo del expediente: la tarjeta refleja lo que se guarda ahí
@@ -444,6 +459,16 @@ private fun InicioPaciente(
                 }
             }
             item { MetricasFitness(resumenDia.copy(hidratacionMl = aguaMl.coerceAtMost(vinculo.metas.aguaMl)), onMetrica, onVerTodasMetricas) }
+            item {
+                val fase = RastreoRuta.global.estado.collectAsState().value.fase
+                FilaAjuste(
+                    icono = R.drawable.ic_correr,
+                    titulo = stringResource(R.string.carrera_titulo),
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    etiqueta = stringResource(if (fase == Fase.CORRIENDO || fase == Fase.PAUSADA) R.string.carrera_entrada_en_curso else R.string.carrera_entrada_etiqueta),
+                    onClick = onCarrera,
+                )
+            }
             item { RutinaDeHoy(rutinaDeHoy) }
             item { DietaNutricion(comidas, onVerTodas = { onDieta(-1) }, onComida = { onDieta(platos.indexOf(it)) }) }
             item { ActividadReciente() }

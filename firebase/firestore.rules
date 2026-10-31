@@ -90,6 +90,20 @@ service cloud.firestore {
         && d.actualizadoEn is int;
     }
 
+    // Carrera o caminata del modo carrera: tipo, cuándo empezó, duración, distancia, calorías y la ruta como lista plana
+    // [lat, lng, lat, lng…] (CarrerasRepository). Los topes son los de la app: 10 s como mínimo para guardarla, un día, 200 km y,
+    // en la ruta, 2 000 puntos más el último (dos números cada uno).
+    function carreraValida(d) {
+      return d.keys().hasOnly(['tipo', 'inicio', 'duracionSeg', 'distanciaM', 'kcal', 'ruta'])
+        && d.keys().hasAll(['tipo', 'inicio', 'duracionSeg', 'distanciaM', 'kcal', 'ruta'])
+        && d.tipo in ['CAMINAR', 'CORRER']
+        && d.inicio is int
+        && d.duracionSeg is int && d.duracionSeg >= 10 && d.duracionSeg <= 86400
+        && d.distanciaM is int && d.distanciaM >= 0 && d.distanciaM <= 200000
+        && d.kcal is int && d.kcal >= 0 && d.kcal <= 20000
+        && d.ruta is list && d.ruta.size() <= 4002 && d.ruta.size() % 2 == 0;
+    }
+
     // Perfil de cuenta. ADMIN se da de alta a mano en la consola: nadie puede asignárselo al registrarse.
     match /usuarios/{uid} {
       allow read: if request.auth != null && request.auth.uid == uid;
@@ -136,6 +150,27 @@ service cloud.firestore {
         && request.resource.data.tipo == resource.data.tipo
         && request.resource.data.creadoEn == resource.data.creadoEn;
 
+      allow delete: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // Carreras y caminatas del modo carrera: personales, solo las ve y las crea su dueño. Una carrera guardada no se edita; se borra.
+    match /usuarios/{uid}/carreras/{carreraId} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow create: if request.auth != null && request.auth.uid == uid && carreraValida(request.resource.data);
+      allow update: if false;
+      allow delete: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // El plan de caminata que sigue el dueño: un solo documento (`plan`) con el plan elegido y el día en que lo eligió.
+    match /usuarios/{uid}/modoCarrera/{docId} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow create, update: if request.auth != null
+        && request.auth.uid == uid
+        && docId == 'plan'
+        && request.resource.data.keys().hasOnly(['plan', 'inicio'])
+        && request.resource.data.keys().hasAll(['plan', 'inicio'])
+        && request.resource.data.plan in ['PRIMEROS_PASOS', 'RITMO_CONSTANTE', 'RESISTENCIA']
+        && request.resource.data.inicio is int;
       allow delete: if request.auth != null && request.auth.uid == uid;
     }
 
