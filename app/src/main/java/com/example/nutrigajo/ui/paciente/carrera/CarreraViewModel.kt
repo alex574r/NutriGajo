@@ -16,6 +16,8 @@ import com.example.nutrigajo.domain.model.PlanCaminata
 import com.example.nutrigajo.domain.model.Ruta
 import com.example.nutrigajo.domain.model.TipoActividad
 import com.example.nutrigajo.ui.shared.mensajeDeFirestore
+import com.example.nutrigajo.widgets.AlmacenWidget
+import com.example.nutrigajo.widgets.actualizarWidgets
 import com.google.firebase.firestore.FirebaseFirestoreException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
@@ -27,6 +29,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.time.Instant
+import java.time.ZoneId
 import kotlin.math.roundToInt
 
 // Lo guardado en Firestore (historial y plan); lo que va pasando en la carrera vive en RastreoRuta.global.
@@ -62,6 +66,8 @@ class CarreraViewModel @JvmOverloads constructor(
                 val elegido = async { leer { repo.plan() } }
                 historial.await() to elegido.await()
             }
+            // lo que ya se guardó también cuenta para la racha (los días se guardan en el teléfono)
+            carreras.getOrNull()?.let { lista -> registrarDiasConCarrera(lista.map { it.inicio }) }
             // sin conexión no es un error: se queda lo que ya se tenía (la caché del teléfono) y se puede salir a correr igual
             val fallo = listOf(carreras, plan).firstNotNullOfOrNull { it.exceptionOrNull() as? Exception }?.takeUnless(::sinConexion)
             _datos.update {
@@ -73,6 +79,14 @@ class CarreraViewModel @JvmOverloads constructor(
                 )
             }
         }
+    }
+
+    // Los días en que hubo una caminata o carrera cuentan para la racha; se guardan en el teléfono para el inicio y los widgets.
+    private fun registrarDiasConCarrera(inicios: List<Long>) {
+        val app = getApplication<Application>()
+        val zona = ZoneId.systemDefault()
+        AlmacenWidget.agregarDiasCarrera(app, inicios.map { Instant.ofEpochMilli(it).atZone(zona).toLocalDate().toEpochDay() })
+        actualizarWidgets(app)
     }
 
     private suspend fun <T> leer(lectura: suspend () -> T): Result<T> =
@@ -168,6 +182,7 @@ class CarreraViewModel @JvmOverloads constructor(
         viewModelScope.launch {
             try {
                 repo.guardar(carrera)
+                registrarDiasConCarrera(listOf(carrera.inicio))
                 rastreo.reiniciar()
                 _datos.update { it.copy(guardando = false) }
                 cargar()

@@ -8,6 +8,10 @@ import com.example.nutrigajo.data.salud.RelojRepository
 import com.example.nutrigajo.domain.model.PeriodoPulso
 import com.example.nutrigajo.domain.model.PulsoPeriodo
 import com.example.nutrigajo.domain.model.ResumenReloj
+import com.example.nutrigajo.widgets.AlmacenWidget
+import com.example.nutrigajo.widgets.DatosWidget
+import com.example.nutrigajo.widgets.actualizarWidgets
+import java.time.LocalDate
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -63,7 +67,10 @@ class RelojViewModel @JvmOverloads constructor(
             }
             try {
                 val resumen = repo.resumen()
-                val pulso = repo.pulso(_estado.value.periodo)
+                val periodo = _estado.value.periodo
+                val pulso = repo.pulso(periodo)
+                // los widgets enseñan el rango de hoy, sea cual sea el periodo que se está viendo
+                publicarWidgets(resumen, if (periodo == PeriodoPulso.HOY) pulso else repo.pulso(PeriodoPulso.HOY))
                 _estado.update { it.copy(fase = FaseReloj.CONECTADO, resumen = resumen, pulso = pulso) }
             } catch (e: CancellationException) {
                 throw e
@@ -71,6 +78,27 @@ class RelojViewModel @JvmOverloads constructor(
                 _estado.update { it.copy(fase = FaseReloj.ERROR) }
             }
         }
+    }
+
+    // Guarda lo leído para los widgets de la pantalla de inicio y los dibuja otra vez.
+    private fun publicarWidgets(resumen: ResumenReloj, hoy: PulsoPeriodo) {
+        val app = getApplication<Application>()
+        AlmacenWidget.guardar(
+            app,
+            DatosWidget(
+                dia = LocalDate.now().toEpochDay(),
+                ultimoBpm = resumen.ultimoBpm,
+                ultimaLectura = resumen.ultimaLectura?.toEpochMilli(),
+                bpmMin = hoy.minimo,
+                bpmMax = hoy.maximo,
+                pasos = resumen.actividad?.pasos,
+                kcal = resumen.actividad?.kcal,
+                minutos = resumen.actividad?.minutos,
+                sueno = resumen.sueno.associate { it.fecha.toEpochDay() to it.minutos },
+                pasosPorDia = resumen.pasosPorDia,
+            ),
+        )
+        actualizarWidgets(app)
     }
 
     fun elegirPeriodo(periodo: PeriodoPulso) {

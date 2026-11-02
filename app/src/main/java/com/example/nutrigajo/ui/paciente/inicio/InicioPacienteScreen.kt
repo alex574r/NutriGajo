@@ -1,5 +1,10 @@
 package com.example.nutrigajo.ui.paciente.inicio
 
+import java.time.LocalDate
+import com.example.nutrigajo.widgets.PerfilWidget
+import com.example.nutrigajo.widgets.DatosWidget
+import com.example.nutrigajo.domain.model.racha
+import com.example.nutrigajo.domain.model.Racha
 import android.Manifest
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -64,6 +69,8 @@ import com.example.nutrigajo.ui.paciente.carrera.CarreraFlujo
 import com.example.nutrigajo.ui.paciente.carrera.CarreraViewModel
 import com.example.nutrigajo.ui.paciente.reloj.RelojScreen
 import com.example.nutrigajo.ui.paciente.reloj.RelojViewModel
+import com.example.nutrigajo.widgets.AlmacenWidget
+import com.example.nutrigajo.widgets.actualizarWidgets
 import com.example.nutrigajo.ui.paciente.citas.AgendaViewModel
 import com.example.nutrigajo.ui.paciente.plan.PlanPacienteScreen
 import com.example.nutrigajo.ui.paciente.plan.PlanPacienteViewModel
@@ -159,6 +166,18 @@ fun InicioPacienteScreen(
     LaunchedEffect(enCitas) { if (enCitas) citasVm.cargar(Rol.PACIENTE) }
 
     val vinculo = estado.vinculo
+    // la racha: días seguidos con la meta de pasos del reloj o con una caminata o carrera guardada (al volver del Modo carrera se cuenta otra vez)
+    val diasCarrera = remember(enCarrera, reloj.resumen) { AlmacenWidget.diasCarrera(contexto) }
+    val rachaDeHoy = remember(reloj.resumen, diasCarrera, vinculo?.metas?.pasos) {
+        racha(LocalDate.now(), reloj.resumen?.pasosPorDia.orEmpty(), diasCarrera, vinculo?.metas?.pasos ?: DatosWidget.META_PASOS)
+    }
+    // los anillos del widget «Resumen de hoy» se miden contra estas metas
+    LaunchedEffect(vinculo?.metas) {
+        vinculo?.metas?.let {
+            AlmacenWidget.guardarMetas(contexto, it.pasos, it.kcal, it.minutos)
+            actualizarWidgets(contexto)
+        }
+    }
     LaunchedEffect(vinculo?.pacienteId) { vinculo?.let { planVm.cargar(it.pacienteId) } }
     // los mensajes de su nutriólogo que aún no ha visto, para la tarjeta del chat; solo se consultan si el último resumen es suyo y nuevo
     val chats = remember { ChatRepository() }
@@ -177,6 +196,12 @@ fun InicioPacienteScreen(
                 1
             }
         }
+    }
+    // el widget de saludo enseña el nombre y lo que le espera: los planes y los mensajes de su nutriólogo que aún no ha visto
+    val planesNuevos = plan.planes.count { it.enviadoEn > visto }
+    LaunchedEffect(perfil.uid, perfil.nombre, planesNuevos, chatPendientes) {
+        AlmacenWidget.guardarPerfil(contexto, PerfilWidget(perfil.nombre, perfil.uid, planesNuevos, chatPendientes))
+        actualizarWidgets(contexto)
     }
     LaunchedEffect(abrirPlan, vinculo) {
         if (abrirPlan && vinculo != null) {
@@ -360,6 +385,7 @@ fun InicioPacienteScreen(
                     onVerTodasMetricas = { todasMetricas = true },
                     onCarrera = { enCarrera = true },
                     onReloj = { enReloj = true },
+                    racha = rachaDeHoy,
                     onDieta = {
                         dietaInicio = it
                         dietaAbierta = true
@@ -429,6 +455,8 @@ private fun InicioPaciente(
     onCarrera: () -> Unit,
     // abre la pantalla del reloj
     onReloj: () -> Unit,
+    // los días seguidos que lleva cumpliendo algo (se ven en el encabezado)
+    racha: Racha,
     // abre Mis comidas (-1) o la comida que se tocó (su lugar en `platos`)
     onDieta: (Int) -> Unit,
     // misma clave que el flujo del expediente: la tarjeta refleja lo que se guarda ahí
@@ -461,7 +489,7 @@ private fun InicioPaciente(
             contentPadding = WindowInsets.navigationBars.asPaddingValues(),
             verticalArrangement = Arrangement.spacedBy(24.dp),
         ) {
-            item { CabeceraInicio(perfil.nombre, resumenDia, onPerfil, imagenAvatar = rememberFotoAvatar(perfil), imagenPortada = rememberFotoPortada(perfil), transicion = transicion, sinLeer = sinLeer, onNotificaciones = onNotificaciones) }
+            item { CabeceraInicio(perfil.nombre, resumenDia, onPerfil, imagenAvatar = rememberFotoAvatar(perfil), imagenPortada = rememberFotoPortada(perfil), transicion = transicion, sinLeer = sinLeer, onNotificaciones = onNotificaciones, racha = racha) }
             // una vez completo, el expediente se consulta desde el perfil
             if (expediente.cargando || !expediente.expediente.completo) {
                 item { TarjetaExpediente(expediente, onExpediente, Modifier.padding(horizontal = 16.dp)) }

@@ -1,5 +1,10 @@
 package com.example.nutrigajo.ui.paciente.inicio
 
+import com.example.nutrigajo.domain.model.Racha
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.res.pluralStringResource
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -63,6 +68,8 @@ fun CabeceraInicio(
     // los planes nuevos que aún no ha visto en sus notificaciones: con alguno la campana lleva un punto
     sinLeer: Int = 0,
     onNotificaciones: () -> Unit = {},
+    // los días seguidos que lleva cumpliendo algo; null no enseña la llama
+    racha: Racha? = null,
 ) {
     val colores = MaterialTheme.colorScheme
     val fecha = remember {
@@ -84,9 +91,13 @@ fun CabeceraInicio(
         Box(Modifier.matchParentSize().background(Color.Black.copy(alpha = 0.25f)))
         Column(Modifier.statusBarsPadding().height(215.dp).padding(horizontal = 21.dp)) {
             Spacer(Modifier.height(62.dp))
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
                 Icon(painterResource(R.drawable.ic_calendario), contentDescription = null, tint = colores.outline)
                 Text(fecha, style = MaterialTheme.typography.labelLarge.copy(fontSize = 12.sp), color = colores.outline)
+                if (racha != null) {
+                    Spacer(Modifier.weight(1f))
+                    ChipRacha(racha)
+                }
             }
             Spacer(Modifier.height(20.dp))
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -160,6 +171,30 @@ private fun Avatar(nombre: String, imagen: ImageBitmap?, transicion: TransicionP
             .compartido(transicion, CLAVE_AVATAR)
             .clickable(onClickLabel = stringResource(R.string.inicio_abrir_perfil), role = Role.Button, onClick = onPerfil),
     )
+}
+
+// La racha: una llama (naranja mientras hay racha, tenue si no) y los días seguidos.
+@Composable
+private fun ChipRacha(racha: Racha) {
+    val dias = pluralStringResource(R.plurals.racha_dias, racha.dias, racha.dias)
+    val descripcion = stringResource(R.string.racha_descripcion, dias)
+    Row(
+        modifier = Modifier
+            .semantics { contentDescription = descripcion }
+            .clip(RoundedCornerShape(12.dp))
+            .background(Color.Black.copy(alpha = 0.35f))
+            .padding(horizontal = 10.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Icon(
+            painter = painterResource(R.drawable.ic_llama_solida),
+            contentDescription = null,
+            modifier = Modifier.size(14.dp),
+            tint = if (racha.dias > 0) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.6f),
+        )
+        Text(dias, style = MaterialTheme.typography.labelLarge.copy(fontSize = 12.sp, fontWeight = FontWeight.Bold), color = Color.White, maxLines = 1)
+    }
 }
 
 @Composable

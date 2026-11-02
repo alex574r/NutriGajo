@@ -84,7 +84,21 @@ class RelojRepository(private val contexto: Context) {
             sueno = if (permisoSueno in concedidos) leer { sueno(ahora) }.orEmpty() else emptyList(),
             oxigeno = if (permisoOxigeno in concedidos) leer { oxigeno(ahora) } else null,
             faltanPermisos = !concedidos.containsAll(permisos),
+            pasosPorDia = if (permisoPasos in concedidos) leer { pasosPorDia() }.orEmpty() else emptyMap(),
         )
+    }
+
+    // Los pasos de cada uno de los últimos 60 días (el de hoy, parcial), por día de calendario.
+    private suspend fun pasosPorDia(): Map<Long, Int> {
+        val zona = ZoneId.systemDefault()
+        val primero = LocalDate.now(zona).minusDays(59)
+        return cliente.aggregateGroupByPeriod(
+            AggregateGroupByPeriodRequest(
+                setOf(StepsRecord.COUNT_TOTAL),
+                TimeRangeFilter.between(primero.atStartOfDay(), LocalDateTime.now(zona)),
+                Period.ofDays(1),
+            ),
+        ).associate { it.startTime.toLocalDate().toEpochDay() to (it.result[StepsRecord.COUNT_TOTAL] ?: 0L).toInt() }
     }
 
     private suspend fun <T> leer(bloque: suspend () -> T): T? =

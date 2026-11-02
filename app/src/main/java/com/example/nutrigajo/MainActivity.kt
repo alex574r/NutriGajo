@@ -48,6 +48,8 @@ import com.example.nutrigajo.ui.shared.registro.RegistroScreen
 import com.example.nutrigajo.ui.shared.registro.RolScreen
 import com.example.nutrigajo.ui.shared.splash.SplashScreen
 import com.example.nutrigajo.ui.theme.NutriGajoTheme
+import com.example.nutrigajo.widgets.AlmacenWidget
+import com.example.nutrigajo.widgets.actualizarWidgets
 import com.google.android.gms.maps.MapsInitializer
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -220,6 +222,8 @@ class MainActivity : FragmentActivity() {
                         LaunchedEffect(Unit) { if (perfil == null) auth.cargarPerfil() }
                         val cerrarSesion = {
                             auth.cerrarSesion()
+                            AlmacenWidget.borrar(applicationContext)
+                            actualizarWidgets(applicationContext)
                             paso = Paso.LOGIN
                         }
                         // el inicio depende del rol del perfil guardado en Firestore
@@ -253,6 +257,8 @@ class MainActivity : FragmentActivity() {
                         onDesbloquear = ::pedirDesbloqueo,
                         onCerrarSesion = {
                             auth.cerrarSesion()
+                            AlmacenWidget.borrar(applicationContext)
+                            actualizarWidgets(applicationContext)
                             AjustesApp.bloqueada.value = false
                             paso = Paso.LOGIN
                         },

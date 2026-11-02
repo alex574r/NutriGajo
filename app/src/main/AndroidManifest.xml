@@ -62,6 +62,62 @@
             android:name=".data.carrera.ServicioCarrera"
             android:exported="false"
             android:foregroundServiceType="location" />
+        <!-- Widgets de la pantalla de inicio del teléfono: pulso, pasos, sueño, el resumen de hoy y el saludo con la racha -->
+        <receiver
+            android:name=".widgets.WidgetResumen"
+            android:exported="false"
+            android:label="@string/widget_resumen_nombre">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_resumen" />
+        </receiver>
+        <receiver
+            android:name=".widgets.WidgetPulso"
+            android:exported="false"
+            android:label="@string/widget_pulso_nombre">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_pulso" />
+        </receiver>
+        <receiver
+            android:name=".widgets.WidgetPasos"
+            android:exported="false"
+            android:label="@string/widget_pasos_nombre">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_pasos" />
+        </receiver>
+        <receiver
+            android:name=".widgets.WidgetSueno"
+            android:exported="false"
+            android:label="@string/widget_sueno_nombre">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_sueno" />
+        </receiver>
+        <receiver
+            android:name=".widgets.WidgetSaludo"
+            android:exported="false"
+            android:label="@string/widget_saludo_nombre">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_saludo" />
+        </receiver>
         <!-- La imagen que se comparte desde el modo carrera: se escribe en la caché y otra app la lee por este proveedor -->
         <provider
             android:name="androidx.core.content.FileProvider"

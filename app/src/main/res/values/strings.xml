@@ -920,6 +920,30 @@
     <string name="carrera_ritmo">Ritmo</string>
     <string name="carrera_calorias">Calorías</string>
     <string name="carrera_actividades">Actividades</string>
+    <string name="widget_saludo_nombre">Saludo y racha</string>
+    <string name="widget_saludo_descripcion">Tu foto y tu nombre, tu racha de días y los planes y mensajes nuevos de tu nutriólogo.</string>
+    <string name="widget_al_dia">Todo al día</string>
+    <plurals name="racha_dias">
+        <item quantity="one">%d día</item>
+        <item quantity="other">%d días</item>
+    </plurals>
+    <plurals name="widget_planes">
+        <item quantity="one">%d plan</item>
+        <item quantity="other">%d planes</item>
+    </plurals>
+    <plurals name="widget_mensajes">
+        <item quantity="one">%d mensaje</item>
+        <item quantity="other">%d mensajes</item>
+    </plurals>
+    <string name="racha_descripcion">Racha de %1$s</string>
+    <string name="widget_resumen_nombre">Resumen de hoy</string>
+    <string name="widget_resumen_descripcion">Tu sueño, tu pulso y los anillos de pasos, calorías y entrenamiento de hoy.</string>
+    <string name="widget_pulso_nombre">Pulso</string>
+    <string name="widget_pulso_descripcion">Tu pulso de ahora con su mínimo y su máximo del día.</string>
+    <string name="widget_pasos_nombre">Pasos</string>
+    <string name="widget_pasos_descripcion">Tus pasos de hoy y cuánto llevas de tu meta.</string>
+    <string name="widget_sueno_nombre">Sueño</string>
+    <string name="widget_sueno_descripcion">Lo que dormiste anoche y las barras de la semana.</string>
     <string name="reloj_titulo">Reloj</string>
     <string name="reloj_entrada_titulo">Tu reloj</string>
     <string name="reloj_entrada_etiqueta">Conéctalo y mira tu pulso</string>

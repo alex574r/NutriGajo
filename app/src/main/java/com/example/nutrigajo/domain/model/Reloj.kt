@@ -63,6 +63,8 @@ data class ResumenReloj(
     val oxigeno: Oxigeno? = null,
     // faltan permisos de métricas que la app sabe leer: se ofrece pedirlos
     val faltanPermisos: Boolean = false,
+    // los pasos de cada uno de los últimos 60 días (toEpochDay), para la racha
+    val pasosPorDia: Map<Long, Int> = emptyMap(),
 )
 
 // «hace 5 min», «hace 2 h», «hace 3 d»
