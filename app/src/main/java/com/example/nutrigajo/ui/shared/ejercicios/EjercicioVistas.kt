@@ -1,6 +1,7 @@
 package com.example.nutrigajo.ui.shared.ejercicios
 
 import androidx.activity.compose.BackHandler
+import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -17,6 +18,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -33,8 +35,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.asImageBitmap
@@ -45,6 +50,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.nutrigajo.R
 import com.example.nutrigajo.data.repository.EjerciciosRepository
 import com.example.nutrigajo.domain.model.Ejercicio
@@ -54,6 +60,9 @@ import com.example.nutrigajo.domain.model.NivelEjercicio
 import com.example.nutrigajo.domain.model.ProblemaEjercicio
 import com.example.nutrigajo.domain.model.TipoEjercicio
 import com.example.nutrigajo.domain.model.ZonaCuerpo
+import com.example.nutrigajo.ui.components.DeslizaParaVer
+import com.example.nutrigajo.ui.components.Etiqueta
+import com.example.nutrigajo.ui.components.cristal
 import com.example.nutrigajo.ui.components.hundible
 import com.example.nutrigajo.ui.nutriologo.plan.BarraSuperior
 import com.example.nutrigajo.ui.nutriologo.plan.OpcionChip
@@ -130,9 +139,23 @@ fun rememberFotoEjercicio(ejercicio: Ejercicio): ImageBitmap? {
     return imagen
 }
 
+// La foto de cada tipo que se ve cuando el ejercicio no tiene la suya (el marcador gris queda para el editor).
+@DrawableRes
+fun TipoEjercicio.imagenPorDefecto(): Int = when (this) {
+    TipoEjercicio.FUERZA -> R.drawable.ej_pesas
+    TipoEjercicio.CARDIO -> R.drawable.ej_cardio
+    TipoEjercicio.FLEXIBILIDAD, TipoEjercicio.YOGA -> R.drawable.ej_yoga
+}
+
 @Composable
 fun FotoEjercicio(ejercicio: Ejercicio, modifier: Modifier = Modifier, forma: Shape = RoundedCornerShape(24.dp)) {
-    FotoOMarcador(rememberFotoEjercicio(ejercicio), modifier, forma)
+    val imagen = rememberFotoEjercicio(ejercicio)
+    // con foto propia pendiente de llegar se ve el marcador; sin ella, la del tipo
+    if (imagen == null && ejercicio.fotoVersion == null) {
+        Image(painterResource(ejercicio.tipo.imagenPorDefecto()), contentDescription = null, modifier = modifier.clip(forma), contentScale = ContentScale.Crop)
+    } else {
+        FotoOMarcador(imagen, modifier, forma)
+    }
 }
 
 // La imagen recortada a la forma o, sin ella, un marcador gris con el icono de imagen.
@@ -201,7 +224,9 @@ fun <E : Enum<E>> GrupoOpciones(
     }
 }
 
-// Una fila de la lista: foto, nombre, zona y nivel, duración y calorías. Con `mostrarEstado` lleva su estado (la lista del entrenador).
+// La tarjeta del banco, con el diseño de «Exercise Process»: foto de fondo con velo oscuro, la zona arriba a la izquierda y el tipo en
+// una píldora de cristal a la derecha, el nombre grande, la duración y las calorías en chips de cristal y abajo «Desliza para ver»
+// con el botón «Ver». Con `mostrarEstado` (la lista del entrenador) la píldora dice el estado y el tipo pasa a la etiqueta de la izquierda.
 @Composable
 fun TarjetaEjercicio(
     ejercicio: Ejercicio,
@@ -209,51 +234,84 @@ fun TarjetaEjercicio(
     modifier: Modifier = Modifier,
     mostrarEstado: Boolean = false,
 ) {
-    val colores = MaterialTheme.colorScheme
-    val forma = RoundedCornerShape(28.dp)
-    Row(
+    val forma = RoundedCornerShape(29.dp)
+    val foto = rememberFotoEjercicio(ejercicio)
+    Box(
         modifier = modifier
             .fillMaxWidth()
+            .height(250.dp)
             .hundible(forma)
             .clip(forma)
-            .background(colores.surfaceVariant)
-            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, role = Role.Button, onClick = onClick)
-            .padding(14.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, role = Role.Button, onClick = onClick),
     ) {
-        FotoEjercicio(ejercicio, Modifier.size(76.dp))
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+        when {
+            foto != null -> Image(bitmap = foto, contentDescription = null, modifier = Modifier.matchParentSize(), contentScale = ContentScale.Crop)
+            // la foto propia está en camino: un fondo oscuro, no la del tipo, para que no parpadee al llegar
+            ejercicio.fotoVersion != null -> Box(Modifier.matchParentSize().background(Color(0xFF2A2A2A)))
+            else -> Image(
+                painter = painterResource(ejercicio.tipo.imagenPorDefecto()),
+                contentDescription = null,
+                modifier = Modifier.matchParentSize(),
+                contentScale = ContentScale.Crop,
+                alignment = BiasAlignment(0f, -0.2f),
+            )
+        }
+        Box(Modifier.matchParentSize().background(Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.25f), Color.Black.copy(alpha = 0.82f)))))
+        val zona = stringResource(ejercicio.zona.titulo())
+        Text(
+            text = zona + " · " + stringResource(if (mostrarEstado) ejercicio.tipo.titulo() else ejercicio.nivel.titulo()),
+            modifier = Modifier.align(Alignment.TopStart).padding(start = 18.dp, top = 22.dp, end = 130.dp),
+            style = MaterialTheme.typography.labelLarge,
+            color = Color.White.copy(alpha = 0.85f),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        Etiqueta(
+            texto = stringResource(if (mostrarEstado) ejercicio.estado.titulo() else ejercicio.tipo.titulo()).uppercase(),
+            modifier = Modifier.align(Alignment.TopEnd).padding(top = 16.dp, end = 16.dp),
+        )
+        Column(Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text(
                 text = ejercicio.titulo,
-                style = MaterialTheme.typography.titleMedium,
-                color = colores.onBackground,
-                maxLines = 1,
+                style = MaterialTheme.typography.headlineMedium,
+                color = Color.White,
+                maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
-            Text(
-                text = stringResource(ejercicio.zona.titulo()) + " · " + stringResource(ejercicio.nivel.titulo()),
-                style = MaterialTheme.typography.bodySmall,
-                color = colores.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Row(Modifier.padding(top = 2.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                Estadistica(R.drawable.ic_reloj, stringResource(R.string.ejercicio_minutos, ejercicio.duracionMin))
-                if (ejercicio.kcal > 0) Estadistica(R.drawable.ic_llama, stringResource(R.string.ejercicio_calorias, ejercicio.kcal))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                DatoCristal(R.drawable.ic_reloj, stringResource(R.string.ejercicio_minutos, ejercicio.duracionMin))
+                if (ejercicio.kcal > 0) DatoCristal(R.drawable.ic_llama, stringResource(R.string.ejercicio_calorias, ejercicio.kcal))
             }
-            if (mostrarEstado) EtiquetaEstado(ejercicio.estado, Modifier.padding(top = 4.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                DeslizaParaVer(stringResource(R.string.ejercicio_desliza), onCompletar = onClick, modifier = Modifier.weight(1f))
+                Row(
+                    modifier = Modifier
+                        .height(52.dp)
+                        .cristal(CircleShape)
+                        .clip(CircleShape)
+                        .clickable(role = Role.Button, onClick = onClick)
+                        .padding(horizontal = 18.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    Text(stringResource(R.string.ejercicio_ver), style = MaterialTheme.typography.labelLarge, color = Color.White)
+                    Icon(painterResource(R.drawable.ic_flecha), contentDescription = null, modifier = Modifier.size(18.dp), tint = Color.White)
+                }
+            }
         }
-        Icon(painterResource(R.drawable.ic_flecha), contentDescription = null, modifier = Modifier.size(22.dp), tint = colores.primary)
     }
 }
 
+// Un dato de la tarjeta (duración, calorías) en un chip de cristal con su icono.
 @Composable
-private fun Estadistica(icono: Int, texto: String) {
-    val colores = MaterialTheme.colorScheme
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-        Icon(painterResource(icono), contentDescription = null, modifier = Modifier.size(14.dp), tint = colores.primary)
-        Text(texto, style = MaterialTheme.typography.bodySmall, color = colores.onSurfaceVariant, maxLines = 1)
+private fun DatoCristal(@DrawableRes icono: Int, texto: String) {
+    Row(
+        modifier = Modifier.cristal(RoundedCornerShape(14.dp)).padding(horizontal = 12.dp, vertical = 7.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Icon(painterResource(icono), contentDescription = null, modifier = Modifier.size(14.dp), tint = Color.White)
+        Text(texto, style = MaterialTheme.typography.labelLarge.copy(fontSize = 12.sp), color = Color.White, maxLines = 1)
     }
 }
 

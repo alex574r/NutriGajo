@@ -1159,6 +1159,8 @@
     <string name="ejercicio_calorias">%1$d kcal</string>
     <string name="ejercicio_como_hacerlo">Cómo hacerlo</string>
     <string name="ejercicio_volver">Regresar</string>
+    <string name="ejercicio_desliza">Desliza para ver</string>
+    <string name="ejercicio_ver">Ver</string>
 
     <string name="inicio_banco">Banco de ejercicios</string>
     <string name="inicio_banco_explorar">Explorar ejercicios</string>
