@@ -43,6 +43,59 @@ service cloud.firestore {
         && getAfter(cedulaRef(d.cedula)).data.nutriologoId == uid;
     }
 
+    // Solicitud de verificación que envía un entrenador (o reenvía tras un rechazo): su credencial en texto (certificación, institución
+    // y folio); el ADMIN la revisa a mano. A diferencia del nutriólogo no hay número que reservar.
+    function envioEntrenadorValido(uid) {
+      let d = request.resource.data;
+      let u = get(/databases/$(database)/documents/usuarios/$(uid)).data;
+      return request.auth != null
+        && request.auth.uid == uid
+        && u.rol == 'ENTRENADOR'
+        && u.verificado == false
+        && d.keys().hasOnly(['entrenadorId', 'nombreCuenta', 'correo', 'credencial', 'estado', 'enviadoEn'])
+        && d.keys().hasAll(['entrenadorId', 'nombreCuenta', 'correo', 'credencial', 'estado', 'enviadoEn'])
+        && d.entrenadorId == uid
+        && d.nombreCuenta == u.nombre
+        && d.correo.lower() == request.auth.token.email.lower()
+        && d.credencial is string && d.credencial.size() >= 10 && d.credencial.size() <= 200
+        && d.estado == 'PENDIENTE'
+        && d.enviadoEn is int;
+    }
+
+    // Solo un entrenador ya verificado por el ADMIN publica contenido en el banco global.
+    function entrenadorVerificado(uid) {
+      let u = get(/databases/$(database)/documents/usuarios/$(uid)).data;
+      return u.rol == 'ENTRENADOR' && u.verificado == true;
+    }
+
+    // Ejercicio del banco global (ejercicios/{id}), con los topes de Ejercicio (domain/model/Ejercicio.kt). Un borrador solo necesita
+    // título; para EN_REVISION el resto tiene que estar completo y con foto.
+    // ponytail: las reglas no recorren una lista, así que el largo de cada paso lo comprueba la app (tope práctico: 1 MiB por documento).
+    function ejercicioValido(d) {
+      return d.keys().hasOnly(['autorId', 'autorNombre', 'titulo', 'descripcion', 'zona', 'tipo', 'nivel', 'equipo', 'duracionMin', 'pasos',
+                               'consejos', 'contraindicaciones', 'kcal', 'fotoVersion', 'estado', 'motivoRechazo', 'creadoEn', 'actualizadoEn',
+                               'publicadoEn', 'revisadoPor', 'revisadoEn'])
+        && d.keys().hasAll(['autorId', 'autorNombre', 'titulo', 'descripcion', 'zona', 'tipo', 'nivel', 'equipo', 'duracionMin', 'pasos',
+                            'consejos', 'contraindicaciones', 'kcal', 'estado', 'creadoEn', 'actualizadoEn'])
+        && d.autorNombre is string && d.autorNombre.size() >= 1 && d.autorNombre.size() <= 120
+        && d.titulo is string && d.titulo.size() >= 3 && d.titulo.size() <= 80
+        && d.descripcion is string && d.descripcion.size() <= 600
+        && d.zona in ['PECHO', 'ESPALDA', 'PIERNAS', 'BRAZOS', 'HOMBROS', 'ABDOMEN', 'CUERPO_COMPLETO']
+        && d.tipo in ['FUERZA', 'CARDIO', 'FLEXIBILIDAD', 'YOGA']
+        && d.nivel in ['PRINCIPIANTE', 'INTERMEDIO', 'AVANZADO']
+        && d.equipo in ['SIN_EQUIPO', 'MANCUERNAS', 'BANDAS', 'BARRA', 'MAQUINA']
+        && d.duracionMin is int && d.duracionMin >= 1 && d.duracionMin <= 180
+        && d.pasos is list && d.pasos.size() <= 10
+        && d.consejos is string && d.consejos.size() <= 400
+        && d.contraindicaciones is string && d.contraindicaciones.size() <= 400
+        && d.kcal is int && d.kcal >= 0 && d.kcal <= 2000
+        && (!('fotoVersion' in d.keys()) || d.fotoVersion is int)
+        && d.estado in ['BORRADOR', 'EN_REVISION', 'PUBLICADO', 'RECHAZADO', 'RETIRADO']
+        && d.creadoEn is int
+        && d.actualizadoEn is int
+        && (d.estado != 'EN_REVISION' || (d.descripcion.size() >= 10 && d.pasos.size() >= 1 && 'fotoVersion' in d.keys()));
+    }
+
     // Expediente del paciente (mapa dentro de pacientes/{id}): todo opcional, con tipos y rangos razonables.
     function expedienteValido(e) {
       return e.keys().hasOnly(['objetivo', 'sexo', 'fechaNacimiento', 'pesoKg', 'estaturaCm', 'nivelActividad',
@@ -108,10 +161,10 @@ service cloud.firestore {
     match /usuarios/{uid} {
       allow read: if request.auth != null && request.auth.uid == uid;
 
-      // Solo el propio usuario crea su perfil, como NUTRIOLOGO o PACIENTE y sin verificar.
+      // Solo el propio usuario crea su perfil, como NUTRIOLOGO, ENTRENADOR o PACIENTE y sin verificar.
       allow create: if request.auth != null
         && request.auth.uid == uid
-        && request.resource.data.rol in ['NUTRIOLOGO', 'PACIENTE']
+        && request.resource.data.rol in ['NUTRIOLOGO', 'ENTRENADOR', 'PACIENTE']
         && request.resource.data.verificado == false
         && request.resource.data.activo == true
         && request.resource.data.correo.lower() == request.auth.token.email.lower();
@@ -153,6 +206,78 @@ service cloud.firestore {
       allow delete: if request.auth != null && request.auth.uid == uid;
     }
 
+    // Banco global de ejercicios. Lo publicado lo ve cualquier sesión; un borrador, uno en revisión o uno rechazado, solo su autor y el
+    // ADMIN. Solo un entrenador verificado crea y edita lo suyo (mientras sea borrador o lo hayan rechazado) y solo el ADMIN publica,
+    // rechaza (con motivo) o retira. El autor puede sacar uno de revisión o retirar uno publicado.
+    match /ejercicios/{ejercicioId} {
+      allow read: if request.auth != null
+        && (resource.data.estado == 'PUBLICADO' || resource.data.autorId == request.auth.uid || esAdmin());
+
+      allow create: if request.auth != null
+        && entrenadorVerificado(request.auth.uid)
+        && request.resource.data.autorId == request.auth.uid
+        && request.resource.data.estado in ['BORRADOR', 'EN_REVISION']
+        && !('motivoRechazo' in request.resource.data.keys())
+        && !('publicadoEn' in request.resource.data.keys())
+        && !('revisadoPor' in request.resource.data.keys())
+        && !('revisadoEn' in request.resource.data.keys())
+        && ejercicioValido(request.resource.data);
+
+      // el autor edita (y reenvía) lo que es borrador o lo rechazaron; lo que puso el ADMIN no se toca
+      allow update: if request.auth != null
+        && resource.data.autorId == request.auth.uid
+        && entrenadorVerificado(request.auth.uid)
+        && resource.data.estado in ['BORRADOR', 'RECHAZADO']
+        && request.resource.data.estado in ['BORRADOR', 'EN_REVISION']
+        && request.resource.data.autorId == resource.data.autorId
+        && request.resource.data.creadoEn == resource.data.creadoEn
+        && request.resource.data.get('publicadoEn', null) == resource.data.get('publicadoEn', null)
+        && request.resource.data.get('revisadoPor', null) == resource.data.get('revisadoPor', null)
+        && request.resource.data.get('revisadoEn', null) == resource.data.get('revisadoEn', null)
+        && ejercicioValido(request.resource.data);
+
+      // el autor retira uno publicado o lo saca de revisión para seguir editándolo
+      allow update: if request.auth != null
+        && resource.data.autorId == request.auth.uid
+        && entrenadorVerificado(request.auth.uid)
+        && ((resource.data.estado == 'PUBLICADO' && request.resource.data.estado == 'RETIRADO')
+            || (resource.data.estado == 'EN_REVISION' && request.resource.data.estado == 'BORRADOR'))
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['estado', 'actualizadoEn']);
+
+      // el ADMIN publica...
+      allow update: if esAdmin()
+        && resource.data.estado == 'EN_REVISION'
+        && request.resource.data.estado == 'PUBLICADO'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['estado', 'publicadoEn', 'revisadoPor', 'revisadoEn', 'actualizadoEn'])
+        && request.resource.data.publicadoEn is int
+        && request.resource.data.revisadoPor == request.auth.uid
+        && request.resource.data.revisadoEn is int;
+
+      // ...rechaza con motivo...
+      allow update: if esAdmin()
+        && resource.data.estado == 'EN_REVISION'
+        && request.resource.data.estado == 'RECHAZADO'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['estado', 'motivoRechazo', 'revisadoPor', 'revisadoEn', 'actualizadoEn'])
+        && request.resource.data.motivoRechazo is string
+        && request.resource.data.motivoRechazo.size() > 0
+        && request.resource.data.motivoRechazo.size() <= 200
+        && request.resource.data.revisadoPor == request.auth.uid
+        && request.resource.data.revisadoEn is int;
+
+      // ...y retira lo ya publicado
+      allow update: if esAdmin()
+        && resource.data.estado == 'PUBLICADO'
+        && request.resource.data.estado == 'RETIRADO'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['estado', 'revisadoPor', 'revisadoEn', 'actualizadoEn'])
+        && request.resource.data.revisadoPor == request.auth.uid
+        && request.resource.data.revisadoEn is int;
+
+      // lo publicado no se borra: se retira
+      allow delete: if request.auth != null
+        && resource.data.autorId == request.auth.uid
+        && resource.data.estado in ['BORRADOR', 'RECHAZADO', 'RETIRADO'];
+    }
+
     // Carreras y caminatas del modo carrera: personales, solo las ve y las crea su dueño. Una carrera guardada no se edita; se borra.
     match /usuarios/{uid}/carreras/{carreraId} {
       allow read: if request.auth != null && request.auth.uid == uid;
@@ -174,13 +299,13 @@ service cloud.firestore {
       allow delete: if request.auth != null && request.auth.uid == uid;
     }
 
-    // Solicitud de verificación del nutriólogo (el id es su uid). La ven él y el ADMIN.
+    // Solicitud de verificación del nutriólogo o del entrenador (el id es su uid). La ven él y el ADMIN.
     match /verificaciones/{uid} {
       allow read: if request.auth != null && (request.auth.uid == uid || rolDe(request.auth.uid) == 'ADMIN');
 
-      allow create: if envioValido(uid);
+      allow create: if envioValido(uid) || envioEntrenadorValido(uid);
       // reenvío: solo después de un rechazo
-      allow update: if (resource.data.estado == 'RECHAZADA' && envioValido(uid))
+      allow update: if (resource.data.estado == 'RECHAZADA' && (envioValido(uid) || envioEntrenadorValido(uid)))
         // revisión del ADMIN: una sola vez, de PENDIENTE a APROBADA o RECHAZADA (el rechazo lleva motivo)
         || (esAdmin()
             && resource.data.estado == 'PENDIENTE'

@@ -1,6 +1,7 @@
 import { verificarSesion } from "./auth/firebase";
 import { avisarMensaje, leerFotoChat, subirFotoChat } from "./routes/chat";
 import { avisarConfirmacion } from "./routes/cita";
+import { leerFotoEjercicio, subirFotoEjercicio } from "./routes/ejercicio";
 import { leerFoto, subirFoto, type Tipo } from "./routes/foto";
 import { avisarPlan, leerPlan, subirPlan } from "./routes/plan";
 
@@ -28,6 +29,17 @@ export default {
         return subirFoto(req, env, uid, tipo);
       }
     }
+
+    // fotos de los ejercicios del banco global: subir exige sesión y se guarda bajo el uid de quien sube; leer es público con el uid
+    // del autor (la app lo sabe por el ejercicio)
+    const ejercicioSubida = pathname.match(/^\/ejercicio\/([A-Za-z0-9_-]{1,128})$/);
+    if (ejercicioSubida && req.method === "PUT") {
+      const uid = await verificarSesion(req, env.FIREBASE_PROJECT_ID);
+      if (!uid) return new Response("No autorizado", { status: 401 });
+      return subirFotoEjercicio(req, env, uid, ejercicioSubida[1]);
+    }
+    const ejercicioLectura = pathname.match(/^\/ejercicio\/([A-Za-z0-9]{20,128})\/([A-Za-z0-9_-]{1,128})$/);
+    if (ejercicioLectura && req.method === "GET") return leerFotoEjercicio(req, env, ejercicioLectura[1], ejercicioLectura[2]);
 
     // aviso al paciente de que su cita quedó confirmada: lo pide el nutriólogo con su sesión
     if (req.method === "POST" && pathname === "/citas/notificar") {
