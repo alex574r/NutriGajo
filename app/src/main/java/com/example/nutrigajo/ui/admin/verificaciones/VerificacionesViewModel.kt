@@ -15,7 +15,7 @@ import kotlinx.coroutines.launch
 
 data class VerificacionesEstado(
     val cargando: Boolean = true,
-    // uid del nutriólogo cuya solicitud se está resolviendo: bloquea sus botones
+    // uid de quien envió la solicitud que se está resolviendo: bloquea sus botones
     val trabajando: String? = null,
     val solicitudes: List<SolicitudVerificacion> = emptyList(),
     @param:StringRes val error: Int? = null,
@@ -46,12 +46,12 @@ class VerificacionesViewModel(private val repo: VerificacionRepository = Verific
 
     private fun resolver(solicitud: SolicitudVerificacion, accion: suspend () -> Unit) {
         if (_estado.value.trabajando != null) return
-        _estado.update { it.copy(trabajando = solicitud.nutriologoId, error = null) }
+        _estado.update { it.copy(trabajando = solicitud.uid, error = null) }
         viewModelScope.launch {
             try {
                 accion()
                 _estado.update {
-                    it.copy(trabajando = null, solicitudes = it.solicitudes.filterNot { s -> s.nutriologoId == solicitud.nutriologoId })
+                    it.copy(trabajando = null, solicitudes = it.solicitudes.filterNot { s -> s.uid == solicitud.uid })
                 }
             } catch (e: CancellationException) {
                 throw e

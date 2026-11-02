@@ -116,7 +116,7 @@ fun TabSolicitudes(
                 )
             }
         } else {
-            items(estado.solicitudes, key = { it.nutriologoId }) { solicitud ->
+            items(estado.solicitudes, key = { it.uid }) { solicitud ->
                 TarjetaSolicitud(
                     solicitud = solicitud,
                     trabajando = estado.trabajando != null,
@@ -173,7 +173,7 @@ private fun TarjetaSolicitud(
                         overflow = TextOverflow.Ellipsis,
                     )
                     Text(
-                        text = stringResource(R.string.admin_etiqueta_pendiente),
+                        text = stringResource(if (solicitud.esEntrenador) R.string.admin_etiqueta_entrenador else R.string.admin_etiqueta_pendiente),
                         modifier = Modifier.border(1.dp, colores.outline, RoundedCornerShape(8.dp)).padding(horizontal = 8.dp, vertical = 2.dp),
                         style = MaterialTheme.typography.labelLarge.copy(fontSize = 11.sp),
                         color = colores.onSurfaceVariant,
@@ -190,31 +190,42 @@ private fun TarjetaSolicitud(
             }
         }
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(
-                text = stringResource(R.string.admin_cedula, solicitud.cedula),
-                style = MaterialTheme.typography.titleLarge,
-                color = colores.onBackground,
-            )
-            Text(
-                text = stringResource(R.string.admin_nombre_cedula, solicitud.nombreCedula),
-                style = MaterialTheme.typography.bodyMedium,
-                color = colores.onBackground,
-            )
-            Text(
-                text = stringResource(if (nombreCoincide) R.string.admin_nombre_coincide else R.string.admin_nombre_distinto),
-                style = MaterialTheme.typography.bodySmall,
-                color = if (nombreCoincide) colores.onSurfaceVariant else colores.error,
-            )
+            if (solicitud.esEntrenador) {
+                // la credencial del entrenador no está en ningún registro público: el ADMIN la juzga por lo que escribió
+                Text(
+                    text = stringResource(R.string.admin_credencial, solicitud.credencial),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = colores.onBackground,
+                )
+            } else {
+                Text(
+                    text = stringResource(R.string.admin_cedula, solicitud.cedula),
+                    style = MaterialTheme.typography.titleLarge,
+                    color = colores.onBackground,
+                )
+                Text(
+                    text = stringResource(R.string.admin_nombre_cedula, solicitud.nombreCedula),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = colores.onBackground,
+                )
+                Text(
+                    text = stringResource(if (nombreCoincide) R.string.admin_nombre_coincide else R.string.admin_nombre_distinto),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (nombreCoincide) colores.onSurfaceVariant else colores.error,
+                )
+            }
         }
         // primer paso: abre la consulta de la SEP para comparar la cédula y el nombre antes de resolver
-        Button(
-            onClick = onRevisar,
-            modifier = Modifier.fillMaxWidth().height(48.dp),
-            shape = RoundedCornerShape(21.dp),
-        ) {
-            Icon(painterResource(R.drawable.ic_buscar), contentDescription = null, modifier = Modifier.size(20.dp))
-            Spacer(Modifier.width(8.dp))
-            Text(stringResource(R.string.admin_revisar))
+        if (!solicitud.esEntrenador) {
+            Button(
+                onClick = onRevisar,
+                modifier = Modifier.fillMaxWidth().height(48.dp),
+                shape = RoundedCornerShape(21.dp),
+            ) {
+                Icon(painterResource(R.drawable.ic_buscar), contentDescription = null, modifier = Modifier.size(20.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(stringResource(R.string.admin_revisar))
+            }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Button(

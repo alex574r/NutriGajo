@@ -44,7 +44,8 @@ private val CITAS = TipoAviso(Avisos.CANAL_CITAS, R.drawable.ic_calendario, R.st
 private fun tiposDe(rol: Rol) = when (rol) {
     Rol.PACIENTE -> listOf(PLANES, MENSAJES, CITAS)
     Rol.NUTRIOLOGO -> listOf(MENSAJES, CITAS)
-    Rol.ADMIN -> emptyList()
+    // ponytail: el entrenador aún no recibe avisos; el de «tu ejercicio se publicó» llega con el Worker de avisos
+    Rol.ENTRENADOR, Rol.ADMIN -> emptyList()
 }
 
 // Android no deja que una app apague sus propios avisos: cada interruptor refleja cómo está ese tipo en el teléfono y tocarlo abre

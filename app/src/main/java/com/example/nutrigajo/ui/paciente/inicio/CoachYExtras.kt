@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.sp
 import com.example.nutrigajo.R
 import com.example.nutrigajo.data.repository.TOPE_PENDIENTES
 import com.example.nutrigajo.ui.components.Etiqueta
+import com.example.nutrigajo.ui.components.FilaAjuste
 import com.example.nutrigajo.ui.components.alPulsar
 
 // La entrada al chat con el nutriólogo: toda la tarjeta lo abre. Cuenta sus mensajes sin leer o, si no hay, muestra el último;
@@ -111,55 +112,18 @@ fun TarjetaCoach(
     }
 }
 
-// ponytail: sin destino todavía; el catálogo de ejercicios llega con las rutinas.
+// La entrada al banco global de ejercicios que publican los entrenadores verificados.
 @Composable
-fun EjerciciosExtra(ejercicios: List<EjercicioExtra>, modifier: Modifier = Modifier) {
+fun BancoEjercicios(onAbrir: () -> Unit, modifier: Modifier = Modifier) {
     Column(modifier) {
-        EncabezadoSeccion(stringResource(R.string.inicio_extra))
+        EncabezadoSeccion(stringResource(R.string.inicio_banco))
         Spacer(Modifier.height(12.dp))
-        Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
-            ejercicios.forEach { FilaEjercicio(it) }
-        }
-    }
-}
-
-@Composable
-private fun FilaEjercicio(ejercicio: EjercicioExtra) {
-    val colores = MaterialTheme.colorScheme
-    val tipos = MaterialTheme.typography
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(107.dp)
-            .clip(RoundedCornerShape(34.dp))
-            .background(colores.surfaceVariant)
-            .padding(horizontal = 19.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Image(
-            painter = painterResource(ejercicio.foto),
-            contentDescription = null,
-            modifier = Modifier.size(79.dp, 80.dp).clip(RoundedCornerShape(24.dp)),
-            contentScale = ContentScale.Crop,
+        FilaAjuste(
+            icono = R.drawable.ic_corredor,
+            titulo = stringResource(R.string.inicio_banco_explorar),
+            modifier = Modifier.padding(horizontal = 16.dp),
+            etiqueta = stringResource(R.string.inicio_banco_etiqueta),
+            onClick = onAbrir,
         )
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(ejercicio.titulo, style = tipos.titleMedium.copy(fontWeight = FontWeight.Bold), color = colores.onBackground, maxLines = 1)
-            Text(ejercicio.subtitulo, style = tipos.bodySmall, color = colores.onSurfaceVariant, maxLines = 1)
-            Row(Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Estadistica(R.drawable.ic_valoracion, ejercicio.valoracion)
-                Estadistica(R.drawable.ic_corazon, ejercicio.favoritos.toString())
-                Estadistica(R.drawable.ic_ojo, ejercicio.vistas)
-            }
-        }
-        Icon(painterResource(R.drawable.ic_flecha), contentDescription = null, modifier = Modifier.size(22.dp), tint = colores.primary)
-    }
-}
-
-@Composable
-private fun Estadistica(@DrawableRes icono: Int, texto: String) {
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-        Icon(painterResource(icono), contentDescription = null, modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.primary)
-        Text(texto, style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp), color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
     }
 }

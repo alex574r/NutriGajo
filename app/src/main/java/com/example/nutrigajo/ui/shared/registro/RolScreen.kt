@@ -17,10 +17,12 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -55,10 +57,11 @@ private class OpcionRol(
 )
 
 // Fotos (Pexels, licencia Pexels: uso libre, sin atribución obligatoria):
-// nutriólogo: RedWolf, /photo/12889997 · paciente: Madethese, /photo/7952236
+// nutriólogo: RedWolf, /photo/12889997 · paciente: Madethese, /photo/7952236 · entrenador: la de pesas del catálogo de la app
 // ADMIN no se ofrece: se da de alta a mano, nadie se asigna ese rol.
 private val opciones = listOf(
     OpcionRol(Rol.NUTRIOLOGO, R.string.rol_nutriologo, R.drawable.rol_nutriologo),
+    OpcionRol(Rol.ENTRENADOR, R.string.rol_entrenador, R.drawable.ej_pesas),
     OpcionRol(Rol.PACIENTE, R.string.rol_paciente, R.drawable.rol_paciente),
 )
 
@@ -105,9 +108,10 @@ fun RolScreen(
             color = colores.onBackground,
             textAlign = TextAlign.Center,
         )
-        Spacer(Modifier.height(48.dp))
-        // el anillo de foco de cada tarjeta ocupa 4dp: se descuenta del margen para que el borde quede a 16dp
-        Column(modifier = Modifier.selectableGroup().padding(horizontal = MARGEN - ANILLO_FOCO)) {
+        Spacer(Modifier.height(32.dp))
+        // el anillo de foco de cada tarjeta ocupa 4dp: se descuenta del margen para que el borde quede a 16dp; con tres tarjetas
+        // una pantalla baja las desplaza
+        Column(modifier = Modifier.weight(1f).verticalScroll(rememberScrollState()).selectableGroup().padding(horizontal = MARGEN - ANILLO_FOCO)) {
             opciones.forEach { opcion ->
                 TarjetaRol(
                     opcion = opcion,
@@ -116,7 +120,6 @@ fun RolScreen(
                 )
             }
         }
-        Spacer(Modifier.weight(1f))
         BotonPrimario(
             texto = stringResource(R.string.rol_continuar),
             onClick = { elegido?.let(onContinuar) },

@@ -14,8 +14,8 @@ class VerificacionException(val motivo: Motivo) : Exception(motivo.name) {
     enum class Motivo { CEDULA_INVALIDA, NOMBRE_DISTINTO, CEDULA_EN_USO }
 }
 
-// Verificación de nutriólogos: el nutriólogo envía su cédula, un filtro automático descarta lo evidente
-// y el ADMIN aprueba o rechaza en un clic tras consultar el registro de la SEP.
+// Verificación de nutriólogos y entrenadores: el nutriólogo envía su cédula, un filtro automático descarta lo evidente
+// y el ADMIN aprueba o rechaza en un clic tras consultar el registro de la SEP. El entrenador manda su credencial en texto.
 // Las reglas de Firestore son las que mandan: aquí se validan antes los casos comunes para dar un mensaje claro.
 // ponytail: la SEP no ofrece API pública, así que la consulta la hace el ADMIN; si hubiera convenio, solo cambia quién aprueba (campo metodo).
 class VerificacionRepository(
@@ -37,7 +37,22 @@ class VerificacionRepository(
             cedula = doc.getString("cedula").orEmpty(),
             nombreCedula = doc.getString("nombreCedula").orEmpty(),
             motivo = doc.getString("motivo"),
+            credencial = doc.getString("credencial").orEmpty(),
         )
+    }
+
+    // El entrenador manda su credencial en texto; el ADMIN la revisa a mano. No hay número que reservar, así que es una sola escritura.
+    suspend fun enviarCredencial(perfil: Perfil, credencial: String) {
+        verificacion(uid).set(
+            mapOf(
+                "entrenadorId" to uid,
+                "nombreCuenta" to perfil.nombre,
+                "correo" to perfil.correo.lowercase(),
+                "credencial" to credencial.trim().replace(Regex("\\s+"), " "),
+                "estado" to EstadoVerificacion.PENDIENTE.name,
+                "enviadoEn" to System.currentTimeMillis(),
+            ),
+        ).await()
     }
 
     // Filtro automático y envío. La solicitud y la reserva de la cédula se escriben en un lote: o pasan las dos o ninguna.
@@ -77,12 +92,13 @@ class VerificacionRepository(
             .get().await().documents
             .map { d ->
                 SolicitudVerificacion(
-                    nutriologoId = d.id,
+                    uid = d.id,
                     nombreCuenta = d.getString("nombreCuenta").orEmpty(),
                     correo = d.getString("correo").orEmpty(),
                     nombreCedula = d.getString("nombreCedula").orEmpty(),
                     cedula = d.getString("cedula").orEmpty(),
                     enviadoEn = d.getLong("enviadoEn") ?: 0L,
+                    credencial = d.getString("credencial").orEmpty(),
                 )
             }
             .sortedBy { it.enviadoEn }
@@ -91,9 +107,9 @@ class VerificacionRepository(
     suspend fun aprobar(solicitud: SolicitudVerificacion) {
         val ahora = System.currentTimeMillis()
         db.runBatch { lote ->
-            lote.update(verificacion(solicitud.nutriologoId), revision(EstadoVerificacion.APROBADA, ahora))
+            lote.update(verificacion(solicitud.uid), revision(EstadoVerificacion.APROBADA, ahora))
             lote.update(
-                db.collection(FirestorePaths.USUARIOS).document(solicitud.nutriologoId),
+                db.collection(FirestorePaths.USUARIOS).document(solicitud.uid),
                 mapOf("verificado" to true, "ultimaModificacion" to ahora),
             )
         }.await()
@@ -103,8 +119,9 @@ class VerificacionRepository(
     suspend fun rechazar(solicitud: SolicitudVerificacion, motivo: String) {
         val ahora = System.currentTimeMillis()
         db.runBatch { lote ->
-            lote.update(verificacion(solicitud.nutriologoId), revision(EstadoVerificacion.RECHAZADA, ahora) + ("motivo" to motivo.trim()))
-            lote.delete(db.collection(FirestorePaths.CEDULAS).document(solicitud.cedula))
+            lote.update(verificacion(solicitud.uid), revision(EstadoVerificacion.RECHAZADA, ahora) + ("motivo" to motivo.trim()))
+            // el entrenador no reservó ninguna cédula
+            if (!solicitud.esEntrenador) lote.delete(db.collection(FirestorePaths.CEDULAS).document(solicitud.cedula))
         }.await()
     }
 

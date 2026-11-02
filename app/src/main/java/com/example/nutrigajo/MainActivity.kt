@@ -36,6 +36,7 @@ import com.example.nutrigajo.data.push.Avisos
 import com.example.nutrigajo.domain.model.Rol
 import com.example.nutrigajo.ui.admin.inicio.InicioAdminScreen
 import com.example.nutrigajo.ui.components.PantallaCarga
+import com.example.nutrigajo.ui.entrenador.inicio.InicioEntrenadorScreen
 import com.example.nutrigajo.ui.nutriologo.inicio.InicioNutriologoScreen
 import com.example.nutrigajo.ui.paciente.inicio.InicioPacienteScreen
 import com.example.nutrigajo.ui.shared.ajustes.PantallaBloqueo
@@ -236,6 +237,7 @@ class MainActivity : FragmentActivity() {
                                 abrirChat = abrirChat,
                                 onChatConsumido = { abrirChat = null },
                             )
+                            perfil.rol == Rol.ENTRENADOR -> InicioEntrenadorScreen(perfil, cerrarSesion)
                             perfil.rol == Rol.PACIENTE -> InicioPacienteScreen(
                                 perfil,
                                 cerrarSesion,

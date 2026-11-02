@@ -45,15 +45,6 @@ data class Comida(
     val dia: LocalDate? = null,
 )
 
-data class EjercicioExtra(
-    @DrawableRes val foto: Int,
-    val titulo: String,
-    val subtitulo: String,
-    val valoracion: String,
-    val favoritos: Int,
-    val vistas: String,
-)
-
 enum class Rango(@StringRes val etiqueta: Int) {
     DIA(R.string.rango_dia),
     SEMANA(R.string.rango_semana),
@@ -173,12 +164,6 @@ val seriesActividad = mapOf(
         variacion = 8400,
     ),
     Rango.TODO to SerieActividad(listOf(520f, 600f, 680f, 740f, 790f, 830f), total = 1204500, variacion = 21000),
-)
-
-val ejerciciosExtra = listOf(
-    EjercicioExtra(R.drawable.inicio_yoga, "Yoga y relajación", "Sesión tranquila", "4.1", 251, "121K"),
-    EjercicioExtra(R.drawable.inicio_yoga, "Estiramiento matutino", "Sesión suave", "4.4", 198, "86K"),
-    EjercicioExtra(R.drawable.inicio_yoga, "Movilidad de cadera", "Sesión corta", "4.0", 164, "64K"),
 )
 
 const val FRASE_DEL_DIA = "El dolor que sientes hoy será la fuerza que sentirás mañana"

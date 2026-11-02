@@ -30,6 +30,8 @@ fun TarjetaVerificacion(
     modifier: Modifier = Modifier,
     // con la solicitud en revisión ofrece volver a consultar el resultado, que es lo que pide el texto de la tarjeta
     onActualizar: (() -> Unit)? = null,
+    // el entrenador manda una credencial en texto, no una cédula: cambian los textos de ayuda
+    entrenador: Boolean = false,
 ) {
     val colores = MaterialTheme.colorScheme
     when {
@@ -44,10 +46,10 @@ fun TarjetaVerificacion(
                 EstadoVerificacion.APROBADA -> R.string.verificacion_aprobada_titulo
             }
             val texto = when (verificacion?.estado) {
-                null -> stringResource(R.string.verificacion_tarjeta_ayuda)
-                EstadoVerificacion.PENDIENTE -> stringResource(R.string.verificacion_pendiente_ayuda)
+                null -> stringResource(if (entrenador) R.string.verificacion_tarjeta_ayuda_entrenador else R.string.verificacion_tarjeta_ayuda)
+                EstadoVerificacion.PENDIENTE -> stringResource(if (entrenador) R.string.verificacion_pendiente_ayuda_entrenador else R.string.verificacion_pendiente_ayuda)
                 EstadoVerificacion.RECHAZADA -> stringResource(R.string.verificacion_rechazada_motivo, verificacion?.motivo.orEmpty())
-                EstadoVerificacion.APROBADA -> stringResource(R.string.verificacion_aprobada_ayuda)
+                EstadoVerificacion.APROBADA -> stringResource(if (entrenador) R.string.verificacion_aprobada_ayuda_entrenador else R.string.verificacion_aprobada_ayuda)
             }
             val boton = when (verificacion?.estado) {
                 null -> R.string.verificacion_boton

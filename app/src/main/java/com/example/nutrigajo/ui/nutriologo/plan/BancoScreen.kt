@@ -192,7 +192,7 @@ internal fun BancoScreen(destino: DestinoBanco, vm: BancoViewModel, onSalir: () 
 }
 
 @Composable
-private fun BarraSuperior(titulo: String, onVolver: () -> Unit) {
+internal fun BarraSuperior(titulo: String, onVolver: () -> Unit) {
     val colores = MaterialTheme.colorScheme
     Row(
         modifier = Modifier.fillMaxWidth().padding(horizontal = MARGEN, vertical = 12.dp),
@@ -259,7 +259,7 @@ private fun TarjetaItem(item: ItemBanco, modifier: Modifier = Modifier, onClick:
 
 // Opción de un grupo (filtro o tiempo de comida): la elegida va en naranja.
 @Composable
-private fun OpcionChip(texto: String, elegida: Boolean, onClick: () -> Unit) {
+internal fun OpcionChip(texto: String, elegida: Boolean, onClick: () -> Unit) {
     val colores = MaterialTheme.colorScheme
     // el color pasa de una opción a otra con resorte, y la elegida se asienta con un pequeño rebote de tamaño
     val fondo by animateColorAsState(if (elegida) colores.primary else colores.surfaceVariant, spring(stiffness = 400f), label = "fondo")

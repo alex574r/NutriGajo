@@ -20,7 +20,7 @@ import kotlinx.coroutines.launch
 data class VerificacionEstado(
     val cargando: Boolean = true,
     val enviando: Boolean = false,
-    // null: aún no ha enviado su cédula
+    // null: aún no ha enviado su cédula (o su credencial, si es entrenador)
     val verificacion: Verificacion? = null,
     @param:StringRes val error: Int? = null,
 )
@@ -57,6 +57,22 @@ class VerificacionViewModel(private val repo: VerificacionRepository = Verificac
                 throw e
             } catch (e: Exception) {
                 _estado.update { it.copy(enviando = false, error = mensajeDe(e)) }
+            }
+        }
+    }
+
+    fun enviarCredencial(perfil: Perfil, credencial: String) {
+        if (_estado.value.enviando) return
+        _estado.update { it.copy(enviando = true, error = null) }
+        viewModelScope.launch {
+            try {
+                repo.enviarCredencial(perfil, credencial)
+                val verificacion = repo.miVerificacion()
+                _estado.update { it.copy(enviando = false, verificacion = verificacion) }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _estado.update { it.copy(enviando = false, error = mensajeDeFirestore(e)) }
             }
         }
     }

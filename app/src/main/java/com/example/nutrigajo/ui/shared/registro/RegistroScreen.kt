@@ -87,7 +87,13 @@ fun RegistroScreen(
     val completo = nombres.isNotBlank() && apellidos.isNotBlank() &&
         Patterns.EMAIL_ADDRESS.matcher(correo.trim()).matches() &&
         contrasena.isNotEmpty() && confirmacion.isNotEmpty() && aviso
-    val rolTexto = stringResource(if (rol == Rol.NUTRIOLOGO) R.string.rol_nutriologo else R.string.rol_paciente)
+    val rolTexto = stringResource(
+        when (rol) {
+            Rol.NUTRIOLOGO -> R.string.rol_nutriologo
+            Rol.ENTRENADOR -> R.string.rol_entrenador
+            else -> R.string.rol_paciente
+        },
+    )
     LaunchedEffect(completo) {
         if (completo) {
             salto.animateTo(1.05f, tween(90))

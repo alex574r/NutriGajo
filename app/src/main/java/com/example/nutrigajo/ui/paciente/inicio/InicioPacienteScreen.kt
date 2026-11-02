@@ -66,6 +66,7 @@ import com.example.nutrigajo.ui.paciente.avisos.NotificacionesScreen
 import com.example.nutrigajo.ui.paciente.avisos.marcarVisto
 import com.example.nutrigajo.ui.paciente.avisos.vistoHasta
 import com.example.nutrigajo.ui.paciente.carrera.CarreraFlujo
+import com.example.nutrigajo.ui.paciente.ejercicios.ExplorarEjerciciosScreen
 import com.example.nutrigajo.ui.paciente.carrera.CarreraViewModel
 import com.example.nutrigajo.ui.paciente.reloj.RelojScreen
 import com.example.nutrigajo.ui.paciente.reloj.RelojViewModel
@@ -130,6 +131,7 @@ fun InicioPacienteScreen(
     var enChat by rememberSaveable { mutableStateOf(false) }
     var enCarrera by rememberSaveable { mutableStateOf(false) }
     var enReloj by rememberSaveable { mutableStateOf(false) }
+    var enEjercicios by rememberSaveable { mutableStateOf(false) }
     // la pantalla de métricas abierta desde las tarjetas y el agua de hoy, que sube con el + y se ve también en la tarjeta
     var metrica by rememberSaveable { mutableStateOf<Metrica?>(null) }
     // «Ver todas» de las métricas: la cuadrícula se queda abierta debajo de la pantalla de la métrica que se abre desde ella
@@ -238,6 +240,8 @@ fun InicioPacienteScreen(
         }
         // el reloj: el pulso que su app manda a Health Connect
         enReloj -> RelojScreen(onVolver = { enReloj = false }, vm = relojVm)
+        // el banco global de ejercicios de los entrenadores
+        enEjercicios -> ExplorarEjerciciosScreen(onVolver = { enEjercicios = false })
         enCitas -> {
             BackHandler { enCitas = false }
             AgendaScreen(
@@ -385,6 +389,7 @@ fun InicioPacienteScreen(
                     onVerTodasMetricas = { todasMetricas = true },
                     onCarrera = { enCarrera = true },
                     onReloj = { enReloj = true },
+                    onEjercicios = { enEjercicios = true },
                     racha = rachaDeHoy,
                     onDieta = {
                         dietaInicio = it
@@ -455,6 +460,8 @@ private fun InicioPaciente(
     onCarrera: () -> Unit,
     // abre la pantalla del reloj
     onReloj: () -> Unit,
+    // abre el banco global de ejercicios
+    onEjercicios: () -> Unit,
     // los días seguidos que lleva cumpliendo algo (se ven en el encabezado)
     racha: Racha,
     // abre Mis comidas (-1) o la comida que se tocó (su lugar en `platos`)
@@ -534,7 +541,7 @@ private fun InicioPaciente(
                     onChat = onChat,
                 )
             }
-            item { EjerciciosExtra(ejerciciosExtra) }
+            item { BancoEjercicios(onEjercicios) }
         }
     }
 }
