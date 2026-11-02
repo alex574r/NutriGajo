@@ -248,6 +248,7 @@ fun InicioPacienteScreen(
             pacienteId = vinculo.pacienteId,
             nombre = vinculo.nutriologoNombre,
             subtitulo = stringResource(R.string.chat_subtitulo_nutriologo),
+            otraId = vinculo.nutriologoId,
             onVolver = {
                 enChat = false
                 chatVersion++

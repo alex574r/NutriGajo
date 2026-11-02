@@ -133,4 +133,7 @@ class ChatViewModel(
     }
 
     suspend fun cargarFoto(pacienteId: String, mensajeId: String, cache: File): Bitmap = repo.foto(pacienteId, mensajeId, cache)
+
+    // La foto de perfil de la otra persona del chat, o null si no tiene.
+    suspend fun fotoDeLaOtra(uid: String, cache: File): Bitmap? = fotos.avatarAjeno(cache, uid)
 }

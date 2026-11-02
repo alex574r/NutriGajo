@@ -100,7 +100,7 @@ class VinculacionRepository(
             .limit(1)
             .get().await().documents
             .firstOrNull()
-            ?.let { Vinculo(it.id, it.getString("nutriologoNombre").orEmpty(), it.aUltimoMensaje(), it.aMetas()) }
+            ?.let { Vinculo(it.id, it.getString("nutriologoNombre").orEmpty(), it.aUltimoMensaje(), it.aMetas(), it.getString("nutriologoId").orEmpty()) }
 
     // Canjea el código y crea el registro del paciente en un solo lote: o pasan las dos escrituras o ninguna.
     suspend fun canjear(codigoEscrito: String, paciente: Perfil): Vinculo {
@@ -133,7 +133,7 @@ class VinculacionRepository(
                 ),
             )
         }.await()
-        return Vinculo(pacienteId, nutriologoNombre)
+        return Vinculo(pacienteId, nutriologoNombre, nutriologoId = doc.getString("nutriologoId").orEmpty())
     }
 
     private fun nuevoCodigo(): String =

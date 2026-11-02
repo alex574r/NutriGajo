@@ -19,9 +19,11 @@ data class PacienteResumen(
 )
 
 // Lo que el paciente necesita saber de su nutriólogo; `ultimoMensaje` es el último del chat con él y `metas` sus metas diarias.
+// `nutriologoId` es la cuenta del nutriólogo: con él se encuentra su foto de perfil.
 data class Vinculo(
     val pacienteId: String,
     val nutriologoNombre: String,
     val ultimoMensaje: UltimoMensaje? = null,
     val metas: MetasDiarias = MetasDiarias(),
+    val nutriologoId: String = "",
 )

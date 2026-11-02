@@ -155,6 +155,7 @@ fun InicioNutriologoScreen(
             pacienteId = abierto.id,
             nombre = abierto.nombre,
             subtitulo = stringResource(R.string.chat_subtitulo_paciente),
+            otraId = abierto.usuarioId,
             onVolver = {
                 chatAbierto = false
                 chatVersion++

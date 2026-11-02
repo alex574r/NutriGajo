@@ -50,6 +50,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
@@ -84,13 +85,15 @@ private val MARGEN = 16.dp
 private val RADIO = 20.dp
 private val PICO = 6.dp
 
-// El chat entre el nutriólogo y su paciente, el mismo para los dos: `nombre` es el de la otra persona y `subtitulo` su papel.
+// El chat entre el nutriólogo y su paciente, el mismo para los dos: `nombre` es el de la otra persona, `subtitulo` su papel y
+// `otraId` su cuenta, con la que se encuentra su foto de perfil (sin ella o sin foto, se ve su inicial).
 // Los mensajes llegan en tiempo real; lo que escribes se ve al instante y se confirma después.
 @Composable
 fun ChatScreen(
     pacienteId: String,
     nombre: String,
     subtitulo: String,
+    otraId: String,
     onVolver: () -> Unit,
     vm: ChatViewModel = viewModel(key = "chat-$pacienteId"),
 ) {
@@ -118,9 +121,23 @@ fun ChatScreen(
         if (uri != null) vm.elegirFoto(contexto.contentResolver, uri)
     }
     var fotoAbierta by remember { mutableStateOf<Bitmap?>(null) }
+    // la foto de perfil de la otra persona; mientras llega (o si no tiene) se ve su inicial
+    val fotoDeLaOtra by produceState<ImageBitmap?>(null, otraId) {
+        value = if (otraId.isEmpty()) {
+            null
+        } else {
+            try {
+                vm.fotoDeLaOtra(otraId, cache)?.asImageBitmap()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                null
+            }
+        }
+    }
 
     Column(Modifier.fillMaxSize().background(colores.background).statusBarsPadding().imePadding()) {
-        CabeceraChat(nombre, subtitulo, onVolver)
+        CabeceraChat(nombre, subtitulo, fotoDeLaOtra, onVolver)
         HorizontalDivider(color = colores.outlineVariant)
         Box(Modifier.weight(1f).fillMaxWidth()) {
             when {
@@ -151,7 +168,7 @@ fun ChatScreen(
 // ---- cabecera
 
 @Composable
-private fun CabeceraChat(nombre: String, subtitulo: String, onVolver: () -> Unit) {
+private fun CabeceraChat(nombre: String, subtitulo: String, foto: ImageBitmap?, onVolver: () -> Unit) {
     val colores = MaterialTheme.colorScheme
     Row(
         modifier = Modifier.fillMaxWidth().padding(horizontal = MARGEN, vertical = 10.dp),
@@ -168,7 +185,7 @@ private fun CabeceraChat(nombre: String, subtitulo: String, onVolver: () -> Unit
         ) {
             Icon(painterResource(R.drawable.ic_arrow_back), contentDescription = stringResource(R.string.mapa_volver), modifier = Modifier.size(22.dp), tint = colores.onBackground)
         }
-        AvatarInicial(nombre, 44.dp, MaterialTheme.typography.titleMedium)
+        AvatarInicial(nombre, 44.dp, MaterialTheme.typography.titleMedium, imagen = foto)
         Column(Modifier.weight(1f)) {
             Text(nombre, style = MaterialTheme.typography.titleMedium, color = colores.onBackground, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(subtitulo, style = MaterialTheme.typography.bodySmall, color = colores.onSurfaceVariant, maxLines = 1)
