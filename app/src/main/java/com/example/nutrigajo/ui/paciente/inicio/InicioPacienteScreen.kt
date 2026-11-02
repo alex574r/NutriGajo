@@ -59,6 +59,8 @@ import com.example.nutrigajo.ui.paciente.avisos.marcarVisto
 import com.example.nutrigajo.ui.paciente.avisos.vistoHasta
 import com.example.nutrigajo.ui.paciente.carrera.CarreraFlujo
 import com.example.nutrigajo.ui.paciente.carrera.CarreraViewModel
+import com.example.nutrigajo.ui.paciente.reloj.RelojScreen
+import com.example.nutrigajo.ui.paciente.reloj.RelojViewModel
 import com.example.nutrigajo.ui.paciente.citas.AgendaViewModel
 import com.example.nutrigajo.ui.paciente.plan.PlanPacienteScreen
 import com.example.nutrigajo.ui.paciente.plan.PlanPacienteViewModel
@@ -91,6 +93,7 @@ fun InicioPacienteScreen(
     planVm: PlanPacienteViewModel = viewModel(key = "plan-${perfil.uid}"),
     metasVm: MetasViewModel = viewModel(key = "metas-${perfil.uid}"),
     carreraVm: CarreraViewModel = viewModel(key = "carrera-${perfil.uid}"),
+    relojVm: RelojViewModel = viewModel(key = "reloj-${perfil.uid}"),
     // se tocó la notificación de un plan nuevo: se abre directo; `onPlanConsumido` avisa que ya se atendió
     abrirPlan: Boolean = false,
     onPlanConsumido: () -> Unit = {},
@@ -112,6 +115,7 @@ fun InicioPacienteScreen(
     var enAvisos by rememberSaveable { mutableStateOf(false) }
     var enChat by rememberSaveable { mutableStateOf(false) }
     var enCarrera by rememberSaveable { mutableStateOf(false) }
+    var enReloj by rememberSaveable { mutableStateOf(false) }
     // la pantalla de métricas abierta desde las tarjetas y el agua de hoy, que sube con el + y se ve también en la tarjeta
     var metrica by rememberSaveable { mutableStateOf<Metrica?>(null) }
     // «Ver todas» de las métricas: la cuadrícula se queda abierta debajo de la pantalla de la métrica que se abre desde ella
@@ -199,6 +203,8 @@ fun InicioPacienteScreen(
             val expediente by expedienteVm.estado.collectAsState()
             CarreraFlujo(pesoKg = expediente.expediente.pesoKg, onSalir = { enCarrera = false }, vm = carreraVm)
         }
+        // el reloj: el pulso que su app manda a Health Connect
+        enReloj -> RelojScreen(onVolver = { enReloj = false }, vm = relojVm)
         enCitas -> {
             BackHandler { enCitas = false }
             AgendaScreen(
@@ -344,6 +350,7 @@ fun InicioPacienteScreen(
                     onMetrica = { metrica = it },
                     onVerTodasMetricas = { todasMetricas = true },
                     onCarrera = { enCarrera = true },
+                    onReloj = { enReloj = true },
                     onDieta = {
                         dietaInicio = it
                         dietaAbierta = true
@@ -410,6 +417,8 @@ private fun InicioPaciente(
     onVerTodasMetricas: () -> Unit,
     // abre el modo carrera
     onCarrera: () -> Unit,
+    // abre la pantalla del reloj
+    onReloj: () -> Unit,
     // abre Mis comidas (-1) o la comida que se tocó (su lugar en `platos`)
     onDieta: (Int) -> Unit,
     // misma clave que el flujo del expediente: la tarjeta refleja lo que se guarda ahí
@@ -462,6 +471,15 @@ private fun InicioPaciente(
             item {
                 val fase = RastreoRuta.global.estado.collectAsState().value.fase
                 TarjetaCarrera(enCurso = fase == Fase.CORRIENDO || fase == Fase.PAUSADA, onAbrir = onCarrera)
+            }
+            item {
+                FilaAjuste(
+                    icono = R.drawable.ic_smartwatch,
+                    titulo = stringResource(R.string.reloj_entrada_titulo),
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    etiqueta = stringResource(R.string.reloj_entrada_etiqueta),
+                    onClick = onReloj,
+                )
             }
             item { RutinaDeHoy(rutinaDeHoy) }
             item { DietaNutricion(comidas, onVerTodas = { onDieta(-1) }, onComida = { onDieta(platos.indexOf(it)) }) }
