@@ -132,6 +132,8 @@ fun InicioPacienteScreen(
     var enCarrera by rememberSaveable { mutableStateOf(false) }
     var enReloj by rememberSaveable { mutableStateOf(false) }
     var enEjercicios by rememberSaveable { mutableStateOf(false) }
+    // el ejercicio que se tocó en el inicio: Explorar lo abre directo; null abre la lista
+    var ejercicioInicial by rememberSaveable { mutableStateOf<String?>(null) }
     // la pantalla de métricas abierta desde las tarjetas y el agua de hoy, que sube con el + y se ve también en la tarjeta
     var metrica by rememberSaveable { mutableStateOf<Metrica?>(null) }
     // «Ver todas» de las métricas: la cuadrícula se queda abierta debajo de la pantalla de la métrica que se abre desde ella
@@ -241,7 +243,13 @@ fun InicioPacienteScreen(
         // el reloj: el pulso que su app manda a Health Connect
         enReloj -> RelojScreen(onVolver = { enReloj = false }, vm = relojVm)
         // el banco global de ejercicios de los entrenadores
-        enEjercicios -> ExplorarEjerciciosScreen(onVolver = { enEjercicios = false })
+        enEjercicios -> ExplorarEjerciciosScreen(
+            abrirId = ejercicioInicial,
+            onVolver = {
+                enEjercicios = false
+                ejercicioInicial = null
+            },
+        )
         enCitas -> {
             BackHandler { enCitas = false }
             AgendaScreen(
@@ -389,7 +397,10 @@ fun InicioPacienteScreen(
                     onVerTodasMetricas = { todasMetricas = true },
                     onCarrera = { enCarrera = true },
                     onReloj = { enReloj = true },
-                    onEjercicios = { enEjercicios = true },
+                    onEjercicios = { id ->
+                        ejercicioInicial = id
+                        enEjercicios = true
+                    },
                     racha = rachaDeHoy,
                     onDieta = {
                         dietaInicio = it
@@ -460,8 +471,8 @@ private fun InicioPaciente(
     onCarrera: () -> Unit,
     // abre la pantalla del reloj
     onReloj: () -> Unit,
-    // abre el banco global de ejercicios
-    onEjercicios: () -> Unit,
+    // abre el banco global de ejercicios: la lista (null) o el ejercicio que se tocó
+    onEjercicios: (String?) -> Unit,
     // los días seguidos que lleva cumpliendo algo (se ven en el encabezado)
     racha: Racha,
     // abre Mis comidas (-1) o la comida que se tocó (su lugar en `platos`)

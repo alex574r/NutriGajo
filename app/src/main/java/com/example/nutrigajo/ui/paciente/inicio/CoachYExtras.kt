@@ -1,5 +1,12 @@
 package com.example.nutrigajo.ui.paciente.inicio
 
+import com.example.nutrigajo.ui.shared.ejercicios.TarjetaEjercicio
+import com.example.nutrigajo.ui.shared.ejercicios.EjerciciosViewModel
+import com.example.nutrigajo.ui.components.Esqueleto
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.LaunchedEffect
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -112,18 +119,38 @@ fun TarjetaCoach(
     }
 }
 
-// La entrada al banco global de ejercicios que publican los entrenadores verificados.
+// Los ejercicios más recientes del banco global (los que publican los entrenadores verificados) con la tarjeta de «Exercise Process»:
+// tocar uno abre su detalle y «Ver todas», el banco completo. Mientras cargan se ven esqueletos; sin ejercicios o sin red queda la
+// entrada de siempre, para no perder el acceso.
 @Composable
-fun BancoEjercicios(onAbrir: () -> Unit, modifier: Modifier = Modifier) {
+fun BancoEjercicios(
+    onAbrir: (String?) -> Unit,
+    modifier: Modifier = Modifier,
+    // la misma instancia que usa Explorar: al abrir un ejercicio ya está leído
+    vm: EjerciciosViewModel = viewModel(key = "explorar-ejercicios"),
+) {
+    val estado by vm.estado.collectAsState()
+    LaunchedEffect(Unit) { vm.cargarPublicados() }
+    val recientes = estado.items.take(RECIENTES)
     Column(modifier) {
-        EncabezadoSeccion(stringResource(R.string.inicio_banco))
+        EncabezadoSeccion(stringResource(R.string.inicio_banco), verTodas = recientes.isNotEmpty(), onVerTodas = { onAbrir(null) })
         Spacer(Modifier.height(12.dp))
-        FilaAjuste(
-            icono = R.drawable.ic_corredor,
-            titulo = stringResource(R.string.inicio_banco_explorar),
-            modifier = Modifier.padding(horizontal = 16.dp),
-            etiqueta = stringResource(R.string.inicio_banco_etiqueta),
-            onClick = onAbrir,
-        )
+        when {
+            recientes.isNotEmpty() -> Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                recientes.forEach { TarjetaEjercicio(it, onClick = { onAbrir(it.id) }) }
+            }
+            estado.cargando -> Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                repeat(2) { Esqueleto(Modifier.fillMaxWidth().height(250.dp), RoundedCornerShape(29.dp)) }
+            }
+            else -> FilaAjuste(
+                icono = R.drawable.ic_corredor,
+                titulo = stringResource(R.string.inicio_banco_explorar),
+                modifier = Modifier.padding(horizontal = 16.dp),
+                etiqueta = stringResource(R.string.inicio_banco_etiqueta),
+                onClick = { onAbrir(null) },
+            )
+        }
     }
 }
+
+private const val RECIENTES = 3

@@ -56,6 +56,8 @@ private val MARGEN = 16.dp
 @Composable
 fun ExplorarEjerciciosScreen(
     onVolver: () -> Unit,
+    // el ejercicio que se tocó en el inicio: se abre directo y atrás vuelve al inicio
+    abrirId: String? = null,
     // clave propia: la lista de publicados es de cualquiera, no del usuario
     vm: EjerciciosViewModel = viewModel(key = "explorar-ejercicios"),
 ) {
@@ -66,11 +68,15 @@ fun ExplorarEjerciciosScreen(
     var zona by rememberSaveable { mutableStateOf<ZonaCuerpo?>(null) }
     var tipo by rememberSaveable { mutableStateOf<TipoEjercicio?>(null) }
     var nivel by rememberSaveable { mutableStateOf<NivelEjercicio?>(null) }
-    var abiertoId by rememberSaveable { mutableStateOf<String?>(null) }
+    var abiertoId by rememberSaveable { mutableStateOf(abrirId) }
 
     val abierto = estado.items.firstOrNull { it.id == abiertoId }
     if (abierto != null) {
-        DetalleEjercicio(ejercicio = abierto, onVolver = { abiertoId = null }, aviso = stringResource(R.string.explorar_aviso))
+        DetalleEjercicio(
+            ejercicio = abierto,
+            onVolver = { if (abrirId != null) onVolver() else abiertoId = null },
+            aviso = stringResource(R.string.explorar_aviso),
+        )
         return
     }
     BackHandler(onBack = onVolver)
