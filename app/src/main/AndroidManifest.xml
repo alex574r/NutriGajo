@@ -9,6 +9,7 @@
     <!-- Modo carrera: el GPS sigue registrando la ruta con la pantalla apagada; el servicio avisa con una notificación fija -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+    <uses-permission android:name="android.permission.VIBRATE" />
 
     <!-- Avisos de citas; desde Android 13 se pide al agendar la primera cita -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />

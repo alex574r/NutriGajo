@@ -1,7 +1,13 @@
 package com.example.nutrigajo.ui.paciente.carrera
 
+import android.annotation.SuppressLint
+import android.location.LocationListener
+import android.location.LocationManager
+import android.os.Looper
 import android.os.SystemClock
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -36,6 +42,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -46,6 +53,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import com.example.nutrigajo.R
 import com.example.nutrigajo.data.carrera.Fase
 import com.example.nutrigajo.data.carrera.RastreoEstado
@@ -188,6 +197,114 @@ internal fun CarreraEnCurso(
             onCancelar = { confirmar = false },
         )
     }
+}
+
+// ---- Antes de salir: el mapa con tu ubicación y, cuando ya se ve y hay señal del GPS, la cuenta de 5 a 1
+
+@Composable
+internal fun PrepararCarrera(preparacion: Preparacion, onListo: () -> Unit, onCancelar: () -> Unit) {
+    val colores = MaterialTheme.colorScheme
+    val densidad = LocalDensity.current
+    BackHandler(onBack = onCancelar)
+    MantenerPantallaEncendida()
+    // con la pantalla apagada o la app en segundo plano el servicio del GPS ya no puede arrancar: se cancela
+    LifecycleEventEffect(Lifecycle.Event.ON_STOP, onEvent = onCancelar)
+    val fix = rememberFixGps()
+    var mapaListo by remember { mutableStateOf(false) }
+    var espera by remember { mutableStateOf(false) }
+    var altoPanel by remember { mutableIntStateOf(0) }
+    val listo = mapaListo && fix != null
+    LaunchedEffect(listo) { if (listo) onListo() }
+    LaunchedEffect(Unit) {
+        delay(15_000)
+        espera = true
+    }
+    val puntos = remember(fix) { listOfNotNull(fix?.let { PuntoRuta(it.latitude, it.longitude) }) }
+    val relleno = with(densidad) { altoPanel.toDp() }
+
+    Box(Modifier.fillMaxSize().background(colores.background)) {
+        MapaRuta(puntos, siguiendo = true, relleno = relleno, modifier = Modifier.fillMaxSize(), onCargado = { mapaListo = true })
+        // arriba, para no tapar el punto de tu ubicación, que la cámara deja en el centro del mapa
+        preparacion.cuenta?.let { Cuenta(it, Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 56.dp)) }
+        Column(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .onSizeChanged { altoPanel = it.height }
+                .clip(RoundedCornerShape(topStart = 34.dp, topEnd = 34.dp))
+                .background(colores.background)
+                .navigationBarsPadding()
+                .padding(horizontal = 24.dp, vertical = 24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(
+                text = stringResource(
+                    when {
+                        preparacion.cuenta != null -> R.string.carrera_preparando_listo
+                        !mapaListo -> R.string.carrera_preparando_mapa
+                        else -> R.string.carrera_preparando_gps
+                    },
+                ),
+                style = MaterialTheme.typography.titleLarge,
+                color = colores.onBackground,
+                textAlign = TextAlign.Center,
+            )
+            if (preparacion.cuenta == null && espera) {
+                Text(
+                    text = stringResource(if (mapaListo) R.string.carrera_preparando_gps_ayuda else R.string.carrera_preparando_mapa_ayuda),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = colores.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                )
+            }
+            TextButton(onClick = onCancelar, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(R.string.carrera_cancelar), style = MaterialTheme.typography.titleMedium, color = colores.onSurfaceVariant)
+            }
+        }
+    }
+}
+
+// El número de la cuenta: un círculo naranja que entra un poco grande y se asienta con cada segundo.
+@Composable
+private fun Cuenta(numero: Int, modifier: Modifier = Modifier) {
+    val colores = MaterialTheme.colorScheme
+    val escala = remember(numero) { Animatable(1.35f) }
+    LaunchedEffect(numero) { escala.animateTo(1f, tween(450)) }
+    Box(
+        modifier = modifier
+            .size(168.dp)
+            .graphicsLayer {
+                scaleX = escala.value
+                scaleY = escala.value
+            }
+            .clip(CircleShape)
+            .background(colores.primary),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = numero.toString(),
+            style = MaterialTheme.typography.displayLarge.copy(fontWeight = FontWeight.Bold, fontFeatureSettings = "tnum"),
+            color = colores.onPrimary,
+        )
+    }
+}
+
+// El primer punto del GPS con la precisión que pide la ruta (la de Ruta), pedido solo mientras la preparación está a la vista.
+@SuppressLint("MissingPermission") // quien abre la preparación ya comprobó el permiso (ver `PestanaActividad`)
+@Composable
+private fun rememberFixGps(): LatLng? {
+    val contexto = LocalContext.current
+    var fix by remember { mutableStateOf<LatLng?>(null) }
+    DisposableEffect(contexto) {
+        val gestor = contexto.getSystemService(LocationManager::class.java)
+        val escucha = LocationListener { ubicacion ->
+            if (!ubicacion.hasAccuracy() || ubicacion.accuracy <= Ruta.PRECISION_MAX_M) fix = LatLng(ubicacion.latitude, ubicacion.longitude)
+        }
+        runCatching { gestor.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000L, 0f, escucha, Looper.getMainLooper()) }
+        onDispose { gestor.removeUpdates(escucha) }
+    }
+    return fix
 }
 
 // ---- Resumen al terminar y detalle de una actividad guardada: el mismo diseño, con otras acciones debajo
@@ -339,7 +456,7 @@ private fun MantenerPantallaEncendida() {
 // El mapa con la ruta en naranja. Con `siguiendo` (carrera en curso) la cámara va tras el último punto y se puede mover el mapa;
 // sin él (resumen y detalle) es una vista fija que encuadra toda la ruta. `relleno` deja libre abajo lo que tapa el panel.
 @Composable
-private fun MapaRuta(ruta: List<PuntoRuta>, siguiendo: Boolean, modifier: Modifier = Modifier, relleno: Dp = 0.dp) {
+private fun MapaRuta(ruta: List<PuntoRuta>, siguiendo: Boolean, modifier: Modifier = Modifier, relleno: Dp = 0.dp, onCargado: () -> Unit = {}) {
     val colores = MaterialTheme.colorScheme
     val contexto = LocalContext.current
     val densidad = LocalDensity.current
@@ -368,6 +485,7 @@ private fun MapaRuta(ruta: List<PuntoRuta>, siguiendo: Boolean, modifier: Modifi
             zoomGesturesEnabled = siguiendo,
         ),
         onMapLoaded = {
+            onCargado()
             if (!siguiendo && puntos.size > 1) {
                 val limites = LatLngBounds.Builder().apply { puntos.forEach { include(it) } }.build()
                 camara.move(CameraUpdateFactory.newLatLngBounds(limites, with(densidad) { 40.dp.roundToPx() }))

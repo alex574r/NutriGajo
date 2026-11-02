@@ -1,6 +1,8 @@
 package com.example.nutrigajo.ui.paciente.carrera
 
 import android.app.Application
+import android.os.VibrationEffect
+import android.os.Vibrator
 import androidx.annotation.StringRes
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -15,6 +17,8 @@ import com.example.nutrigajo.domain.model.Ruta
 import com.example.nutrigajo.domain.model.TipoActividad
 import com.example.nutrigajo.ui.shared.mensajeDeFirestore
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -30,6 +34,11 @@ data class CarreraDatos(
     @param:StringRes val error: Int? = null,
     val guardando: Boolean = false,
 )
+
+// Lo que pasa entre tocar «comenzar» y salir: se ve el mapa y, cuando está listo, corre la cuenta de 5 a 1 (`cuenta` es null antes).
+data class Preparacion(val tipo: TipoActividad, val cuenta: Int? = null)
+
+private const val SEGUNDOS_CUENTA = 5
 
 // AndroidViewModel porque arrancar y detener el servicio del GPS pide un Context.
 // ponytail: repositorio por defecto en el constructor, como el resto de los ViewModels.
@@ -58,11 +67,48 @@ class CarreraViewModel @JvmOverloads constructor(
 
     fun limpiarError() = _datos.update { it.copy(error = null) }
 
-    // Quien llama ya comprobó el permiso de ubicación precisa (el servicio en primer plano lo exige).
-    fun comenzar(tipo: TipoActividad) {
+    private val _preparacion = MutableStateFlow<Preparacion?>(null)
+    val preparacion: StateFlow<Preparacion?> = _preparacion.asStateFlow()
+    private var cuenta: Job? = null
+
+    // «Comenzar»: abre la preparación (el mapa). Quien llama ya comprobó el permiso de ubicación precisa (el servicio en primer plano lo exige).
+    fun preparar(tipo: TipoActividad) {
         limpiarError()
+        _preparacion.value = Preparacion(tipo)
+    }
+
+    // El mapa y el GPS ya están listos: 5, 4, 3, 2, 1 con una vibración por segundo y, al final, sale la carrera.
+    // Llamarla otra vez con la cuenta en marcha no la reinicia.
+    fun contar() {
+        val tipo = _preparacion.value?.tipo ?: return
+        if (cuenta?.isActive == true) return
+        cuenta = viewModelScope.launch {
+            for (n in SEGUNDOS_CUENTA downTo 1) {
+                _preparacion.update { it?.copy(cuenta = n) }
+                vibrar(120)
+                delay(1000)
+            }
+            vibrar(500)
+            _preparacion.value = null
+            comenzar(tipo)
+        }
+    }
+
+    fun cancelar() {
+        cuenta?.cancel()
+        _preparacion.value = null
+    }
+
+    private fun comenzar(tipo: TipoActividad) {
         rastreo.iniciar(tipo, System.currentTimeMillis())
         arrancarServicio()
+    }
+
+    private fun vibrar(milisegundos: Long) {
+        runCatching {
+            getApplication<Application>().getSystemService(Vibrator::class.java)
+                ?.vibrate(VibrationEffect.createOneShot(milisegundos, VibrationEffect.DEFAULT_AMPLITUDE))
+        }
     }
 
     fun pausar() {

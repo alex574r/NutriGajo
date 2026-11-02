@@ -69,19 +69,22 @@ private const val PESO_POR_DEFECTO_KG = 70.0
 fun CarreraFlujo(pesoKg: Double?, onSalir: () -> Unit, vm: CarreraViewModel) {
     val rastreo by RastreoRuta.global.estado.collectAsState()
     val datos by vm.datos.collectAsState()
+    val preparacion by vm.preparacion.collectAsState()
     var abierta by rememberSaveable { mutableStateOf<String?>(null) }
     val peso = pesoKg ?: PESO_POR_DEFECTO_KG
     LaunchedEffect(Unit) { vm.cargar() }
     val detalle = datos.carreras.firstOrNull { it.id == abierta }
+    val preparando = preparacion
     when {
         rastreo.fase == Fase.CORRIENDO || rastreo.fase == Fase.PAUSADA ->
             CarreraEnCurso(rastreo, peso, vm::pausar, vm::reanudar, vm::terminar, vm::descartar)
         rastreo.fase == Fase.RESUMEN ->
             ResumenCarrera(rastreo, peso, datos.guardando, datos.error, onGuardar = { vm.guardar(peso) }, onDescartar = vm::descartar)
+        preparando != null -> PrepararCarrera(preparando, onListo = vm::contar, onCancelar = vm::cancelar)
         detalle != null -> DetalleCarrera(detalle, onVolver = { abierta = null }, onEliminar = { vm.eliminar(detalle.id) { abierta = null } })
         else -> CarreraInicio(
             datos = datos,
-            onComenzar = vm::comenzar,
+            onComenzar = vm::preparar,
             onAbrir = { abierta = it },
             onElegirPlan = vm::elegirPlan,
             onQuitarPlan = vm::quitarPlan,
