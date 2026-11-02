@@ -920,6 +920,13 @@
     <string name="carrera_ritmo">Ritmo</string>
     <string name="carrera_calorias">Calorías</string>
     <string name="carrera_actividades">Actividades</string>
+    <string name="carrera_centrar">Centrar la ruta</string>
+    <string name="carrera_compartir">Compartir</string>
+    <string name="carrera_compartir_enviar">compartir</string>
+    <string name="carrera_compartir_ayuda">Toca la imagen para cambiar el diseño</string>
+    <string name="carrera_compartir_galeria">Elegir una foto de la galería</string>
+    <string name="carrera_compartir_cerrar">Cerrar</string>
+    <string name="carrera_compartir_error">No se pudo preparar la imagen. Inténtalo de nuevo.</string>
     <string name="carrera_unidad_km">km</string>
     <string name="carrera_unidad_ritmo">/km</string>
     <string name="carrera_unidad_kcal">kcal</string>

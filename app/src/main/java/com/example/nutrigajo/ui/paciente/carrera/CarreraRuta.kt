@@ -6,6 +6,8 @@ import android.location.LocationManager
 import android.os.Looper
 import android.os.SystemClock
 import androidx.activity.compose.BackHandler
+import androidx.annotation.DrawableRes
+import androidx.annotation.StringRes
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -18,12 +20,15 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -44,6 +49,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
@@ -68,8 +74,8 @@ import com.example.nutrigajo.ui.components.CENTRO_POR_DEFECTO
 import com.example.nutrigajo.ui.components.alPulsar
 import com.example.nutrigajo.ui.components.ultimaUbicacion
 import com.example.nutrigajo.ui.nutriologo.inicio.fechaMedia
-import com.example.nutrigajo.ui.paciente.inicio.PantallaMetrica
 import com.google.android.gms.maps.CameraUpdateFactory
+import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
@@ -78,6 +84,8 @@ import com.google.maps.android.compose.Circle
 import com.google.maps.android.compose.GoogleMap
 import com.google.maps.android.compose.MapProperties
 import com.google.maps.android.compose.MapUiSettings
+import com.google.maps.android.compose.Marker
+import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.Polyline
 import com.google.maps.android.compose.rememberCameraPositionState
 import kotlinx.coroutines.delay
@@ -136,45 +144,21 @@ internal fun CarreraEnCurso(
                 textAlign = TextAlign.Center,
             )
         }
-        Column(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-                .onSizeChanged { altoPanel = it.height }
-                .clip(RoundedCornerShape(topStart = 34.dp, topEnd = 34.dp))
-                .background(colores.background)
-                .navigationBarsPadding()
-                .padding(horizontal = 24.dp, vertical = 24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(20.dp),
+        TarjetaRuta(
+            titulo = stringResource(if (estado.tipo == TipoActividad.CORRER) R.string.carrera_correr else R.string.carrera_caminar),
+            fecha = null,
+            distanciaM = estado.distanciaM,
+            segundos = segundos,
+            ritmoSegKm = Ruta.ritmoSegPorKm(estado.distanciaM, segundos.toInt()),
+            kcal = Ruta.kcal(estado.tipo, pesoKg, segundos.toInt(), estado.distanciaM),
+            modifier = Modifier.align(Alignment.BottomCenter).onSizeChanged { altoPanel = it.height },
         ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    text = duracion(segundos),
-                    style = MaterialTheme.typography.displayMedium.copy(fontWeight = FontWeight.Bold, fontFeatureSettings = "tnum"),
-                    color = colores.onBackground,
-                )
-                Text(stringResource(R.string.carrera_tiempo), style = MaterialTheme.typography.bodySmall, color = colores.onSurfaceVariant)
-            }
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                Cifra(kilometros(estado.distanciaM), stringResource(R.string.carrera_unidad_km), stringResource(R.string.carrera_distancia))
-                Cifra(
-                    ritmo(Ruta.ritmoSegPorKm(estado.distanciaM, segundos.toInt())),
-                    stringResource(R.string.carrera_unidad_ritmo),
-                    stringResource(R.string.carrera_ritmo),
-                )
-                Cifra(
-                    Ruta.kcal(estado.tipo, pesoKg, segundos.toInt(), estado.distanciaM).toString(),
-                    stringResource(R.string.carrera_unidad_kcal),
-                    stringResource(R.string.carrera_calorias),
-                )
-            }
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
                 Box(
                     modifier = Modifier
                         .size(72.dp)
                         .clip(CircleShape)
-                        .background(colores.onBackground)
+                        .background(colores.background)
                         .alPulsar(if (pausada) onReanudar else onPausar),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -182,7 +166,7 @@ internal fun CarreraEnCurso(
                         painter = painterResource(if (pausada) R.drawable.ic_reanudar else R.drawable.ic_pausa),
                         contentDescription = stringResource(if (pausada) R.string.carrera_reanudar else R.string.carrera_pausar),
                         modifier = Modifier.size(32.dp),
-                        tint = colores.background,
+                        tint = colores.onBackground,
                     )
                 }
                 BotonPrimario(stringResource(R.string.carrera_terminar), onTerminar, Modifier.weight(1f))
@@ -336,14 +320,17 @@ internal fun ResumenCarrera(estado: RastreoEstado, pesoKg: Double, guardando: Bo
         )
     }
     var confirmar by rememberSaveable { mutableStateOf(false) }
+    // la tarjeta es oscura (ver TarjetaRuta): el texto va con el color del fondo
+    val tenue = MaterialTheme.colorScheme.background.copy(alpha = 0.7f)
     PantallaRuta(
         titulo = stringResource(if (estado.tipo == TipoActividad.CORRER) R.string.carrera_completada_correr else R.string.carrera_completada_caminar),
+        fecha = fechaMedia(estado.inicio),
         onVolver = { confirmar = true },
         carrera = carrera,
     ) {
         error?.let { AlertaError(stringResource(it)) }
         if (segundos < 10) {
-            Text(stringResource(R.string.carrera_muy_corta), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(stringResource(R.string.carrera_muy_corta), style = MaterialTheme.typography.bodySmall, color = tenue)
         }
         BotonPrimario(
             texto = stringResource(R.string.carrera_guardar),
@@ -353,7 +340,7 @@ internal fun ResumenCarrera(estado: RastreoEstado, pesoKg: Double, guardando: Bo
             cargando = guardando,
         )
         TextButton(onClick = { confirmar = true }, modifier = Modifier.fillMaxWidth(), enabled = !guardando) {
-            Text(stringResource(R.string.carrera_descartar), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(stringResource(R.string.carrera_descartar), style = MaterialTheme.typography.titleMedium, color = tenue)
         }
     }
     if (confirmar) {
@@ -371,7 +358,7 @@ internal fun ResumenCarrera(estado: RastreoEstado, pesoKg: Double, guardando: Bo
 internal fun DetalleCarrera(carrera: Carrera, onVolver: () -> Unit, onEliminar: () -> Unit) {
     var confirmar by rememberSaveable { mutableStateOf(false) }
     val tipo = stringResource(if (carrera.tipo == TipoActividad.CORRER) R.string.carrera_correr else R.string.carrera_caminar)
-    PantallaRuta(titulo = "$tipo · ${fechaMedia(carrera.inicio)}", onVolver = onVolver, carrera = carrera) {
+    PantallaRuta(titulo = tipo, fecha = fechaMedia(carrera.inicio), onVolver = onVolver, carrera = carrera) {
         TextButton(onClick = { confirmar = true }, modifier = Modifier.fillMaxWidth()) {
             Text(stringResource(R.string.carrera_eliminar), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.error)
         }
@@ -387,44 +374,128 @@ internal fun DetalleCarrera(carrera: Carrera, onVolver: () -> Unit, onEliminar: 
     }
 }
 
+// El mapa a pantalla completa con la ruta entera, los botones de volver y centrar flotando encima y, abajo, la tarjeta con las cifras.
 @Composable
-private fun PantallaRuta(titulo: String, onVolver: () -> Unit, carrera: Carrera, acciones: @Composable ColumnScope.() -> Unit) {
+private fun PantallaRuta(titulo: String, fecha: String, onVolver: () -> Unit, carrera: Carrera, acciones: @Composable ColumnScope.() -> Unit) {
     val colores = MaterialTheme.colorScheme
-    PantallaMetrica(titulo, onVolver) {
-        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            val forma = RoundedCornerShape(34.dp)
-            if (carrera.ruta.isEmpty()) {
-                Box(Modifier.fillMaxWidth().height(280.dp).clip(forma).background(colores.surfaceVariant), contentAlignment = Alignment.Center) {
-                    Text(
-                        text = stringResource(R.string.carrera_sin_ruta),
-                        modifier = Modifier.padding(24.dp),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = colores.onSurfaceVariant,
-                        textAlign = TextAlign.Center,
-                    )
-                }
-            } else {
-                MapaRuta(carrera.ruta, siguiendo = false, modifier = Modifier.fillMaxWidth().height(300.dp).clip(forma))
-            }
-            Column(
-                modifier = Modifier.fillMaxWidth().clip(forma).background(colores.surfaceVariant).padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(20.dp),
-            ) {
-                Row(Modifier.fillMaxWidth()) {
-                    Cifra(kilometros(carrera.distanciaM.toDouble()), stringResource(R.string.carrera_unidad_km), stringResource(R.string.carrera_distancia), Modifier.weight(1f))
-                    Cifra(duracion(carrera.duracionSeg.toLong()), "", stringResource(R.string.carrera_tiempo), Modifier.weight(1f))
-                }
-                Row(Modifier.fillMaxWidth()) {
-                    Cifra(ritmo(carrera.ritmoSegKm), stringResource(R.string.carrera_unidad_ritmo), stringResource(R.string.carrera_ritmo), Modifier.weight(1f))
-                    Cifra(carrera.kcal.toString(), stringResource(R.string.carrera_unidad_kcal), stringResource(R.string.carrera_calorias), Modifier.weight(1f))
-                }
-            }
-            acciones()
+    BackHandler(onBack = onVolver)
+    var altoPanel by remember { mutableIntStateOf(0) }
+    var encuadre by remember { mutableIntStateOf(0) }
+    var compartiendo by rememberSaveable { mutableStateOf(false) }
+    val relleno = with(LocalDensity.current) { altoPanel.toDp() }
+    val hayRuta = carrera.ruta.isNotEmpty()
+
+    Box(Modifier.fillMaxSize().background(colores.surfaceVariant)) {
+        if (hayRuta) {
+            MapaRuta(carrera.ruta, siguiendo = false, relleno = relleno, encuadre = encuadre, modifier = Modifier.fillMaxSize())
+        } else {
+            Text(
+                text = stringResource(R.string.carrera_sin_ruta),
+                modifier = Modifier.align(Alignment.Center).padding(start = 24.dp, end = 24.dp, bottom = relleno),
+                style = MaterialTheme.typography.bodyMedium,
+                color = colores.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+            )
         }
+        BotonMapa(R.drawable.ic_chevron_izquierda, R.string.mapa_volver, onVolver, Modifier.align(Alignment.TopStart).statusBarsPadding().padding(16.dp))
+        Column(Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            BotonMapa(R.drawable.ic_compartir, R.string.carrera_compartir, { compartiendo = true })
+            if (hayRuta) BotonMapa(R.drawable.ic_centrar, R.string.carrera_centrar, { encuadre++ })
+        }
+        TarjetaRuta(
+            titulo = titulo,
+            fecha = fecha,
+            distanciaM = carrera.distanciaM.toDouble(),
+            segundos = carrera.duracionSeg.toLong(),
+            ritmoSegKm = carrera.ritmoSegKm,
+            kcal = carrera.kcal,
+            modifier = Modifier.align(Alignment.BottomCenter).onSizeChanged { altoPanel = it.height },
+            acciones = acciones,
+        )
+        if (compartiendo) EditorCompartir(carrera, onCerrar = { compartiendo = false })
     }
 }
 
 // ---- Piezas
+
+// La tarjeta oscura de abajo: qué fue (y cuándo), la distancia grande y, separados por una línea, el tiempo, las calorías y el ritmo;
+// después las acciones de cada pantalla. En un teléfono acostado no cabe entera: se desplaza dentro de un tope de alto.
+@Composable
+private fun TarjetaRuta(
+    titulo: String,
+    fecha: String?,
+    distanciaM: Double,
+    segundos: Long,
+    ritmoSegKm: Int?,
+    kcal: Int,
+    modifier: Modifier = Modifier,
+    acciones: @Composable ColumnScope.() -> Unit,
+) {
+    val colores = MaterialTheme.colorScheme
+    val tenue = colores.background.copy(alpha = 0.7f)
+    val tope = (LocalConfiguration.current.screenHeightDp * 0.7f).dp
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(topStart = 34.dp, topEnd = 34.dp))
+            .background(colores.onBackground)
+            .navigationBarsPadding()
+            .heightIn(max = tope)
+            .verticalScroll(rememberScrollState())
+            .padding(24.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        Text(titulo, style = MaterialTheme.typography.labelLarge, color = tenue)
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Bottom) {
+            Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(
+                    text = kilometros(distanciaM),
+                    style = MaterialTheme.typography.displayMedium.copy(fontWeight = FontWeight.Bold, fontFeatureSettings = "tnum"),
+                    color = colores.background,
+                )
+                Text(stringResource(R.string.carrera_unidad_km), Modifier.padding(bottom = 10.dp), style = MaterialTheme.typography.titleMedium, color = tenue)
+            }
+            fecha?.let { Text(it, Modifier.padding(bottom = 10.dp), style = MaterialTheme.typography.bodySmall, color = tenue) }
+        }
+        Box(Modifier.fillMaxWidth().height(1.dp).background(colores.background.copy(alpha = 0.16f)))
+        Row(Modifier.fillMaxWidth()) {
+            DatoRuta(duracion(segundos), "", R.string.carrera_tiempo, Modifier.weight(1f))
+            DatoRuta(kcal.toString(), stringResource(R.string.carrera_unidad_kcal), R.string.carrera_calorias, Modifier.weight(1f))
+            DatoRuta(ritmo(ritmoSegKm), stringResource(R.string.carrera_unidad_ritmo), R.string.carrera_ritmo, Modifier.weight(1f))
+        }
+        acciones()
+    }
+}
+
+// Un dato de la tarjeta oscura: el valor con su unidad pequeña y, debajo, qué mide.
+@Composable
+private fun DatoRuta(valor: String, unidad: String, @StringRes etiqueta: Int, modifier: Modifier = Modifier) {
+    val colores = MaterialTheme.colorScheme
+    val tenue = colores.background.copy(alpha = 0.7f)
+    Column(modifier) {
+        Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+            Text(
+                text = valor,
+                style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold, fontFeatureSettings = "tnum"),
+                color = colores.background,
+            )
+            if (unidad.isNotEmpty()) Text(unidad, Modifier.padding(bottom = 2.dp), style = MaterialTheme.typography.bodySmall, color = tenue)
+        }
+        Text(stringResource(etiqueta), style = MaterialTheme.typography.bodySmall, color = tenue)
+    }
+}
+
+// Los botones redondos y oscuros que flotan sobre el mapa.
+@Composable
+private fun BotonMapa(@DrawableRes icono: Int, @StringRes descripcion: Int, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val colores = MaterialTheme.colorScheme
+    Box(
+        modifier = modifier.size(44.dp).clip(CircleShape).background(colores.onBackground.copy(alpha = 0.85f)).alPulsar(onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(painterResource(icono), contentDescription = stringResource(descripcion), modifier = Modifier.size(24.dp), tint = colores.background)
+    }
+}
 
 // Un número grande con su unidad y, debajo, qué mide.
 @Composable
@@ -466,10 +537,18 @@ private fun MantenerPantallaEncendida() {
     }
 }
 
-// El mapa con la ruta en naranja. Con `siguiendo` (carrera en curso) la cámara va tras el último punto y se puede mover el mapa;
-// sin él (resumen y detalle) es una vista fija que encuadra toda la ruta. `relleno` deja libre abajo lo que tapa el panel.
+// El mapa con la ruta en naranja. Con `siguiendo` (carrera en curso) la cámara va tras el último punto y la salida es un círculo;
+// sin él (resumen y detalle) encuadra toda la ruta (otra vez cada vez que cambia `encuadre`, el botón de centrar, o lo que tapa el
+// panel) y marca la salida en verde y la llegada en naranja. `relleno` deja libre abajo lo que tapa el panel.
 @Composable
-private fun MapaRuta(ruta: List<PuntoRuta>, siguiendo: Boolean, modifier: Modifier = Modifier, relleno: Dp = 0.dp, onCargado: () -> Unit = {}) {
+private fun MapaRuta(
+    ruta: List<PuntoRuta>,
+    siguiendo: Boolean,
+    modifier: Modifier = Modifier,
+    relleno: Dp = 0.dp,
+    encuadre: Int = 0,
+    onCargado: () -> Unit = {},
+) {
     val colores = MaterialTheme.colorScheme
     val contexto = LocalContext.current
     val densidad = LocalDensity.current
@@ -477,9 +556,18 @@ private fun MapaRuta(ruta: List<PuntoRuta>, siguiendo: Boolean, modifier: Modifi
     val camara = rememberCameraPositionState {
         position = CameraPosition.fromLatLngZoom(puntos.lastOrNull() ?: ultimaUbicacion(contexto) ?: CENTRO_POR_DEFECTO, ZOOM_RUTA)
     }
+    var cargado by remember { mutableStateOf(false) }
     if (siguiendo) {
         LaunchedEffect(puntos.lastOrNull()) {
             puntos.lastOrNull()?.let { camara.animate(CameraUpdateFactory.newLatLng(it), 700) }
+        }
+    } else if (puntos.size > 1) {
+        LaunchedEffect(cargado, relleno, encuadre) {
+            if (!cargado) return@LaunchedEffect
+            val limites = LatLngBounds.Builder().apply { puntos.forEach { include(it) } }.build()
+            camara.move(CameraUpdateFactory.newLatLngBounds(limites, with(densidad) { 56.dp.roundToPx() }))
+            // una ruta muy corta no debe acercarse hasta la calle
+            if (camara.position.zoom > ZOOM_MAXIMO_RESUMEN) camara.move(CameraUpdateFactory.zoomTo(ZOOM_MAXIMO_RESUMEN))
         }
     }
     GoogleMap(
@@ -494,28 +582,24 @@ private fun MapaRuta(ruta: List<PuntoRuta>, siguiendo: Boolean, modifier: Modifi
             compassEnabled = false,
             rotationGesturesEnabled = false,
             tiltGesturesEnabled = false,
-            scrollGesturesEnabled = siguiendo,
-            zoomGesturesEnabled = siguiendo,
         ),
         onMapLoaded = {
+            cargado = true
             onCargado()
-            if (!siguiendo && puntos.size > 1) {
-                val limites = LatLngBounds.Builder().apply { puntos.forEach { include(it) } }.build()
-                camara.move(CameraUpdateFactory.newLatLngBounds(limites, with(densidad) { 40.dp.roundToPx() }))
-                // una ruta muy corta no debe acercarse hasta la calle
-                if (camara.position.zoom > ZOOM_MAXIMO_RESUMEN) camara.move(CameraUpdateFactory.zoomTo(ZOOM_MAXIMO_RESUMEN))
-            }
         },
     ) {
         if (puntos.size > 1) {
             Polyline(points = puntos, color = colores.primary, width = 18f, startCap = RoundCap(), endCap = RoundCap())
         }
-        // salida: círculo vacío; llegada (solo en el resumen): círculo lleno
-        puntos.firstOrNull()?.let {
-            Circle(center = it, radius = 6.0, fillColor = colores.background, strokeColor = colores.primary, strokeWidth = 8f, zIndex = 1f)
-        }
-        if (!siguiendo && puntos.size > 1) {
-            Circle(center = puntos.last(), radius = 6.0, fillColor = colores.primary, strokeColor = colores.background, strokeWidth = 8f, zIndex = 1f)
+        val salida = puntos.firstOrNull()
+        if (siguiendo) {
+            salida?.let { Circle(center = it, radius = 6.0, fillColor = colores.background, strokeColor = colores.primary, strokeWidth = 8f, zIndex = 1f) }
+        } else if (salida != null) {
+            Marker(state = remember(salida) { MarkerState(salida) }, icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN))
+            if (puntos.size > 1) {
+                val llegada = puntos.last()
+                Marker(state = remember(llegada) { MarkerState(llegada) }, icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_ORANGE))
+            }
         }
     }
 }
