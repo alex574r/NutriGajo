@@ -46,7 +46,7 @@ fun TarjetaCarrera(enCurso: Boolean, onAbrir: () -> Unit, modifier: Modifier = M
                 .clip(RoundedCornerShape(31.dp)),
         ) {
             Image(
-                painter = painterResource(R.drawable.ej_correr),
+                painter = painterResource(R.drawable.carrera_tarjeta),
                 contentDescription = null,
                 modifier = Modifier.matchParentSize(),
                 contentScale = ContentScale.Crop,
