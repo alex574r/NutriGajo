@@ -16,8 +16,11 @@ import com.example.nutrigajo.domain.model.PlanCaminata
 import com.example.nutrigajo.domain.model.Ruta
 import com.example.nutrigajo.domain.model.TipoActividad
 import com.example.nutrigajo.ui.shared.mensajeDeFirestore
+import com.google.firebase.firestore.FirebaseFirestoreException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -53,17 +56,35 @@ class CarreraViewModel @JvmOverloads constructor(
     fun cargar() {
         _datos.update { it.copy(cargando = true, error = null) }
         viewModelScope.launch {
-            try {
-                val carreras = repo.listar()
-                val plan = repo.plan()
-                _datos.update { it.copy(cargando = false, carreras = carreras, plan = plan) }
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                _datos.update { it.copy(cargando = false, error = mensajeDeFirestore(e)) }
+            // cada lectura por su lado: sin conexión una puede fallar (un documento que nunca se bajó) y no debe esconder la otra
+            val (carreras, plan) = coroutineScope {
+                val historial = async { leer { repo.listar() } }
+                val elegido = async { leer { repo.plan() } }
+                historial.await() to elegido.await()
+            }
+            // sin conexión no es un error: se queda lo que ya se tenía (la caché del teléfono) y se puede salir a correr igual
+            val fallo = listOf(carreras, plan).firstNotNullOfOrNull { it.exceptionOrNull() as? Exception }?.takeUnless(::sinConexion)
+            _datos.update {
+                it.copy(
+                    cargando = false,
+                    carreras = carreras.getOrDefault(it.carreras),
+                    plan = if (plan.isSuccess) plan.getOrNull() else it.plan,
+                    error = fallo?.let(::mensajeDeFirestore),
+                )
             }
         }
     }
+
+    private suspend fun <T> leer(lectura: suspend () -> T): Result<T> =
+        try {
+            Result.success(lectura())
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+
+    private fun sinConexion(e: Exception) = e is FirebaseFirestoreException && e.code == FirebaseFirestoreException.Code.UNAVAILABLE
 
     fun limpiarError() = _datos.update { it.copy(error = null) }
 

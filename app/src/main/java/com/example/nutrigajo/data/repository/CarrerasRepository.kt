@@ -6,11 +6,13 @@ import com.example.nutrigajo.domain.model.PlanCaminata
 import com.example.nutrigajo.domain.model.PuntoRuta
 import com.example.nutrigajo.domain.model.Ruta
 import com.example.nutrigajo.domain.model.TipoActividad
+import com.google.android.gms.tasks.Task
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.math.roundToLong
 
 // El plan de caminata que sigue el paciente y el día (milisegundos desde 1970) en que lo eligió.
@@ -41,11 +43,11 @@ class CarrerasRepository(
                 "kcal" to carrera.kcal,
                 "ruta" to ruta,
             ),
-        ).await()
+        ).esperarUnPoco()
     }
 
     suspend fun eliminar(id: String) {
-        usuario().collection(FirestorePaths.CARRERAS).document(id).delete().await()
+        usuario().collection(FirestorePaths.CARRERAS).document(id).delete().esperarUnPoco()
     }
 
     suspend fun plan(): PlanElegido? {
@@ -55,11 +57,19 @@ class CarrerasRepository(
     }
 
     suspend fun elegirPlan(plan: PlanCaminata, inicio: Long) {
-        usuario().collection(FirestorePaths.MODO_CARRERA).document(DOC_PLAN).set(mapOf("plan" to plan.name, "inicio" to inicio)).await()
+        usuario().collection(FirestorePaths.MODO_CARRERA).document(DOC_PLAN).set(mapOf("plan" to plan.name, "inicio" to inicio)).esperarUnPoco()
     }
 
     suspend fun quitarPlan() {
-        usuario().collection(FirestorePaths.MODO_CARRERA).document(DOC_PLAN).delete().await()
+        usuario().collection(FirestorePaths.MODO_CARRERA).document(DOC_PLAN).delete().esperarUnPoco()
+    }
+
+    // Firestore solo confirma una escritura cuando el servidor la recibe. Sin conexión el cambio ya está en la caché del teléfono y
+    // sale al volver la red, así que no se espera más que unos segundos: con red, la confirmación (o el rechazo de las reglas) llega
+    // mucho antes. Se corre al aire libre, donde muchas veces no hay datos.
+    // ponytail: si el servidor rechaza la escritura después de esa espera (reglas), el cambio se revierte en la caché sin avisar.
+    private suspend fun Task<*>.esperarUnPoco() {
+        withTimeoutOrNull(ESPERA_ESCRITURA_MS) { await() }
     }
 
     // seis decimales son ~10 cm: de sobra para una ruta y la mitad de bytes
@@ -67,6 +77,7 @@ class CarrerasRepository(
 
     private companion object {
         const val DOC_PLAN = "plan"
+        const val ESPERA_ESCRITURA_MS = 4_000L
     }
 }
 

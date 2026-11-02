@@ -929,7 +929,7 @@
     <string name="carrera_fila_etiqueta">%1$s · %2$s</string>
     <string name="carrera_buscando_gps">Buscando señal del GPS… sal a un lugar abierto.</string>
     <string name="carrera_preparando_mapa">Cargando el mapa…</string>
-    <string name="carrera_preparando_mapa_ayuda">Revisa tu conexión a internet.</string>
+    <string name="carrera_preparando_mapa_ayuda">El mapa no carga (¿sin conexión?). Tu ruta se registra igual.</string>
     <string name="carrera_preparando_gps">Buscando tu ubicación…</string>
     <string name="carrera_preparando_gps_ayuda">Sal a un lugar abierto para mejorar la señal del GPS.</string>
     <string name="carrera_preparando_listo">¡Prepárate!</string>

@@ -85,6 +85,7 @@ import kotlin.math.roundToInt
 
 private const val ZOOM_RUTA = 17f
 private const val ZOOM_MAXIMO_RESUMEN = 18f
+private const val ESPERA_MAPA_MS = 8_000L
 
 // ---- Carrera en curso: el mapa con la ruta dibujándose y, abajo, el tiempo, la distancia, el ritmo y las calorías
 
@@ -211,12 +212,18 @@ internal fun PrepararCarrera(preparacion: Preparacion, onListo: () -> Unit, onCa
     LifecycleEventEffect(Lifecycle.Event.ON_STOP, onEvent = onCancelar)
     val fix = rememberFixGps()
     var mapaListo by remember { mutableStateOf(false) }
+    var sinMapa by remember { mutableStateOf(false) }
     var espera by remember { mutableStateOf(false) }
     var altoPanel by remember { mutableIntStateOf(0) }
-    val listo = mapaListo && fix != null
+    // El mapa se espera unos segundos: sin conexión (o sin teselas guardadas) nunca termina de cargar y no por eso se deja sin
+    // salir a correr; la ruta se registra igual y se dibuja sobre el fondo vacío.
+    val mapaOk = mapaListo || sinMapa
+    val listo = mapaOk && fix != null
     LaunchedEffect(listo) { if (listo) onListo() }
     LaunchedEffect(Unit) {
-        delay(15_000)
+        delay(ESPERA_MAPA_MS)
+        sinMapa = true
+        delay(15_000 - ESPERA_MAPA_MS)
         espera = true
     }
     val puntos = remember(fix) { listOfNotNull(fix?.let { PuntoRuta(it.latitude, it.longitude) }) }
@@ -242,7 +249,7 @@ internal fun PrepararCarrera(preparacion: Preparacion, onListo: () -> Unit, onCa
                 text = stringResource(
                     when {
                         preparacion.cuenta != null -> R.string.carrera_preparando_listo
-                        !mapaListo -> R.string.carrera_preparando_mapa
+                        !mapaOk -> R.string.carrera_preparando_mapa
                         else -> R.string.carrera_preparando_gps
                     },
                 ),
@@ -250,9 +257,15 @@ internal fun PrepararCarrera(preparacion: Preparacion, onListo: () -> Unit, onCa
                 color = colores.onBackground,
                 textAlign = TextAlign.Center,
             )
-            if (preparacion.cuenta == null && espera) {
+            val ayuda = when {
+                preparacion.cuenta != null -> null
+                espera && fix == null -> R.string.carrera_preparando_gps_ayuda
+                sinMapa && !mapaListo -> R.string.carrera_preparando_mapa_ayuda
+                else -> null
+            }
+            ayuda?.let {
                 Text(
-                    text = stringResource(if (mapaListo) R.string.carrera_preparando_gps_ayuda else R.string.carrera_preparando_mapa_ayuda),
+                    text = stringResource(it),
                     style = MaterialTheme.typography.bodySmall,
                     color = colores.onSurfaceVariant,
                     textAlign = TextAlign.Center,
