@@ -9,6 +9,7 @@ import com.example.nutrigajo.domain.model.BarraPulso
 import com.example.nutrigajo.domain.model.PeriodoPulso
 import com.example.nutrigajo.domain.model.ResumenReloj
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -38,8 +39,12 @@ class RelojViewModel @JvmOverloads constructor(
 
     // Se llama al abrir y cada vez que se vuelve a la pantalla (de instalar Health Connect o de darle el permiso): lo que ya se veía
     // se queda mientras se vuelve a leer.
+    private var carga: Job? = null
+
     fun cargar() {
-        viewModelScope.launch {
+        // el inicio y la pantalla del reloj la piden a la vez al volver: la segunda reemplaza a la primera
+        carga?.cancel()
+        carga = viewModelScope.launch {
             val fase = try {
                 when (repo.disponibilidad()) {
                     Disponibilidad.NO_DISPONIBLE -> FaseReloj.NO_DISPONIBLE

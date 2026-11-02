@@ -5,12 +5,14 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.annotation.StringRes
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -45,7 +47,10 @@ import androidx.health.connect.client.PermissionController
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import com.example.nutrigajo.R
+import com.example.nutrigajo.domain.model.ActividadHoy
 import com.example.nutrigajo.domain.model.BarraPulso
+import com.example.nutrigajo.domain.model.NocheSueno
+import com.example.nutrigajo.domain.model.Oxigeno
 import com.example.nutrigajo.domain.model.PeriodoPulso
 import com.example.nutrigajo.domain.model.haceCuanto
 import com.example.nutrigajo.ui.components.BotonPrimario
@@ -55,6 +60,9 @@ import com.example.nutrigajo.ui.components.SelectorPestanas
 import com.example.nutrigajo.ui.nutriologo.inicio.fechaMedia
 import com.example.nutrigajo.ui.paciente.inicio.PantallaMetrica
 import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
+import java.util.Locale
 
 private const val HEALTH_CONNECT = "com.google.android.apps.healthdata"
 
@@ -74,9 +82,14 @@ fun RelojScreen(onVolver: () -> Unit, vm: RelojViewModel) {
                 Esqueleto(Modifier.fillMaxWidth().height(150.dp), RoundedCornerShape(34.dp))
                 Esqueleto(Modifier.fillMaxWidth().height(300.dp), RoundedCornerShape(34.dp))
             } else {
-                TarjetaReloj(estado, onInstalar = { abrirTienda(contexto) }, onConectar = { pedir.launch(vm.permisos) }, onActualizar = vm::cargar)
+                TarjetaConexion(estado, onInstalar = { abrirTienda(contexto) }, onConectar = { pedir.launch(vm.permisos) }, onActualizar = vm::cargar)
                 if (estado.fase == FaseReloj.CONECTADO) {
+                    val resumen = estado.resumen
+                    if (resumen?.faltanPermisos == true) PermisosFaltantes(onPermitir = { pedir.launch(vm.permisos) })
                     TarjetaPulso(estado, onPeriodo = vm::elegirPeriodo)
+                    resumen?.actividad?.let { TarjetaActividad(it) }
+                    if (resumen != null && resumen.sueno.isNotEmpty()) TarjetaSueno(resumen.sueno)
+                    resumen?.oxigeno?.let { TarjetaOxigeno(it) }
                     Historial(estado)
                 } else {
                     PasosConexion()
@@ -88,7 +101,7 @@ fun RelojScreen(onVolver: () -> Unit, vm: RelojViewModel) {
 
 // La tarjeta oscura del reloj: de qué app vienen los datos, cuándo se sincronizaron y, si falta algo, el botón que sigue.
 @Composable
-private fun TarjetaReloj(estado: RelojEstado, onInstalar: () -> Unit, onConectar: () -> Unit, onActualizar: () -> Unit) {
+private fun TarjetaConexion(estado: RelojEstado, onInstalar: () -> Unit, onConectar: () -> Unit, onActualizar: () -> Unit) {
     val colores = MaterialTheme.colorScheme
     val tenue = colores.background.copy(alpha = 0.7f)
     val conectado = estado.fase == FaseReloj.CONECTADO
@@ -224,6 +237,110 @@ private fun GraficaPulso(barras: List<BarraPulso>) {
                 }
             }
         }
+    }
+}
+
+// Cuando se dio el permiso del pulso pero no el de otras métricas (o se agregaron después): se vuelve a pedir todo junto.
+@Composable
+private fun PermisosFaltantes(onPermitir: () -> Unit) {
+    val colores = MaterialTheme.colorScheme
+    Column(
+        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(34.dp)).background(colores.primaryContainer).padding(20.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Text(stringResource(R.string.reloj_permisos_titulo), style = MaterialTheme.typography.titleMedium, color = colores.onBackground)
+        Text(stringResource(R.string.reloj_permisos_texto), style = MaterialTheme.typography.bodyMedium, color = colores.onSurfaceVariant)
+        BotonPrimario(stringResource(R.string.reloj_boton_permitir), onPermitir, Modifier.fillMaxWidth(), altura = 48.dp)
+    }
+}
+
+// La tarjeta gris con su título; las de actividad, sueño y oxígeno la comparten.
+@Composable
+private fun TarjetaReloj(@StringRes titulo: Int, contenido: @Composable ColumnScope.() -> Unit) {
+    val colores = MaterialTheme.colorScheme
+    Column(
+        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(34.dp)).background(colores.surfaceVariant).padding(20.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        Text(stringResource(titulo), style = MaterialTheme.typography.titleMedium, color = colores.onSurfaceVariant)
+        contenido()
+    }
+}
+
+// Lo que lleva el día: pasos y kilómetros, calorías activas y minutos de entrenamiento.
+@Composable
+private fun TarjetaActividad(a: ActividadHoy) {
+    TarjetaReloj(R.string.reloj_actividad) {
+        Row(Modifier.fillMaxWidth()) {
+            DatoReloj(String.format(Locale.getDefault(), "%,d", a.pasos), "", R.string.reloj_pasos, Modifier.weight(1f))
+            DatoReloj(String.format(Locale.getDefault(), "%.1f", a.km), "km", R.string.reloj_distancia, Modifier.weight(1f))
+        }
+        Row(Modifier.fillMaxWidth()) {
+            DatoReloj(a.kcal.toString(), "kcal", R.string.reloj_calorias_activas, Modifier.weight(1f))
+            DatoReloj(a.minutos.toString(), "min", R.string.reloj_minutos, Modifier.weight(1f))
+        }
+    }
+}
+
+@Composable
+private fun DatoReloj(valor: String, unidad: String, @StringRes etiqueta: Int, modifier: Modifier = Modifier) {
+    val colores = MaterialTheme.colorScheme
+    Column(modifier) {
+        Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(
+                text = valor,
+                style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold, fontFeatureSettings = "tnum"),
+                color = colores.onBackground,
+            )
+            if (unidad.isNotEmpty()) Text(unidad, Modifier.padding(bottom = 3.dp), style = MaterialTheme.typography.bodySmall, color = colores.onSurfaceVariant)
+        }
+        Text(stringResource(etiqueta), style = MaterialTheme.typography.bodySmall, color = colores.onSurfaceVariant)
+    }
+}
+
+// Lo dormido anoche y el promedio de las noches de la semana.
+@Composable
+private fun TarjetaSueno(noches: List<NocheSueno>) {
+    val colores = MaterialTheme.colorScheme
+    val ultima = noches.first()
+    val promedio = noches.map { it.minutos }.average().toInt()
+    val dia = if (ultima.fecha == LocalDate.now()) {
+        stringResource(R.string.reloj_sueno_anoche)
+    } else {
+        fechaMedia(ultima.fecha.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli())
+    }
+    TarjetaReloj(R.string.reloj_sueno) {
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(
+                text = horasMinutos(ultima.minutos),
+                style = MaterialTheme.typography.displayMedium.copy(fontWeight = FontWeight.Bold, fontFeatureSettings = "tnum"),
+                color = colores.onBackground,
+            )
+            Text(dia, style = MaterialTheme.typography.bodyMedium, color = colores.onSurfaceVariant)
+        }
+        Text(stringResource(R.string.reloj_sueno_promedio, horasMinutos(promedio)), style = MaterialTheme.typography.bodyMedium, color = colores.onBackground)
+    }
+}
+
+@Composable
+private fun horasMinutos(minutos: Int): String = stringResource(R.string.reloj_horas_minutos, minutos / 60, minutos % 60)
+
+// La última lectura de oxígeno en sangre y el promedio de 24 horas.
+@Composable
+private fun TarjetaOxigeno(o: Oxigeno) {
+    val colores = MaterialTheme.colorScheme
+    val ahora = remember(o) { Instant.now() }
+    TarjetaReloj(R.string.reloj_oxigeno) {
+        Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(
+                text = o.porcentaje.toString(),
+                style = MaterialTheme.typography.displayMedium.copy(fontWeight = FontWeight.Bold, fontFeatureSettings = "tnum"),
+                color = colores.onBackground,
+            )
+            Text("%", Modifier.padding(bottom = 10.dp), style = MaterialTheme.typography.titleMedium, color = colores.onSurfaceVariant)
+        }
+        Text(stringResource(R.string.reloj_oxigeno_lectura, haceCuanto(o.lectura, ahora)), style = MaterialTheme.typography.bodyMedium, color = colores.onSurfaceVariant)
+        Text(stringResource(R.string.reloj_oxigeno_promedio, o.promedio), style = MaterialTheme.typography.bodyMedium, color = colores.onBackground)
     }
 }
 

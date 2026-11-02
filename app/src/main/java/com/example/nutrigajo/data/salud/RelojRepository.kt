@@ -3,17 +3,26 @@ package com.example.nutrigajo.data.salud
 import android.content.Context
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.permission.HealthPermission
+import androidx.health.connect.client.records.ActiveCaloriesBurnedRecord
+import androidx.health.connect.client.records.DistanceRecord
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.HeartRateRecord
+import androidx.health.connect.client.records.OxygenSaturationRecord
+import androidx.health.connect.client.records.SleepSessionRecord
+import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.request.AggregateGroupByDurationRequest
 import androidx.health.connect.client.request.AggregateGroupByPeriodRequest
 import androidx.health.connect.client.request.AggregateRequest
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
+import com.example.nutrigajo.domain.model.ActividadHoy
 import com.example.nutrigajo.domain.model.BarraPulso
+import com.example.nutrigajo.domain.model.NocheSueno
+import com.example.nutrigajo.domain.model.Oxigeno
 import com.example.nutrigajo.domain.model.PeriodoPulso
 import com.example.nutrigajo.domain.model.ResumenReloj
 import com.example.nutrigajo.domain.model.SesionReloj
+import kotlinx.coroutines.CancellationException
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
@@ -36,9 +45,14 @@ private val ESPANOL = Locale.forLanguageTag("es-MX")
 class RelojRepository(private val contexto: Context) {
     private val permisoPulso = HealthPermission.getReadPermission(HeartRateRecord::class)
     private val permisoEjercicio = HealthPermission.getReadPermission(ExerciseSessionRecord::class)
+    private val permisoPasos = HealthPermission.getReadPermission(StepsRecord::class)
+    private val permisoDistancia = HealthPermission.getReadPermission(DistanceRecord::class)
+    private val permisoCalorias = HealthPermission.getReadPermission(ActiveCaloriesBurnedRecord::class)
+    private val permisoSueno = HealthPermission.getReadPermission(SleepSessionRecord::class)
+    private val permisoOxigeno = HealthPermission.getReadPermission(OxygenSaturationRecord::class)
 
     // lo que se pide al usuario
-    val permisos = setOf(permisoPulso, permisoEjercicio)
+    val permisos = setOf(permisoPulso, permisoEjercicio, permisoPasos, permisoDistancia, permisoCalorias, permisoSueno, permisoOxigeno)
 
     private val cliente by lazy { HealthConnectClient.getOrCreate(contexto) }
 
@@ -54,16 +68,87 @@ class RelojRepository(private val contexto: Context) {
 
     suspend fun resumen(): ResumenReloj {
         val ahora = Instant.now()
+        val concedidos = cliente.permissionController.getGrantedPermissions()
         val ultima = cliente.readRecords(
             ReadRecordsRequest(HeartRateRecord::class, TimeRangeFilter.between(ahora.minus(7, ChronoUnit.DAYS), ahora), ascendingOrder = false, pageSize = 1),
         ).records.firstOrNull()
         val muestra = ultima?.samples?.maxByOrNull { it.time }
-        val sesiones = if (permisoEjercicio in cliente.permissionController.getGrantedPermissions()) sesiones(ahora) else emptyList()
         return ResumenReloj(
             ultimoBpm = muestra?.beatsPerMinute?.toInt(),
             ultimaLectura = muestra?.time,
             origen = ultima?.metadata?.dataOrigin?.packageName?.let(::nombreDeApp),
-            sesiones = sesiones,
+            // cada métrica por su lado: sin su permiso (o si falla) solo ella falta, no todo el resumen
+            sesiones = if (permisoEjercicio in concedidos) leer { sesiones(ahora) }.orEmpty() else emptyList(),
+            actividad = leer { actividadHoy(ahora, concedidos) },
+            sueno = if (permisoSueno in concedidos) leer { sueno(ahora) }.orEmpty() else emptyList(),
+            oxigeno = if (permisoOxigeno in concedidos) leer { oxigeno(ahora) } else null,
+            faltanPermisos = !concedidos.containsAll(permisos),
+        )
+    }
+
+    private suspend fun <T> leer(bloque: suspend () -> T): T? =
+        try {
+            bloque()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            null
+        }
+
+    // Lo de hoy desde las 0:00. Health Connect suma sin repetir lo que dos apps cuentan dos veces; solo se piden las métricas con permiso.
+    private suspend fun actividadHoy(ahora: Instant, concedidos: Set<String>): ActividadHoy? {
+        val metricas = buildSet {
+            if (permisoPasos in concedidos) add(StepsRecord.COUNT_TOTAL)
+            if (permisoDistancia in concedidos) add(DistanceRecord.DISTANCE_TOTAL)
+            if (permisoCalorias in concedidos) add(ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL)
+            if (permisoEjercicio in concedidos) add(ExerciseSessionRecord.EXERCISE_DURATION_TOTAL)
+        }
+        if (metricas.isEmpty()) return null
+        val inicio = LocalDate.now().atStartOfDay(ZoneId.systemDefault()).toInstant()
+        val r = cliente.aggregate(AggregateRequest(metricas, TimeRangeFilter.between(inicio, ahora)))
+        return ActividadHoy(
+            pasos = (r[StepsRecord.COUNT_TOTAL] ?: 0L).toInt(),
+            km = ((r[DistanceRecord.DISTANCE_TOTAL]?.inMeters ?: 0.0) / 1000).toFloat(),
+            kcal = (r[ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL]?.inKilocalories ?: 0.0).toInt(),
+            minutos = (r[ExerciseSessionRecord.EXERCISE_DURATION_TOTAL]?.toMinutes() ?: 0L).toInt(),
+        )
+    }
+
+    // Las noches de la última semana: cada sesión de sueño cuenta en el día en que terminó y solo suma el tiempo dormido (sin los
+    // ratos despierto); si el reloj no manda etapas se cuenta la sesión entera.
+    private suspend fun sueno(ahora: Instant): List<NocheSueno> {
+        val zona = ZoneId.systemDefault()
+        val dormido = setOf(
+            SleepSessionRecord.STAGE_TYPE_SLEEPING,
+            SleepSessionRecord.STAGE_TYPE_LIGHT,
+            SleepSessionRecord.STAGE_TYPE_DEEP,
+            SleepSessionRecord.STAGE_TYPE_REM,
+        )
+        return cliente.readRecords(
+            ReadRecordsRequest(SleepSessionRecord::class, TimeRangeFilter.between(ahora.minus(8, ChronoUnit.DAYS), ahora), ascendingOrder = false, pageSize = 30),
+        ).records
+            .groupBy { it.endTime.atZone(zona).toLocalDate() }
+            .map { (dia, sesiones) ->
+                val minutos = sesiones.sumOf { s ->
+                    if (s.stages.isEmpty()) Duration.between(s.startTime, s.endTime).toMinutes()
+                    else s.stages.filter { it.stage in dormido }.sumOf { Duration.between(it.startTime, it.endTime).toMinutes() }
+                }
+                NocheSueno(dia, minutos.toInt())
+            }
+            .filter { it.minutos > 0 }
+            .sortedByDescending { it.fecha }
+            .take(7)
+    }
+
+    private suspend fun oxigeno(ahora: Instant): Oxigeno? {
+        val lecturas = cliente.readRecords(
+            ReadRecordsRequest(OxygenSaturationRecord::class, TimeRangeFilter.between(ahora.minus(24, ChronoUnit.HOURS), ahora), ascendingOrder = false, pageSize = 200),
+        ).records
+        val ultima = lecturas.firstOrNull() ?: return null
+        return Oxigeno(
+            porcentaje = ultima.percentage.value.toInt(),
+            promedio = lecturas.map { it.percentage.value }.average().toInt(),
+            lectura = ultima.time,
         )
     }
 

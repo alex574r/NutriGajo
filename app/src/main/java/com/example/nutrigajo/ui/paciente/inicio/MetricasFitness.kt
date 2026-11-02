@@ -227,7 +227,7 @@ private fun TarjetaDeMetrica(metrica: Metrica, resumen: ResumenDia, onClick: () 
             fondo = Color(GrupoAlimento.VERDURAS.color),
             titulo = stringResource(R.string.metrica_pasos),
             icono = null,
-            valor = String.format(Locale.getDefault(), "%,d", pasosMuestra.total),
+            valor = String.format(Locale.getDefault(), "%,d", LocalPasos.current.total),
             unidad = "",
             onClick = onClick,
         ) {

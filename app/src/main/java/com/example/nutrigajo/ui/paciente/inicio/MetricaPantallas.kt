@@ -302,7 +302,7 @@ private const val KM_POR_PASO = 0.00075f
 private fun PasosScreen(metas: MetasDiarias, onAjustes: () -> Unit, onVolver: () -> Unit) {
     val colores = MaterialTheme.colorScheme
     val tipos = MaterialTheme.typography
-    val pasos = pasosMuestra
+    val pasos = LocalPasos.current
     val metaKm = metas.pasos * KM_POR_PASO
     // cada anillo (de fuera a dentro: pasos, calorías, movimiento y distancia) es lo que lleva de su meta
     val avances = listOf(pasos.total / metas.pasos.toFloat(), pasos.kcal / metas.kcal.toFloat(), pasos.minutos / metas.minutos.toFloat(), pasos.km / metaKm)

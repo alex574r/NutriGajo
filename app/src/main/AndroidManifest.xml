@@ -11,9 +11,14 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
     <uses-permission android:name="android.permission.VIBRATE" />
 
-    <!-- Reloj: la frecuencia cardíaca y los entrenamientos que la app del reloj sincroniza con Health Connect (solo lectura) -->
+    <!-- Reloj: pulso, entrenamientos, pasos, distancia, calorías activas, sueño y oxígeno que la app del reloj sincroniza con Health Connect (solo lectura) -->
     <uses-permission android:name="android.permission.health.READ_HEART_RATE" />
     <uses-permission android:name="android.permission.health.READ_EXERCISE" />
+    <uses-permission android:name="android.permission.health.READ_STEPS" />
+    <uses-permission android:name="android.permission.health.READ_DISTANCE" />
+    <uses-permission android:name="android.permission.health.READ_ACTIVE_CALORIES_BURNED" />
+    <uses-permission android:name="android.permission.health.READ_SLEEP" />
+    <uses-permission android:name="android.permission.health.READ_OXYGEN_SATURATION" />
 
     <!-- Antes de Android 14 Health Connect es una app aparte: sin esto no se puede ver si está instalada -->
     <queries>

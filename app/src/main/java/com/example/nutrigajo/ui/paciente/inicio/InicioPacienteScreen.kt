@@ -15,6 +15,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
@@ -30,6 +31,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.nutrigajo.data.carrera.Fase
 import com.example.nutrigajo.data.carrera.RastreoRuta
@@ -107,6 +110,10 @@ fun InicioPacienteScreen(
     val citas by citasVm.estado.collectAsState()
     val plan by planVm.estado.collectAsState()
     val metasEstado by metasVm.estado.collectAsState()
+    // el reloj: si está conectado y dio pasos, los de las métricas son los suyos; si no, los de muestra de siempre
+    val reloj by relojVm.estado.collectAsState()
+    val pasosReloj = reloj.resumen?.actividad?.let { Pasos(it.pasos, it.kcal, it.km, it.minutos) } ?: pasosMuestra
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { relojVm.cargar() }
     var enMapa by rememberSaveable { mutableStateOf(false) }
     var enExpediente by rememberSaveable { mutableStateOf(false) }
     var enPerfil by rememberSaveable { mutableStateOf(false) }
@@ -195,6 +202,7 @@ fun InicioPacienteScreen(
         }
     }
     val metricaAbierta = metrica
+    CompositionLocalProvider(LocalPasos provides pasosReloj) {
     when {
         estado.cargando -> PantallaCarga(conCabecera = true)
         // el modo carrera: la ruta en el mapa, el historial y los planes de caminata (el peso del expediente afina las calorías)
@@ -359,6 +367,7 @@ fun InicioPacienteScreen(
                 )
             }
         }
+    }
     }
 
     // las metas se ajustan en una hoja encima de la pantalla de métricas; al guardar se vuelve a leer el vínculo, que las trae

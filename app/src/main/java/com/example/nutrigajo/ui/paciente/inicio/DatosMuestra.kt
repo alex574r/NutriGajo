@@ -214,6 +214,9 @@ data class Pasos(val total: Int, val kcal: Int, val km: Float, val minutos: Int)
 
 val pasosMuestra = Pasos(total = 2574, kcal = 578, km = 1.9f, minutos = 25)
 
+// Los pasos que ven la tarjeta y la pantalla de pasos: los de muestra, o los del reloj cuando está conectado (los da el inicio).
+val LocalPasos = androidx.compose.runtime.compositionLocalOf { pasosMuestra }
+
 // lo que resume la pantalla de score tras una sesión
 data class SesionCompletada(val scoreSumado: Int, val minutos: Int, val kcal: Int, val kg: Int, val sugerencias: Int)
 
