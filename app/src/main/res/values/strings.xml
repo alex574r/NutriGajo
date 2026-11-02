@@ -33,6 +33,10 @@
     <string name="login_ingresar">ingresar</string>
     <string name="login_sin_cuenta">¿No tienes una cuenta?</string>
     <string name="login_registrate">Regístrate</string>
+    <string name="login_olvidaste">¿Olvidaste tu contraseña?</string>
+    <string name="login_restablecer_titulo">Restablecer contraseña</string>
+    <string name="login_restablecer_ayuda">Escribe tu correo y te mandamos un enlace para elegir una contraseña nueva.</string>
+    <string name="login_restablecer_enviado">Si hay una cuenta con %1$s, te mandamos un correo con el enlace para elegir una contraseña nueva. Revisa también la carpeta de spam.</string>
 
     <string name="contrasena_mostrar">Mostrar contraseña</string>
     <string name="contrasena_ocultar">Ocultar contraseña</string>

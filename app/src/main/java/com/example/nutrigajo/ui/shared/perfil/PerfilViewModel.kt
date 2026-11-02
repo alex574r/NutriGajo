@@ -12,6 +12,7 @@ import com.example.nutrigajo.data.repository.FotoPerfil
 import com.example.nutrigajo.data.repository.FotoPerfilRepository
 import com.google.firebase.FirebaseNetworkException
 import com.google.firebase.FirebaseTooManyRequestsException
+import com.google.firebase.auth.FirebaseAuthInvalidUserException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -37,7 +38,8 @@ data class FotoEstado(
     @param:StringRes val error: Int? = null,
 )
 
-// Lo que el perfil escribe fuera de la pantalla: el correo para cambiar la contraseña y las dos fotos.
+// Lo que el perfil escribe fuera de la pantalla: el correo para cambiar la contraseña (también el de «¿Olvidaste tu contraseña?» del
+// login) y las dos fotos.
 // ponytail: repositorios por defecto en el constructor; pasan a inyección (Hilt) cuando haya más ViewModels.
 class PerfilViewModel(
     private val repo: AuthRepository = AuthRepository(),
@@ -63,6 +65,9 @@ class PerfilViewModel(
                 PerfilEstado(enviado = true)
             } catch (e: CancellationException) {
                 throw e
+            } catch (_: FirebaseAuthInvalidUserException) {
+                // desde el login se escribe cualquier correo: sin cuenta se contesta lo mismo que con cuenta
+                PerfilEstado(enviado = true)
             } catch (e: Exception) {
                 PerfilEstado(
                     error = when (e) {
