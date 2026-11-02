@@ -5,8 +5,8 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.nutrigajo.data.salud.Disponibilidad
 import com.example.nutrigajo.data.salud.RelojRepository
-import com.example.nutrigajo.domain.model.BarraPulso
 import com.example.nutrigajo.domain.model.PeriodoPulso
+import com.example.nutrigajo.domain.model.PulsoPeriodo
 import com.example.nutrigajo.domain.model.ResumenReloj
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
@@ -23,7 +23,8 @@ data class RelojEstado(
     val fase: FaseReloj = FaseReloj.CARGANDO,
     val periodo: PeriodoPulso = PeriodoPulso.HOY,
     val resumen: ResumenReloj? = null,
-    val barras: List<BarraPulso> = emptyList(),
+    // null mientras llega (al abrir y al cambiar de periodo)
+    val pulso: PulsoPeriodo? = null,
 )
 
 // AndroidViewModel porque Health Connect pide un Context.
@@ -62,8 +63,8 @@ class RelojViewModel @JvmOverloads constructor(
             }
             try {
                 val resumen = repo.resumen()
-                val barras = repo.barras(_estado.value.periodo)
-                _estado.update { it.copy(fase = FaseReloj.CONECTADO, resumen = resumen, barras = barras) }
+                val pulso = repo.pulso(_estado.value.periodo)
+                _estado.update { it.copy(fase = FaseReloj.CONECTADO, resumen = resumen, pulso = pulso) }
             } catch (e: CancellationException) {
                 throw e
             } catch (_: Exception) {
@@ -74,12 +75,12 @@ class RelojViewModel @JvmOverloads constructor(
 
     fun elegirPeriodo(periodo: PeriodoPulso) {
         if (periodo == _estado.value.periodo) return
-        _estado.update { it.copy(periodo = periodo, barras = emptyList()) }
+        _estado.update { it.copy(periodo = periodo, pulso = null) }
         viewModelScope.launch {
             try {
-                val barras = repo.barras(periodo)
+                val pulso = repo.pulso(periodo)
                 // si mientras tanto se eligió otro periodo, esta lectura ya no sirve
-                _estado.update { if (it.periodo == periodo) it.copy(barras = barras) else it }
+                _estado.update { if (it.periodo == periodo) it.copy(pulso = pulso) else it }
             } catch (e: CancellationException) {
                 throw e
             } catch (_: Exception) {

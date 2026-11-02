@@ -16,10 +16,11 @@ import androidx.health.connect.client.request.AggregateRequest
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
 import com.example.nutrigajo.domain.model.ActividadHoy
-import com.example.nutrigajo.domain.model.BarraPulso
+import com.example.nutrigajo.domain.model.Barra
 import com.example.nutrigajo.domain.model.NocheSueno
 import com.example.nutrigajo.domain.model.Oxigeno
 import com.example.nutrigajo.domain.model.PeriodoPulso
+import com.example.nutrigajo.domain.model.PulsoPeriodo
 import com.example.nutrigajo.domain.model.ResumenReloj
 import com.example.nutrigajo.domain.model.SesionReloj
 import kotlinx.coroutines.CancellationException
@@ -104,36 +105,64 @@ class RelojRepository(private val contexto: Context) {
             if (permisoEjercicio in concedidos) add(ExerciseSessionRecord.EXERCISE_DURATION_TOTAL)
         }
         if (metricas.isEmpty()) return null
-        val inicio = LocalDate.now().atStartOfDay(ZoneId.systemDefault()).toInstant()
+        val zona = ZoneId.systemDefault()
+        val hoy = LocalDate.now(zona)
+        val inicio = hoy.atStartOfDay(zona).toInstant()
         val r = cliente.aggregate(AggregateRequest(metricas, TimeRangeFilter.between(inicio, ahora)))
+        val conPasos = permisoPasos in concedidos
+        // lo de ayer y la gráfica por hora, cada uno por su lado: si falla, el resto de la actividad se muestra igual
+        val ayer = if (conPasos) {
+            leer {
+                val desde = hoy.minusDays(1).atStartOfDay(zona).toInstant()
+                cliente.aggregate(AggregateRequest(setOf(StepsRecord.COUNT_TOTAL), TimeRangeFilter.between(desde, inicio)))[StepsRecord.COUNT_TOTAL]?.toInt()
+            }
+        } else {
+            null
+        }
         return ActividadHoy(
             pasos = (r[StepsRecord.COUNT_TOTAL] ?: 0L).toInt(),
             km = ((r[DistanceRecord.DISTANCE_TOTAL]?.inMeters ?: 0.0) / 1000).toFloat(),
             kcal = (r[ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL]?.inKilocalories ?: 0.0).toInt(),
             minutos = (r[ExerciseSessionRecord.EXERCISE_DURATION_TOTAL]?.toMinutes() ?: 0L).toInt(),
+            pasosAyer = ayer,
+            pasosPorHora = if (conPasos) leer { pasosPorHora(inicio, ahora, zona) }.orEmpty() else emptyList(),
         )
+    }
+
+    private suspend fun pasosPorHora(inicio: Instant, ahora: Instant, zona: ZoneId): List<Int> {
+        val porHora = cliente.aggregateGroupByDuration(
+            AggregateGroupByDurationRequest(setOf(StepsRecord.COUNT_TOTAL), TimeRangeFilter.between(inicio, ahora), Duration.ofHours(1)),
+        ).associate { ZonedDateTime.ofInstant(it.startTime, zona).hour to (it.result[StepsRecord.COUNT_TOTAL] ?: 0L).toInt() }
+        return (0..23).map { porHora[it] ?: 0 }
     }
 
     // Las noches de la última semana: cada sesión de sueño cuenta en el día en que terminó y solo suma el tiempo dormido (sin los
     // ratos despierto); si el reloj no manda etapas se cuenta la sesión entera.
     private suspend fun sueno(ahora: Instant): List<NocheSueno> {
         val zona = ZoneId.systemDefault()
-        val dormido = setOf(
-            SleepSessionRecord.STAGE_TYPE_SLEEPING,
-            SleepSessionRecord.STAGE_TYPE_LIGHT,
-            SleepSessionRecord.STAGE_TYPE_DEEP,
-            SleepSessionRecord.STAGE_TYPE_REM,
-        )
         return cliente.readRecords(
             ReadRecordsRequest(SleepSessionRecord::class, TimeRangeFilter.between(ahora.minus(8, ChronoUnit.DAYS), ahora), ascendingOrder = false, pageSize = 30),
         ).records
             .groupBy { it.endTime.atZone(zona).toLocalDate() }
             .map { (dia, sesiones) ->
-                val minutos = sesiones.sumOf { s ->
-                    if (s.stages.isEmpty()) Duration.between(s.startTime, s.endTime).toMinutes()
-                    else s.stages.filter { it.stage in dormido }.sumOf { Duration.between(it.startTime, it.endTime).toMinutes() }
+                var profundo = 0L
+                var ligero = 0L
+                var rem = 0L
+                var despierto = 0L
+                var sinEtapas = 0L
+                for (s in sesiones) {
+                    if (s.stages.isEmpty()) sinEtapas += Duration.between(s.startTime, s.endTime).toMinutes()
+                    for (e in s.stages) {
+                        val m = Duration.between(e.startTime, e.endTime).toMinutes()
+                        when (e.stage) {
+                            SleepSessionRecord.STAGE_TYPE_DEEP -> profundo += m
+                            SleepSessionRecord.STAGE_TYPE_REM -> rem += m
+                            SleepSessionRecord.STAGE_TYPE_LIGHT, SleepSessionRecord.STAGE_TYPE_SLEEPING -> ligero += m
+                            SleepSessionRecord.STAGE_TYPE_AWAKE, SleepSessionRecord.STAGE_TYPE_AWAKE_IN_BED, SleepSessionRecord.STAGE_TYPE_OUT_OF_BED -> despierto += m
+                        }
+                    }
                 }
-                NocheSueno(dia, minutos.toInt())
+                NocheSueno(dia, (profundo + ligero + rem + sinEtapas).toInt(), profundo.toInt(), ligero.toInt(), rem.toInt(), despierto.toInt())
             }
             .filter { it.minutos > 0 }
             .sortedByDescending { it.fecha }
@@ -145,10 +174,16 @@ class RelojRepository(private val contexto: Context) {
             ReadRecordsRequest(OxygenSaturationRecord::class, TimeRangeFilter.between(ahora.minus(24, ChronoUnit.HOURS), ahora), ascendingOrder = false, pageSize = 200),
         ).records
         val ultima = lecturas.firstOrNull() ?: return null
+        val zona = ZoneId.systemDefault()
+        val valores = lecturas.map { it.percentage.value }
+        // las 24 horas del reloj de pared: como la ventana es de 24 h cada hora cae una sola vez
+        val porHora = lecturas.groupBy { ZonedDateTime.ofInstant(it.time, zona).hour }.mapValues { (_, l) -> l.map { it.percentage.value }.average().toInt() }
         return Oxigeno(
             porcentaje = ultima.percentage.value.toInt(),
-            promedio = lecturas.map { it.percentage.value }.average().toInt(),
+            promedio = valores.average().toInt(),
+            minimo = valores.min().toInt(),
             lectura = ultima.time,
+            porHora = (0..23).map { porHora[it] },
         )
     }
 
@@ -169,15 +204,26 @@ class RelojRepository(private val contexto: Context) {
             )
         }
 
-    // Hoy: 24 barras, una por hora. 7 días: una por día, con hoy al final. Las horas y los días sin lecturas llevan bpm null.
-    suspend fun barras(periodo: PeriodoPulso): List<BarraPulso> {
+    // El pulso del periodo: sus barras y el promedio, el mínimo y el máximo de todo él.
+    suspend fun pulso(periodo: PeriodoPulso): PulsoPeriodo {
+        val zona = ZoneId.systemDefault()
+        val hoy = LocalDate.now(zona)
+        val desde = (if (periodo == PeriodoPulso.HOY) hoy else hoy.minusDays(6)).atStartOfDay(zona).toInstant()
+        val r = cliente.aggregate(
+            AggregateRequest(setOf(HeartRateRecord.BPM_AVG, HeartRateRecord.BPM_MIN, HeartRateRecord.BPM_MAX), TimeRangeFilter.between(desde, Instant.now())),
+        )
+        return PulsoPeriodo(barras(periodo), r[HeartRateRecord.BPM_AVG]?.toInt(), r[HeartRateRecord.BPM_MIN]?.toInt(), r[HeartRateRecord.BPM_MAX]?.toInt())
+    }
+
+    // Hoy: 24 barras, una por hora. 7 días: una por día, con hoy al final. Las horas y los días sin lecturas llevan valor null.
+    private suspend fun barras(periodo: PeriodoPulso): List<Barra> {
         val zona = ZoneId.systemDefault()
         return if (periodo == PeriodoPulso.HOY) {
             val inicio = LocalDate.now(zona).atStartOfDay(zona).toInstant()
             val porHora = cliente.aggregateGroupByDuration(
                 AggregateGroupByDurationRequest(setOf(HeartRateRecord.BPM_AVG), TimeRangeFilter.between(inicio, Instant.now()), Duration.ofHours(1)),
             ).associate { ZonedDateTime.ofInstant(it.startTime, zona).hour to it.result[HeartRateRecord.BPM_AVG]?.toInt() }
-            (0..23).map { h -> BarraPulso(if (h % 6 == 0) "$h" else "", String.format(Locale.US, "%02d:00", h), porHora[h]) }
+            (0..23).map { h -> Barra(if (h % 6 == 0) "$h" else "", String.format(Locale.US, "%02d:00", h), porHora[h]) }
         } else {
             val hoy = LocalDate.now(zona)
             val primero = hoy.minusDays(6)
@@ -190,10 +236,10 @@ class RelojRepository(private val contexto: Context) {
             ).associate { it.startTime.toLocalDate() to it.result[HeartRateRecord.BPM_AVG]?.toInt() }
             (0L..6L).map { i ->
                 val dia = primero.plusDays(i)
-                BarraPulso(
+                Barra(
                     etiqueta = dia.dayOfWeek.getDisplayName(TextStyle.NARROW, ESPANOL).uppercase(ESPANOL),
                     detalle = DateTimeFormatter.ofPattern("EEE d MMM", ESPANOL).format(dia),
-                    bpm = porDia[dia],
+                    valor = porDia[dia],
                 )
             }
         }
