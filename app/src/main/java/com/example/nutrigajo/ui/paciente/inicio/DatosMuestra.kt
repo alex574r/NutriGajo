@@ -11,15 +11,6 @@ import java.time.LocalDate
 
 data class ResumenDia(val score: Int, val avance: Int, val hidratacionMl: Int, val calorias: Int)
 
-data class Rutina(
-    @DrawableRes val foto: Int,
-    val titulo: String,
-    val series: Int,
-    val minutos: Int,
-    val kcal: Int,
-    val intensidad: String,
-)
-
 enum class TipoComida(@StringRes val etiqueta: Int) {
     DESAYUNO(R.string.comida_desayuno),
     ALMUERZO(R.string.comida_almuerzo),
@@ -57,15 +48,6 @@ enum class Rango(@StringRes val etiqueta: Int) {
 data class SerieActividad(val valores: List<Float>, val total: Int, val variacion: Int)
 
 val resumenDia = ResumenDia(score = 80, avance = 32, hidratacionMl = 781, calorias = 1503)
-
-val rutinaDeHoy = Rutina(
-    foto = R.drawable.inicio_rutina,
-    titulo = "Ejercicio de estiramiento",
-    series = 8,
-    minutos = 25,
-    kcal = 415,
-    intensidad = "Intenso",
-)
 
 // El plan de comidas de cada día (el mismo todos los días); la sección del inicio enseña las dos del almuerzo. La app solo trae una
 // foto de comida, así que todas llevan la misma hasta que haya las reales.

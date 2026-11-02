@@ -135,7 +135,36 @@
     <string name="inicio_rutinas">Rutinas de hoy</string>
     <string name="rutina_minutos">%1$d min</string>
     <string name="rutina_kcal">%1$d kcal</string>
-    <string name="rutina_series">%1$d series de rutina</string>
+    <plurals name="rutina_ejercicios">
+        <item quantity="one">%1$d ejercicio</item>
+        <item quantity="other">%1$d ejercicios</item>
+    </plurals>
+    <string name="rutina_enfoque_piernas">Piernas y glúteos</string>
+    <string name="rutina_enfoque_pecho_brazos">Pecho y brazos</string>
+    <string name="rutina_enfoque_espalda_hombros">Espalda y hombros</string>
+    <string name="rutina_enfoque_abdomen_cardio">Abdomen y cardio</string>
+    <string name="rutina_enfoque_cuerpo_completo">Cuerpo completo</string>
+    <string name="rutina_enfoque_cardio">Cardio activo</string>
+    <string name="rutina_enfoque_movilidad">Movilidad y relajación</string>
+    <string name="rutina_nivel_suave">Suave</string>
+    <string name="rutina_nivel_moderado">Moderado</string>
+    <string name="rutina_nivel_intenso">Intenso</string>
+    <string name="entrenar_titulo">Rutina de hoy</string>
+    <string name="entrenar_comenzar">comenzar</string>
+    <string name="entrenar_ejercicio_n">Ejercicio %1$d de %2$d</string>
+    <string name="entrenar_pausa">Pausa</string>
+    <string name="entrenar_reanudar">Reanudar</string>
+    <string name="entrenar_anterior">Anterior</string>
+    <string name="entrenar_siguiente">siguiente</string>
+    <string name="entrenar_terminar">terminar</string>
+    <string name="entrenar_completada">¡Rutina completada!</string>
+    <string name="entrenar_resumen_tiempo">Tiempo</string>
+    <string name="entrenar_resumen_kcal">Calorías aprox.</string>
+    <plurals name="entrenar_resumen_ejercicios">
+        <item quantity="one">Ejercicio</item>
+        <item quantity="other">Ejercicios</item>
+    </plurals>
+    <string name="entrenar_aviso">Esta rutina no sustituye las indicaciones de tu nutriólogo. Si algo te duele, detente.</string>
     <string name="rutina_iniciar">Iniciar rutina</string>
     <string name="inicio_dieta">Dieta &amp; nutrición</string>
     <string name="dieta_gramos">%1$dg</string>
@@ -1162,7 +1191,7 @@
     <string name="ejercicio_desliza">Desliza para ver</string>
     <string name="ejercicio_ver">Ver</string>
 
-    <string name="inicio_banco">Banco de ejercicios</string>
+    <string name="inicio_extra">Más ejercicios extra</string>
     <string name="inicio_banco_explorar">Explorar ejercicios</string>
     <string name="inicio_banco_etiqueta">Creados por entrenadores verificados</string>
     <string name="explorar_titulo">Ejercicios</string>
@@ -1171,4 +1200,26 @@
     <string name="explorar_vacio">Ningún ejercicio coincide con tu búsqueda.</string>
     <string name="explorar_sin_publicados">Aún no hay ejercicios publicados.</string>
     <string name="explorar_aviso">Esto no sustituye las indicaciones de tu nutriólogo. Si algo te duele, detente.</string>
+    <string name="explorar_descripcion">Ejercicios de entrenadores verificados. Elige uno, sigue sus pasos y entrena todos los días.</string>
+    <string name="explorar_todos_ejercicios">Todos los ejercicios</string>
+    <string name="explorar_orden">Más recientes</string>
+    <plurals name="explorar_en_total">
+        <item quantity="one">%1$d en total</item>
+        <item quantity="other">%1$d en total</item>
+    </plurals>
+    <string name="ejercicio_nuevo">Nuevo</string>
+    <string name="ejercicio_instrucciones">Instrucciones</string>
+    <plurals name="ejercicio_n_pasos">
+        <item quantity="one">%1$d paso</item>
+        <item quantity="other">%1$d pasos</item>
+    </plurals>
+    <string name="ejercicio_empezar">empezar ejercicio</string>
+    <string name="ejercicio_tiempo">Tiempo</string>
+    <string name="ejercicio_calorias_nombre">Calorías</string>
+    <string name="ejercicio_paso_de">Paso %1$d de %2$d</string>
+    <string name="ejercicio_antes_terminar">Antes de terminar</string>
+    <string name="ejercicio_guia_siguiente">Siguiente</string>
+    <string name="ejercicio_guia_anterior">Anterior</string>
+    <string name="ejercicio_guia_terminar">Terminar</string>
+    <string name="entrenar_ejercicio_tag">Ejercicio %1$d</string>
 </resources>

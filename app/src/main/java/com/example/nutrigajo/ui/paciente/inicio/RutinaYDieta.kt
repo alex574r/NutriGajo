@@ -1,5 +1,13 @@
 package com.example.nutrigajo.ui.paciente.inicio
 
+import com.example.nutrigajo.ui.shared.ejercicios.titulo
+import com.example.nutrigajo.ui.shared.ejercicios.intensidad
+import com.example.nutrigajo.ui.shared.ejercicios.FotoEjercicio
+import com.example.nutrigajo.ui.components.Esqueleto
+import com.example.nutrigajo.domain.model.RutinaDelDia
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -39,26 +47,34 @@ import com.example.nutrigajo.ui.components.cristal
 internal val TEXTO_SOBRE_FOTO = Color(0xFFD0D0D0)
 internal val SOMBRA_TEXTO = Shadow(Color.Black.copy(alpha = 0.35f), Offset(0f, 3f), 6f)
 
-// ponytail: los botones de reproducir y de la comida no abren nada todavía; el detalle llega con las rutinas y los planes.
+// «Rutinas de hoy»: la rutina del día armada con el banco global (ver rutinaDelDia). Toda la tarjeta, y su botón de play, abren «Entrenar
+// ahora». Mientras se lee el banco se ve un esqueleto; sin ejercicios publicados no hay rutina y la sección no aparece.
+// ponytail: el botón de la comida sigue sin abrir nada; el detalle llega con los planes.
 @Composable
-fun RutinaDeHoy(rutina: Rutina, modifier: Modifier = Modifier) {
+fun RutinaDeHoy(rutina: RutinaDelDia?, cargando: Boolean, onIniciar: () -> Unit, modifier: Modifier = Modifier) {
     val tipos = MaterialTheme.typography
+    if (rutina == null) {
+        if (cargando) {
+            Column(modifier) {
+                EncabezadoSeccion(stringResource(R.string.inicio_rutinas))
+                Spacer(Modifier.height(12.dp))
+                Esqueleto(Modifier.padding(horizontal = 16.dp).fillMaxWidth().height(234.dp), RoundedCornerShape(31.dp))
+            }
+        }
+        return
+    }
     Column(modifier) {
-        EncabezadoSeccion(stringResource(R.string.inicio_rutinas), contador = "(25)", menu = true)
+        EncabezadoSeccion(stringResource(R.string.inicio_rutinas), contador = "(${rutina.ejercicios.size})", menu = true)
         Spacer(Modifier.height(12.dp))
         Box(
             modifier = Modifier
                 .padding(horizontal = 16.dp)
                 .fillMaxWidth()
                 .height(234.dp)
-                .clip(RoundedCornerShape(31.dp)),
+                .clip(RoundedCornerShape(31.dp))
+                .clickable(role = Role.Button, onClickLabel = stringResource(R.string.rutina_iniciar), onClick = onIniciar),
         ) {
-            Image(
-                painter = painterResource(rutina.foto),
-                contentDescription = null,
-                modifier = Modifier.matchParentSize(),
-                contentScale = ContentScale.Crop,
-            )
+            FotoEjercicio(rutina.ejercicios.first(), Modifier.matchParentSize(), RoundedCornerShape(0.dp))
             Box(
                 Modifier.matchParentSize().background(
                     Brush.verticalGradient(0f to Color.Black.copy(alpha = 0.3f), 0.35f to Color.Transparent, 1f to Color.Black.copy(alpha = 0.6f)),
@@ -85,16 +101,16 @@ fun RutinaDeHoy(rutina: Rutina, modifier: Modifier = Modifier) {
                     color = TEXTO_SOBRE_FOTO,
                 )
             }
-            Column(Modifier.align(Alignment.BottomStart).padding(start = 16.dp, bottom = 26.dp)) {
-                Text(rutina.titulo, style = tipos.titleLarge.copy(shadow = SOMBRA_TEXTO), color = Color.White)
+            Column(Modifier.align(Alignment.BottomStart).padding(start = 16.dp, bottom = 26.dp, end = 70.dp)) {
+                Text(stringResource(rutina.enfoque.titulo()), style = tipos.titleLarge.copy(shadow = SOMBRA_TEXTO), color = Color.White, maxLines = 2)
                 Row(Modifier.padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text(
-                        text = stringResource(R.string.rutina_series, rutina.series),
+                        text = pluralStringResource(R.plurals.rutina_ejercicios, rutina.ejercicios.size, rutina.ejercicios.size),
                         style = tipos.bodySmall.copy(shadow = SOMBRA_TEXTO),
                         color = Color.White,
                     )
                     Text(
-                        text = rutina.intensidad,
+                        text = stringResource(rutina.nivel.intensidad()),
                         modifier = Modifier
                             .cristal(RoundedCornerShape(7.dp))
                             .padding(horizontal = 10.dp, vertical = 2.dp),

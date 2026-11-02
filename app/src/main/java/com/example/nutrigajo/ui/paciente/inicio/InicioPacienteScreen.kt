@@ -1,5 +1,10 @@
 package com.example.nutrigajo.ui.paciente.inicio
 
+import com.example.nutrigajo.ui.shared.ejercicios.EjerciciosViewModel
+import com.example.nutrigajo.ui.shared.ejercicios.EjerciciosEstado
+import com.example.nutrigajo.ui.paciente.rutina.EntrenarScreen
+import com.example.nutrigajo.domain.model.rutinaDelDia
+import com.example.nutrigajo.domain.model.RutinaDelDia
 import java.time.LocalDate
 import com.example.nutrigajo.widgets.PerfilWidget
 import com.example.nutrigajo.widgets.DatosWidget
@@ -134,6 +139,7 @@ fun InicioPacienteScreen(
     var enEjercicios by rememberSaveable { mutableStateOf(false) }
     // el ejercicio que se tocó en el inicio: Explorar lo abre directo; null abre la lista
     var ejercicioInicial by rememberSaveable { mutableStateOf<String?>(null) }
+    var enRutina by rememberSaveable { mutableStateOf(false) }
     // la pantalla de métricas abierta desde las tarjetas y el agua de hoy, que sube con el + y se ve también en la tarjeta
     var metrica by rememberSaveable { mutableStateOf<Metrica?>(null) }
     // «Ver todas» de las métricas: la cuadrícula se queda abierta debajo de la pantalla de la métrica que se abre desde ella
@@ -168,6 +174,11 @@ fun InicioPacienteScreen(
     LaunchedEffect(Unit) { vm.cargar() }
     LaunchedEffect(enMapa) { if (enMapa) mapaVm.cargar() }
     LaunchedEffect(enCitas) { if (enCitas) citasVm.cargar(Rol.PACIENTE) }
+    // el banco global alimenta «Rutinas de hoy» y «Más ejercicios extra»; Explorar usa la misma instancia
+    val ejerciciosVm: EjerciciosViewModel = viewModel(key = "explorar-ejercicios")
+    val ejercicios by ejerciciosVm.estado.collectAsState()
+    LaunchedEffect(Unit) { ejerciciosVm.cargarPublicados() }
+    val rutina = remember(ejercicios.items) { rutinaDelDia(LocalDate.now(), ejercicios.items) }
 
     val vinculo = estado.vinculo
     // la racha: días seguidos con la meta de pasos del reloj o con una caminata o carrera guardada (al volver del Modo carrera se cuenta otra vez)
@@ -242,6 +253,8 @@ fun InicioPacienteScreen(
         }
         // el reloj: el pulso que su app manda a Health Connect
         enReloj -> RelojScreen(onVolver = { enReloj = false }, vm = relojVm)
+        // «Entrenar ahora»: la rutina del día paso a paso
+        enRutina && rutina != null -> EntrenarScreen(rutina, onSalir = { enRutina = false })
         // el banco global de ejercicios de los entrenadores
         enEjercicios -> ExplorarEjerciciosScreen(
             abrirId = ejercicioInicial,
@@ -401,6 +414,9 @@ fun InicioPacienteScreen(
                         ejercicioInicial = id
                         enEjercicios = true
                     },
+                    ejercicios = ejercicios,
+                    rutina = rutina,
+                    onRutina = { enRutina = true },
                     racha = rachaDeHoy,
                     onDieta = {
                         dietaInicio = it
@@ -473,6 +489,10 @@ private fun InicioPaciente(
     onReloj: () -> Unit,
     // abre el banco global de ejercicios: la lista (null) o el ejercicio que se tocó
     onEjercicios: (String?) -> Unit,
+    // el banco leído, la rutina que de él sale hoy y lo que abre su tarjeta («Entrenar ahora»)
+    ejercicios: EjerciciosEstado,
+    rutina: RutinaDelDia?,
+    onRutina: () -> Unit,
     // los días seguidos que lleva cumpliendo algo (se ven en el encabezado)
     racha: Racha,
     // abre Mis comidas (-1) o la comida que se tocó (su lugar en `platos`)
@@ -537,7 +557,7 @@ private fun InicioPaciente(
                     onClick = onReloj,
                 )
             }
-            item { RutinaDeHoy(rutinaDeHoy) }
+            item { RutinaDeHoy(rutina, ejercicios.cargando, onRutina) }
             item { DietaNutricion(comidas, onVerTodas = { onDieta(-1) }, onComida = { onDieta(platos.indexOf(it)) }) }
             item { ActividadReciente() }
             item {
@@ -552,7 +572,7 @@ private fun InicioPaciente(
                     onChat = onChat,
                 )
             }
-            item { BancoEjercicios(onEjercicios) }
+            item { BancoEjercicios(ejercicios, onEjercicios) }
         }
     }
 }

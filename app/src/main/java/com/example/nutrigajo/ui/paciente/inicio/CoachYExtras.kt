@@ -1,12 +1,9 @@
 package com.example.nutrigajo.ui.paciente.inicio
 
-import com.example.nutrigajo.ui.shared.ejercicios.TarjetaEjercicio
-import com.example.nutrigajo.ui.shared.ejercicios.EjerciciosViewModel
+import com.example.nutrigajo.ui.shared.ejercicios.FilaEjercicio
+import com.example.nutrigajo.ui.shared.ejercicios.EjerciciosEstado
 import com.example.nutrigajo.ui.components.Esqueleto
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.LaunchedEffect
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -119,28 +116,21 @@ fun TarjetaCoach(
     }
 }
 
-// Los ejercicios más recientes del banco global (los que publican los entrenadores verificados) con la tarjeta de «Exercise Process»:
+// «Más ejercicios extra»: los más recientes del banco global (los que publican los entrenadores verificados) en filas compactas;
 // tocar uno abre su detalle y «Ver todas», el banco completo. Mientras cargan se ven esqueletos; sin ejercicios o sin red queda la
 // entrada de siempre, para no perder el acceso.
 @Composable
-fun BancoEjercicios(
-    onAbrir: (String?) -> Unit,
-    modifier: Modifier = Modifier,
-    // la misma instancia que usa Explorar: al abrir un ejercicio ya está leído
-    vm: EjerciciosViewModel = viewModel(key = "explorar-ejercicios"),
-) {
-    val estado by vm.estado.collectAsState()
-    LaunchedEffect(Unit) { vm.cargarPublicados() }
+fun BancoEjercicios(estado: EjerciciosEstado, onAbrir: (String?) -> Unit, modifier: Modifier = Modifier) {
     val recientes = estado.items.take(RECIENTES)
     Column(modifier) {
-        EncabezadoSeccion(stringResource(R.string.inicio_banco), verTodas = recientes.isNotEmpty(), onVerTodas = { onAbrir(null) })
+        EncabezadoSeccion(stringResource(R.string.inicio_extra), verTodas = recientes.isNotEmpty(), onVerTodas = { onAbrir(null) })
         Spacer(Modifier.height(12.dp))
         when {
             recientes.isNotEmpty() -> Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                recientes.forEach { TarjetaEjercicio(it, onClick = { onAbrir(it.id) }) }
+                recientes.forEach { FilaEjercicio(it, onClick = { onAbrir(it.id) }) }
             }
             estado.cargando -> Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                repeat(2) { Esqueleto(Modifier.fillMaxWidth().height(250.dp), RoundedCornerShape(29.dp)) }
+                repeat(3) { Esqueleto(Modifier.fillMaxWidth().height(107.dp), RoundedCornerShape(34.dp)) }
             }
             else -> FilaAjuste(
                 icono = R.drawable.ic_corredor,

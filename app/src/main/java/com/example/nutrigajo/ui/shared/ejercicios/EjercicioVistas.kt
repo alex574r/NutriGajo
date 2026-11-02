@@ -1,5 +1,14 @@
 package com.example.nutrigajo.ui.shared.ejercicios
 
+import com.example.nutrigajo.ui.components.BotonPrimario
+import com.example.nutrigajo.ui.components.BarraEstadoClara
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.Spacer
+import com.example.nutrigajo.domain.model.EnfoqueDia
+import androidx.compose.ui.text.font.FontWeight
 import androidx.activity.compose.BackHandler
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
@@ -113,6 +122,25 @@ fun EstadoEjercicio.titulo(): Int = when (this) {
     EstadoEjercicio.PUBLICADO -> R.string.ejercicio_estado_publicado
     EstadoEjercicio.RECHAZADO -> R.string.ejercicio_estado_rechazado
     EstadoEjercicio.RETIRADO -> R.string.ejercicio_estado_retirado
+}
+
+@StringRes
+fun EnfoqueDia.titulo(): Int = when (this) {
+    EnfoqueDia.PIERNAS -> R.string.rutina_enfoque_piernas
+    EnfoqueDia.PECHO_Y_BRAZOS -> R.string.rutina_enfoque_pecho_brazos
+    EnfoqueDia.ESPALDA_Y_HOMBROS -> R.string.rutina_enfoque_espalda_hombros
+    EnfoqueDia.ABDOMEN_Y_CARDIO -> R.string.rutina_enfoque_abdomen_cardio
+    EnfoqueDia.CUERPO_COMPLETO -> R.string.rutina_enfoque_cuerpo_completo
+    EnfoqueDia.CARDIO_ACTIVO -> R.string.rutina_enfoque_cardio
+    EnfoqueDia.MOVILIDAD -> R.string.rutina_enfoque_movilidad
+}
+
+// El nivel de un ejercicio dicho como la intensidad de una rutina.
+@StringRes
+fun NivelEjercicio.intensidad(): Int = when (this) {
+    NivelEjercicio.PRINCIPIANTE -> R.string.rutina_nivel_suave
+    NivelEjercicio.INTERMEDIO -> R.string.rutina_nivel_moderado
+    NivelEjercicio.AVANZADO -> R.string.rutina_nivel_intenso
 }
 
 @StringRes
@@ -302,6 +330,72 @@ fun TarjetaEjercicio(
     }
 }
 
+// La fila compacta de «Más ejercicios extra» del inicio: foto a la izquierda, nombre, zona y tipo, la duración y las calorías, y la
+// flecha naranja. La tarjeta grande de arriba es la de Explorar.
+@Composable
+fun FilaEjercicio(ejercicio: Ejercicio, onClick: () -> Unit, modifier: Modifier = Modifier, nuevo: Boolean = false) {
+    val colores = MaterialTheme.colorScheme
+    val forma = RoundedCornerShape(34.dp)
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(107.dp)
+            .hundible(forma)
+            .clip(forma)
+            .background(colores.surfaceVariant)
+            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, role = Role.Button, onClick = onClick)
+            .padding(horizontal = 19.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Box {
+            FotoEjercicio(ejercicio, Modifier.size(79.dp, 80.dp), RoundedCornerShape(24.dp))
+            // lo publicado hace poco lleva la insignia, como «New» del diseño
+            if (nuevo) {
+                Text(
+                    text = stringResource(R.string.ejercicio_nuevo),
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .padding(5.dp)
+                        .background(colores.secondary, RoundedCornerShape(7.dp))
+                        .padding(horizontal = 6.dp, vertical = 1.dp),
+                    style = MaterialTheme.typography.labelLarge.copy(fontSize = 10.sp),
+                    color = colores.onSecondary,
+                )
+            }
+        }
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(
+                text = ejercicio.titulo,
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                color = colores.onBackground,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = stringResource(ejercicio.zona.titulo()) + " · " + stringResource(ejercicio.tipo.titulo()),
+                style = MaterialTheme.typography.bodySmall,
+                color = colores.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Row(Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                DatoFila(R.drawable.ic_reloj, stringResource(R.string.ejercicio_minutos, ejercicio.duracionMin))
+                if (ejercicio.kcal > 0) DatoFila(R.drawable.ic_llama, stringResource(R.string.ejercicio_calorias, ejercicio.kcal))
+            }
+        }
+        Icon(painterResource(R.drawable.ic_flecha), contentDescription = null, modifier = Modifier.size(22.dp), tint = colores.primary)
+    }
+}
+
+@Composable
+private fun DatoFila(@DrawableRes icono: Int, texto: String) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        Icon(painterResource(icono), contentDescription = null, modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.primary)
+        Text(texto, style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp), color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+    }
+}
+
 // Un dato de la tarjeta (duración, calorías) en un chip de cristal con su icono.
 @Composable
 private fun DatoCristal(@DrawableRes icono: Int, texto: String) {
@@ -315,7 +409,10 @@ private fun DatoCristal(@DrawableRes icono: Int, texto: String) {
     }
 }
 
-// El ejercicio completo, para el entrenador, el ADMIN que lo revisa y el paciente. `acciones` son los botones de abajo, según quién lo ve.
+// El ejercicio completo con el aspecto «Workout»: la cabecera oscura con su foto, la zona, el nombre y el autor, y debajo una hoja blanca
+// con la descripción, el tiempo, las calorías y el nivel, y las instrucciones paso a paso. Con `onEmpezar` (el paciente) cada paso abre la
+// guía en ese paso y el botón fijo de abajo la abre desde el primero; `acciones` son, en su lugar, los botones de quien lo gestiona
+// (el entrenador y el ADMIN).
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun DetalleEjercicio(
@@ -324,61 +421,122 @@ fun DetalleEjercicio(
     modifier: Modifier = Modifier,
     // texto fijo al final (el aviso a los pacientes)
     aviso: String? = null,
+    onEmpezar: ((paso: Int) -> Unit)? = null,
     acciones: (@Composable ColumnScope.() -> Unit)? = null,
 ) {
     val colores = MaterialTheme.colorScheme
     BackHandler(onBack = onVolver)
-    Column(modifier.fillMaxSize().background(colores.background).statusBarsPadding()) {
-        BarraSuperior(titulo = ejercicio.titulo, onVolver = onVolver)
-        Column(
-            modifier = Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = MARGEN),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            FotoEjercicio(ejercicio, Modifier.fillMaxWidth().aspectRatio(16f / 10f), RoundedCornerShape(28.dp))
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (ejercicio.estado != EstadoEjercicio.PUBLICADO) EtiquetaEstado(ejercicio.estado)
-                Dato(stringResource(ejercicio.zona.titulo()))
-                Dato(stringResource(ejercicio.tipo.titulo()))
-                Dato(stringResource(ejercicio.nivel.titulo()))
-                Dato(stringResource(ejercicio.equipo.titulo()))
-                Dato(stringResource(R.string.ejercicio_minutos, ejercicio.duracionMin))
-                if (ejercicio.kcal > 0) Dato(stringResource(R.string.ejercicio_calorias, ejercicio.kcal))
+    BarraEstadoClara()
+    val barraAbajo = onEmpezar != null || acciones != null
+    Box(modifier.fillMaxSize().background(colores.background)) {
+        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+            CabeceraOscura(alto = 320.dp, foto = { FotoEjercicio(ejercicio, Modifier.matchParentSize(), RectangleShape) }) {
+                Etiqueta(stringResource(ejercicio.zona.titulo()).uppercase())
+                Text(
+                    text = ejercicio.titulo,
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = Color.White,
+                    textAlign = TextAlign.Center,
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                if (ejercicio.autorNombre.isNotBlank()) {
+                    Text(stringResource(R.string.ejercicio_por, ejercicio.autorNombre), style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.75f))
+                }
             }
-            ejercicio.motivoRechazo?.let {
-                Text(stringResource(R.string.ejercicio_motivo_rechazo, it), style = MaterialTheme.typography.bodyMedium, color = colores.error)
-            }
-            if (ejercicio.descripcion.isNotBlank()) {
-                Text(ejercicio.descripcion, style = MaterialTheme.typography.bodyLarge, color = colores.onBackground)
-            }
-            if (ejercicio.pasos.isNotEmpty()) {
-                Text(stringResource(R.string.ejercicio_como_hacerlo), style = MaterialTheme.typography.titleMedium, color = colores.onBackground)
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    ejercicio.pasos.forEachIndexed { i, paso ->
-                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Box(Modifier.size(28.dp).background(colores.primaryContainer, CircleShape), contentAlignment = Alignment.Center) {
-                                Text("${i + 1}", style = MaterialTheme.typography.labelLarge, color = colores.primary)
+            Column(
+                modifier = Modifier
+                    .montadaSobreLaCabecera()
+                    .fillMaxWidth()
+                    .background(colores.background, RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp))
+                    .padding(start = MARGEN, end = MARGEN, top = 22.dp),
+                verticalArrangement = Arrangement.spacedBy(18.dp),
+            ) {
+                if (ejercicio.descripcion.isNotBlank()) {
+                    Text(ejercicio.descripcion, style = MaterialTheme.typography.bodyLarge, color = colores.onSurfaceVariant)
+                }
+                DatosEnColumnas(
+                    listOf(
+                        stringResource(R.string.ejercicio_minutos, ejercicio.duracionMin) to stringResource(R.string.ejercicio_tiempo),
+                        (if (ejercicio.kcal > 0) stringResource(R.string.ejercicio_calorias, ejercicio.kcal) else "—") to stringResource(R.string.ejercicio_calorias_nombre),
+                        stringResource(ejercicio.nivel.titulo()) to stringResource(R.string.ejercicio_nivel),
+                    ),
+                )
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (ejercicio.estado != EstadoEjercicio.PUBLICADO) EtiquetaEstado(ejercicio.estado)
+                    Dato(stringResource(ejercicio.tipo.titulo()))
+                    Dato(stringResource(ejercicio.equipo.titulo()))
+                }
+                ejercicio.motivoRechazo?.let {
+                    Text(stringResource(R.string.ejercicio_motivo_rechazo, it), style = MaterialTheme.typography.bodyMedium, color = colores.error)
+                }
+                if (ejercicio.pasos.isNotEmpty()) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(stringResource(R.string.ejercicio_instrucciones), style = MaterialTheme.typography.titleMedium, color = colores.onBackground)
+                        Spacer(Modifier.weight(1f))
+                        Text(
+                            text = pluralStringResource(R.plurals.ejercicio_n_pasos, ejercicio.pasos.size, ejercicio.pasos.size),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = colores.onSurfaceVariant,
+                        )
+                    }
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        ejercicio.pasos.forEachIndexed { i, paso ->
+                            val forma = RoundedCornerShape(22.dp)
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(forma)
+                                    .background(colores.surfaceVariant)
+                                    .clickable(enabled = onEmpezar != null, role = Role.Button) { onEmpezar?.invoke(i) }
+                                    .padding(14.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            ) {
+                                Box(Modifier.size(44.dp).background(colores.primaryContainer, RoundedCornerShape(14.dp)), contentAlignment = Alignment.Center) {
+                                    Text("${i + 1}", style = MaterialTheme.typography.titleMedium, color = colores.primary)
+                                }
+                                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                    Text(stringResource(R.string.ejercicio_paso_n, i + 1), style = MaterialTheme.typography.labelLarge, color = colores.onSurfaceVariant)
+                                    Text(paso, style = MaterialTheme.typography.bodyMedium, color = colores.onBackground, maxLines = 3, overflow = TextOverflow.Ellipsis)
+                                }
+                                if (onEmpezar != null) {
+                                    Icon(painterResource(R.drawable.ic_play), contentDescription = null, modifier = Modifier.size(20.dp), tint = colores.primary)
+                                }
                             }
-                            Text(paso, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium, color = colores.onBackground)
                         }
                     }
                 }
+                if (ejercicio.consejos.isNotBlank()) Parrafo(R.string.ejercicio_consejos, ejercicio.consejos)
+                if (ejercicio.contraindicaciones.isNotBlank()) Parrafo(R.string.ejercicio_contraindicaciones, ejercicio.contraindicaciones)
+                aviso?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = colores.onSurfaceVariant) }
+                // el pie deja libre la barra de botones fija y la de navegación
+                Spacer(Modifier.navigationBarsPadding().height(if (barraAbajo) 96.dp else 16.dp))
             }
-            if (ejercicio.consejos.isNotBlank()) Parrafo(R.string.ejercicio_consejos, ejercicio.consejos)
-            if (ejercicio.contraindicaciones.isNotBlank()) Parrafo(R.string.ejercicio_contraindicaciones, ejercicio.contraindicaciones)
-            if (ejercicio.autorNombre.isNotBlank()) {
-                Text(stringResource(R.string.ejercicio_por, ejercicio.autorNombre), style = MaterialTheme.typography.bodySmall, color = colores.onSurfaceVariant)
-            }
-            aviso?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = colores.onSurfaceVariant) }
-            if (acciones == null) Box(Modifier.navigationBarsPadding().padding(bottom = MARGEN))
         }
-        if (acciones != null) {
-            Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(MARGEN), verticalArrangement = Arrangement.spacedBy(8.dp)) { acciones() }
+        BotonVolverCristal(onVolver, Modifier.align(Alignment.TopStart).statusBarsPadding().padding(16.dp))
+        if (barraAbajo) {
+            Column(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .background(Brush.verticalGradient(listOf(Color.Transparent, colores.background, colores.background)))
+                    .navigationBarsPadding()
+                    .padding(start = MARGEN, end = MARGEN, top = 24.dp, bottom = MARGEN),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                if (acciones != null) {
+                    acciones()
+                } else {
+                    BotonPrimario(stringResource(R.string.ejercicio_empezar), onClick = { onEmpezar?.invoke(0) }, modifier = Modifier.fillMaxWidth())
+                }
+            }
         }
     }
 }
 
 @Composable
-private fun Parrafo(@StringRes titulo: Int, texto: String) {
+internal fun Parrafo(@StringRes titulo: Int, texto: String) {
     val colores = MaterialTheme.colorScheme
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(stringResource(titulo), style = MaterialTheme.typography.titleSmall, color = colores.onBackground)
