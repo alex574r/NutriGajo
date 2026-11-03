@@ -72,11 +72,19 @@ class CarreraTest {
     fun la_sesion_empieza_y_termina_caminando_y_repite_la_ronda() {
         val plan = PlanCaminata.INTERVALOS_INTERMEDIO // 5 × (1 min caminar, 2 trotar, 2 correr)
         val tramos = plan.tramos
-        assertEquals(1 + 5 * 3 + 1, tramos.size)
-        assertEquals(Tramo(Ritmo.CAMINAR, CALENTAMIENTO_SEG), tramos.first())
+        // el calentamiento y el primer caminar de la ronda son un solo tramo
+        assertEquals(1 + 5 * 3 + 1 - 1, tramos.size)
+        assertEquals(Tramo(Ritmo.CAMINAR, CALENTAMIENTO_SEG + 60), tramos.first())
         assertEquals(Tramo(Ritmo.CAMINAR, ENFRIAMIENTO_SEG), tramos.last())
-        assertEquals(listOf(Ritmo.CAMINAR, Ritmo.TROTAR, Ritmo.CORRER), tramos.subList(1, 4).map { it.ritmo })
+        assertEquals(listOf(Ritmo.CAMINAR, Ritmo.TROTAR, Ritmo.CORRER, Ritmo.CAMINAR), tramos.take(4).map { it.ritmo })
         assertEquals(35, plan.minutos)
+    }
+
+    @Test
+    fun ningun_tramo_va_seguido_de_otro_del_mismo_ritmo() {
+        PlanCaminata.entries.forEach { plan ->
+            plan.tramos.zipWithNext().forEach { (a, b) -> assertTrue("${plan.name}: $a y $b", a.ritmo != b.ritmo) }
+        }
     }
 
     @Test

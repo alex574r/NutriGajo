@@ -135,8 +135,14 @@ enum class PlanCaminata(val rondas: Int, val ronda: List<Tramo>) {
     QUEMAGRASA(8, unaRonda(caminar = 45, trotar = 90, correr = 60)),
     ;
 
+    // Los tramos de la sesión. Dos seguidos del mismo ritmo (el calentamiento y el primer caminar de la ronda) se juntan en uno: si no,
+    // la app avisaría de un cambio que no es.
     val tramos: List<Tramo>
-        get() = listOf(Tramo(Ritmo.CAMINAR, CALENTAMIENTO_SEG)) + List(rondas) { ronda }.flatten() + Tramo(Ritmo.CAMINAR, ENFRIAMIENTO_SEG)
+        get() = (listOf(Tramo(Ritmo.CAMINAR, CALENTAMIENTO_SEG)) + List(rondas) { ronda }.flatten() + Tramo(Ritmo.CAMINAR, ENFRIAMIENTO_SEG))
+            .fold(emptyList()) { juntos, tramo ->
+                val ultimo = juntos.lastOrNull()
+                if (ultimo?.ritmo == tramo.ritmo) juntos.dropLast(1) + Tramo(tramo.ritmo, ultimo.segundos + tramo.segundos) else juntos + tramo
+            }
 
     val minutos: Int get() = ceil(tramos.sumOf { it.segundos } / 60.0).toInt()
 
