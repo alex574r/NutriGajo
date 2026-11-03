@@ -1,7 +1,7 @@
 import { verificarSesion } from "./auth/firebase";
 import { avisarMensaje, leerFotoChat, subirFotoChat } from "./routes/chat";
 import { avisarConfirmacion } from "./routes/cita";
-import { leerFotoEjercicio, subirFotoEjercicio } from "./routes/ejercicio";
+import { leerFotoBanco, subirFotoBanco, type Carpeta } from "./routes/fotoBanco";
 import { leerFoto, subirFoto, type Tipo } from "./routes/foto";
 import { avisarPlan, leerPlan, subirPlan } from "./routes/plan";
 
@@ -30,16 +30,17 @@ export default {
       }
     }
 
-    // fotos de los ejercicios del banco global: subir exige sesión y se guarda bajo el uid de quien sube; leer es público con el uid
-    // del autor (la app lo sabe por el ejercicio)
-    const ejercicioSubida = pathname.match(/^\/ejercicio\/([A-Za-z0-9_-]{1,128})$/);
-    if (ejercicioSubida && req.method === "PUT") {
+    // fotos de los bancos globales (ejercicios y platillos): subir exige sesión y se guarda bajo el uid de quien sube; leer es público
+    // con el uid del autor (la app lo sabe por el ejercicio o el platillo)
+    const carpetas: Record<string, Carpeta> = { ejercicio: "ejercicios", platillo: "platillos" };
+    const bancoSubida = pathname.match(/^\/(ejercicio|platillo)\/([A-Za-z0-9_-]{1,128})$/);
+    if (bancoSubida && req.method === "PUT") {
       const uid = await verificarSesion(req, env.FIREBASE_PROJECT_ID);
       if (!uid) return new Response("No autorizado", { status: 401 });
-      return subirFotoEjercicio(req, env, uid, ejercicioSubida[1]);
+      return subirFotoBanco(req, env, uid, bancoSubida[2], carpetas[bancoSubida[1]]);
     }
-    const ejercicioLectura = pathname.match(/^\/ejercicio\/([A-Za-z0-9]{20,128})\/([A-Za-z0-9_-]{1,128})$/);
-    if (ejercicioLectura && req.method === "GET") return leerFotoEjercicio(req, env, ejercicioLectura[1], ejercicioLectura[2]);
+    const bancoLectura = pathname.match(/^\/(ejercicio|platillo)\/([A-Za-z0-9]{20,128})\/([A-Za-z0-9_-]{1,128})$/);
+    if (bancoLectura && req.method === "GET") return leerFotoBanco(req, env, bancoLectura[2], bancoLectura[3], carpetas[bancoLectura[1]]);
 
     // aviso al paciente de que su cita quedó confirmada: lo pide el nutriólogo con su sesión
     if (req.method === "POST" && pathname === "/citas/notificar") {

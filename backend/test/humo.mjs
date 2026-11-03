@@ -19,6 +19,12 @@ assert.equal(await pedir("/ejercicio/e1", { method: "PUT", body: "x", headers: {
 assert.equal(await pedir(`/ejercicio/${uidAjeno}/e1`), 404, "ejercicio: leer una foto que no existe");
 assert.equal(await pedir("/ejercicio/e1"), 404, "ejercicio: leer sin el autor");
 assert.equal(await pedir(`/ejercicio/${uidAjeno}/e1`, { method: "PUT", body: "x", headers: jpegEj }), 404, "ejercicio: subir con la ruta de lectura");
+// fotos de los platillos: las mismas reglas que las de los ejercicios, en su propia ruta y su propia carpeta de R2
+assert.equal(await pedir("/platillo/p1", { method: "PUT", body: "x", headers: jpegEj }), 401, "platillo: subir sin sesión");
+assert.equal(await pedir("/platillo/p1", { method: "PUT", body: "x", headers: { ...jpegEj, Authorization: "Bearer falso" } }), 401, "platillo: subir con token falso");
+assert.equal(await pedir(`/platillo/${uidAjeno}/p1`), 404, "platillo: leer una foto que no existe");
+assert.equal(await pedir("/platillo/p1"), 404, "platillo: leer sin el autor");
+assert.equal(await pedir(`/platillo/${uidAjeno}/p1`, { method: "PUT", body: "x", headers: jpegEj }), 404, "platillo: subir con la ruta de lectura");
 const json = { "Content-Type": "application/json" };
 assert.equal(await pedir("/citas/notificar", { method: "POST", body: "{}", headers: json }), 401, "avisar sin sesión");
 assert.equal(await pedir("/citas/notificar", { method: "POST", body: "{}", headers: { ...json, Authorization: "Bearer falso" } }), 401, "avisar con token falso");
