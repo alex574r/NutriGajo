@@ -10,6 +10,7 @@ package com.example.nutrigajo.data.remote.firebase.firestore
  * codigosVinculacion/{codigo}         nutriologoId, expiraEn, usado, canjeadoPor… (el id es el código)
  * verificaciones/{uid}                solicitud de verificación del nutriólogo (cédula) o del entrenador (credencial); estado PENDIENTE|APROBADA|RECHAZADA
  * ejercicios/{id}                    banco global: ejercicio que crea un entrenador verificado (estado BORRADOR|EN_REVISION|PUBLICADO|RECHAZADO|RETIRADO); lo publicado lo ve cualquier sesión, su foto vive en R2
+ * platillos/{id}                    banco global: platillo que crea un nutriólogo o un entrenador verificado (mismos estados que ejercicios; autorRol dice cuál); lo publicado lo ve cualquier sesión, su foto vive en R2
  * cedulas/{numero}                    reserva de una cédula por un nutriólogo (una cédula, una cuenta)
  * directorio/{uid}                    consultorio de un nutriólogo verificado en el mapa (nombre, lat, lng)
  *   └─ ocupados/{inicio}              hora ya pedida (citaId, inicio); sin datos del paciente, la ve cualquier sesión
@@ -36,6 +37,7 @@ object FirestorePaths {
     const val CODIGOS_VINCULACION = "codigosVinculacion"
     const val VERIFICACIONES = "verificaciones"
     const val EJERCICIOS = "ejercicios"
+    const val PLATILLOS = "platillos"
     const val CEDULAS = "cedulas"
     const val DIRECTORIO = "directorio"
     const val OCUPADOS = "ocupados"

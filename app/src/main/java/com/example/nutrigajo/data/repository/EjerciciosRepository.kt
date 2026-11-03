@@ -1,8 +1,6 @@
 package com.example.nutrigajo.data.repository
 
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
-import com.example.nutrigajo.BuildConfig
 import com.example.nutrigajo.data.remote.firebase.firestore.FirestorePaths
 import com.example.nutrigajo.domain.model.Ejercicio
 import com.example.nutrigajo.domain.model.EquipoEjercicio
@@ -15,15 +13,8 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.tasks.await
-import kotlinx.coroutines.withContext
-import org.json.JSONObject
 import java.io.File
-import java.io.IOException
-import java.io.OutputStream
-import java.net.HttpURLConnection
-import java.net.URL
 
 // El banco global de ejercicios (ejercicios/{id}). Las reglas de Firestore son las que mandan: solo un entrenador verificado crea y
 // edita lo suyo, y solo el ADMIN publica o rechaza. Las fotos viven en R2 detrás del Worker, bajo el uid del autor.
@@ -31,7 +22,7 @@ import java.net.URL
 class EjerciciosRepository(
     private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
     private val db: FirebaseFirestore = FirebaseFirestore.getInstance(),
-    private val base: String = BuildConfig.WORKER_URL,
+    private val fotos: FotosBanco = FotosBanco(auth),
 ) {
     private val uid: String get() = auth.currentUser?.uid ?: error("Sin sesión")
 
@@ -57,7 +48,7 @@ class EjerciciosRepository(
     // Guarda como borrador o lo manda a revisión; si hay foto nueva la sube antes y apunta su versión. Devuelve el guardado.
     suspend fun guardar(ejercicio: Ejercicio, autorNombre: String, enviarARevision: Boolean, foto: ByteArray?, cache: File): Ejercicio {
         val referencia = if (ejercicio.id.isEmpty()) coleccion().document() else coleccion().document(ejercicio.id)
-        val version = foto?.let { subirFoto(referencia.id, it, cache) } ?: ejercicio.fotoVersion
+        val version = foto?.let { fotos.subir(RUTA_FOTOS, referencia.id, it, cache) } ?: ejercicio.fotoVersion
         val ahora = System.currentTimeMillis()
         val nuevo = ejercicio.limpio().copy(
             id = referencia.id,
@@ -116,57 +107,12 @@ class EjerciciosRepository(
 
     // ---- foto
 
-    // Sube el JPEG con el ID token de la sesión y devuelve su versión; la deja en la caché para no bajarla otra vez.
-    private suspend fun subirFoto(id: String, jpeg: ByteArray, cache: File): Long = withContext(Dispatchers.IO) {
-        val token = auth.currentUser?.getIdToken(false)?.await()?.token ?: error("Sin token")
-        val conexion = (URL("$base/ejercicio/$id").openConnection() as HttpURLConnection).apply {
-            requestMethod = "PUT"
-            doOutput = true
-            connectTimeout = 10_000
-            readTimeout = 20_000
-            setFixedLengthStreamingMode(jpeg.size)
-            setRequestProperty("Authorization", "Bearer $token")
-            setRequestProperty("Content-Type", "image/jpeg")
-        }
-        try {
-            conexion.outputStream.use { it.write(jpeg) }
-            if (conexion.responseCode != HttpURLConnection.HTTP_OK) throw IOException("El Worker respondió ${conexion.responseCode}")
-            val version = JSONObject(conexion.inputStream.bufferedReader().readText()).getLong("version")
-            guardarEnCache(cache, uid, id, version) { it.write(jpeg) }
-            version
-        } finally {
-            conexion.disconnect()
-        }
-    }
-
     // La foto de ese ejercicio en su versión: de la caché o descargada del Worker; null si no tiene.
-    suspend fun foto(ejercicio: Ejercicio, cache: File): Bitmap? = withContext(Dispatchers.IO) {
-        val version = ejercicio.fotoVersion ?: return@withContext null
-        val archivo = archivoDe(cache, ejercicio.autorId, ejercicio.id, version)
-        if (!archivo.exists()) {
-            val conexion = (URL("$base/ejercicio/${ejercicio.autorId}/${ejercicio.id}?v=$version").openConnection() as HttpURLConnection).apply {
-                connectTimeout = 10_000
-                readTimeout = 20_000
-            }
-            try {
-                if (conexion.responseCode != HttpURLConnection.HTTP_OK) throw IOException("El Worker respondió ${conexion.responseCode}")
-                guardarEnCache(cache, ejercicio.autorId, ejercicio.id, version) { salida -> conexion.inputStream.use { it.copyTo(salida) } }
-            } finally {
-                conexion.disconnect()
-            }
-        }
-        BitmapFactory.decodeFile(archivo.path)
-    }
+    suspend fun foto(ejercicio: Ejercicio, cache: File): Bitmap? =
+        ejercicio.fotoVersion?.let { fotos.bajar(RUTA_FOTOS, ejercicio.autorId, ejercicio.id, it, cache) }
 
-    private fun archivoDe(cache: File, autor: String, id: String, version: Long) = File(cache, "ejercicio-$autor-$id-$version.jpg")
-
-    // Escribe en un archivo parcial y lo renombra al terminar; después quita las versiones anteriores de ese ejercicio.
-    private fun guardarEnCache(cache: File, autor: String, id: String, version: Long, escribir: (OutputStream) -> Unit) {
-        val destino = archivoDe(cache, autor, id, version)
-        val parcial = File(cache, "${destino.name}.part")
-        parcial.outputStream().use(escribir)
-        parcial.renameTo(destino)
-        cache.listFiles { f -> f.name.startsWith("ejercicio-$autor-$id-") && f != destino }?.forEach { it.delete() }
+    private companion object {
+        const val RUTA_FOTOS = "ejercicio"
     }
 }
 
@@ -219,5 +165,5 @@ internal fun ejercicioDeMapa(id: String, d: Map<String, Any?>): Ejercicio? {
     )
 }
 
-private inline fun <reified E : Enum<E>> enumDe(valor: Any?): E? =
+internal inline fun <reified E : Enum<E>> enumDe(valor: Any?): E? =
     (valor as? String)?.let { nombre -> enumValues<E>().firstOrNull { it.name == nombre } }
