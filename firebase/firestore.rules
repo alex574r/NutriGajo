@@ -157,6 +157,19 @@ service cloud.firestore {
         && d.ruta is list && d.ruta.size() <= 4002 && d.ruta.size() % 2 == 0;
     }
 
+    // Una rutina de «Entrenar ahora» terminada (usuarios/{uid}/entrenamientos/{id}): cuándo, el enfoque del día, cuánto duró, las calorías
+    // estimadas y los ejercicios que se hicieron de los que traía. Con los mismos topes que Entrenamiento.kt.
+    function entrenamientoValido(d) {
+      return d.keys().hasOnly(['fecha', 'enfoque', 'minutos', 'kcal', 'hechos', 'total'])
+        && d.keys().hasAll(['fecha', 'enfoque', 'minutos', 'kcal', 'hechos', 'total'])
+        && d.fecha is int
+        && d.enfoque in ['PIERNAS', 'PECHO_Y_BRAZOS', 'ESPALDA_Y_HOMBROS', 'ABDOMEN_Y_CARDIO', 'CUERPO_COMPLETO', 'CARDIO_ACTIVO', 'MOVILIDAD']
+        && d.minutos is int && d.minutos >= 1 && d.minutos <= 600
+        && d.kcal is int && d.kcal >= 0 && d.kcal <= 10000
+        && d.total is int && d.total >= 1 && d.total <= 20
+        && d.hechos is int && d.hechos >= 1 && d.hechos <= d.total;
+    }
+
     // Perfil de cuenta. ADMIN se da de alta a mano en la consola: nadie puede asignárselo al registrarse.
     match /usuarios/{uid} {
       allow read: if request.auth != null && request.auth.uid == uid;
@@ -282,6 +295,14 @@ service cloud.firestore {
     match /usuarios/{uid}/carreras/{carreraId} {
       allow read: if request.auth != null && request.auth.uid == uid;
       allow create: if request.auth != null && request.auth.uid == uid && carreraValida(request.resource.data);
+      allow update: if false;
+      allow delete: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // El historial de «Entrenar ahora»: personal, solo lo ve y lo crea su dueño. Uno guardado no se edita; se borra.
+    match /usuarios/{uid}/entrenamientos/{entrenamientoId} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow create: if request.auth != null && request.auth.uid == uid && entrenamientoValido(request.resource.data);
       allow update: if false;
       allow delete: if request.auth != null && request.auth.uid == uid;
     }

@@ -164,6 +164,16 @@
         <item quantity="one">Ejercicio</item>
         <item quantity="other">Ejercicios</item>
     </plurals>
+    <string name="rutina_historial">Historial</string>
+    <string name="entrenar_racha_hoy">Hoy suma a tu racha</string>
+    <string name="entrenar_guardando">Guardando en tu historial…</string>
+    <string name="entrenar_guardado">Guardado en tu historial</string>
+    <string name="entrenar_error_guardar">No pudimos guardar tu entrenamiento. Se cuenta para tu racha, pero no saldrá en el historial.</string>
+    <string name="historial_titulo">Mis entrenamientos</string>
+    <string name="historial_sesiones">Sesiones</string>
+    <string name="historial_vacio">Aún no has entrenado. Tu primera rutina aparecerá aquí.</string>
+    <string name="historial_ejercicios_de">%1$d de %2$d ejercicios</string>
+    <string name="historial_cuenta_racha">Suma a la racha</string>
     <string name="entrenar_aviso">Esta rutina no sustituye las indicaciones de tu nutriólogo. Si algo te duele, detente.</string>
     <string name="rutina_iniciar">Iniciar rutina</string>
     <string name="inicio_dieta">Dieta &amp; nutrición</string>

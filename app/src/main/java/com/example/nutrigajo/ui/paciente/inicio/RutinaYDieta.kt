@@ -48,10 +48,10 @@ internal val TEXTO_SOBRE_FOTO = Color(0xFFD0D0D0)
 internal val SOMBRA_TEXTO = Shadow(Color.Black.copy(alpha = 0.35f), Offset(0f, 3f), 6f)
 
 // «Rutinas de hoy»: la rutina del día armada con el banco global (ver rutinaDelDia). Toda la tarjeta, y su botón de play, abren «Entrenar
-// ahora». Mientras se lee el banco se ve un esqueleto; sin ejercicios publicados no hay rutina y la sección no aparece.
+// ahora» y «Historial» abre lo ya entrenado. Mientras se lee el banco se ve un esqueleto; sin ejercicios publicados no hay rutina y la sección no aparece.
 // ponytail: el botón de la comida sigue sin abrir nada; el detalle llega con los planes.
 @Composable
-fun RutinaDeHoy(rutina: RutinaDelDia?, cargando: Boolean, onIniciar: () -> Unit, modifier: Modifier = Modifier) {
+fun RutinaDeHoy(rutina: RutinaDelDia?, cargando: Boolean, onIniciar: () -> Unit, onHistorial: () -> Unit, modifier: Modifier = Modifier) {
     val tipos = MaterialTheme.typography
     if (rutina == null) {
         if (cargando) {
@@ -64,7 +64,13 @@ fun RutinaDeHoy(rutina: RutinaDelDia?, cargando: Boolean, onIniciar: () -> Unit,
         return
     }
     Column(modifier) {
-        EncabezadoSeccion(stringResource(R.string.inicio_rutinas), contador = "(${rutina.ejercicios.size})", menu = true)
+        EncabezadoSeccion(
+            titulo = stringResource(R.string.inicio_rutinas),
+            contador = "(${rutina.ejercicios.size})",
+            verTodas = true,
+            etiquetaVerTodas = R.string.rutina_historial,
+            onVerTodas = onHistorial,
+        )
         Spacer(Modifier.height(12.dp))
         Box(
             modifier = Modifier

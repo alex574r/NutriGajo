@@ -134,7 +134,7 @@ object AlmacenWidget {
         prefs(contexto).edit().putString(PERFIL, j.toString()).apply()
     }
 
-    // Los días (toEpochDay) en que se guardó una caminata o carrera; se van sumando y nunca se quitan (borrar una actividad no
+    // Los días (toEpochDay) en que se guardó una caminata o carrera o se terminó una rutina; se van sumando y nunca se quitan (borrar una actividad no
     // rompe una racha ya ganada).
     fun diasCarrera(contexto: Context): Set<Long> =
         prefs(contexto).getStringSet(DIAS_CARRERA, emptySet()).orEmpty().mapNotNull { it.toLongOrNull() }.toSet()

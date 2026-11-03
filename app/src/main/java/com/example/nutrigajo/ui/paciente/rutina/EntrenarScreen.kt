@@ -1,5 +1,8 @@
 package com.example.nutrigajo.ui.paciente.rutina
 
+import com.example.nutrigajo.domain.model.Entrenamiento
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.runtime.collectAsState
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -73,11 +76,17 @@ private enum class Fase { INTRO, EJERCICIO, FIN }
 
 // «Entrenar ahora» con el aspecto «Workout»: primero la cabecera con el enfoque del día, tiempo, calorías y nivel, y la lista de ejercicios;
 // luego cada ejercicio con su cronómetro y sus instrucciones de una en una (pausa, anterior y siguiente; al llegar a cero pasa solo al
-// que sigue) y al final lo que se hizo. La pantalla no se apaga mientras dura.
-// ponytail: no guarda historial ni cuenta para la racha; las calorías son la suma de lo estimado de cada ejercicio que se terminó.
+// que sigue) y al final lo que se hizo, que se guarda en el historial y, si se hizo al menos la mitad, suma el día a la racha. La pantalla
+// no se apaga mientras dura. Las calorías son la suma de lo estimado de cada ejercicio que se terminó.
 @Composable
-fun EntrenarScreen(rutina: RutinaDelDia, onSalir: () -> Unit) {
+fun EntrenarScreen(
+    rutina: RutinaDelDia,
+    onSalir: () -> Unit,
+    // la misma instancia que el historial: al terminar se guarda ahí
+    vm: EntrenamientosViewModel = viewModel(key = "entrenamientos"),
+) {
     BackHandler(onBack = onSalir)
+    val guardado by vm.estado.collectAsState()
     val colores = MaterialTheme.colorScheme
     val vista = LocalView.current
     DisposableEffect(Unit) {
@@ -164,6 +173,7 @@ fun EntrenarScreen(rutina: RutinaDelDia, onSalir: () -> Unit) {
                         onClick = {
                             inicioMs = System.currentTimeMillis()
                             hechos = 0
+                            vm.reiniciarGuardado()
                             irA(0)
                             fase = Fase.EJERCICIO
                         },
@@ -237,8 +247,11 @@ fun EntrenarScreen(rutina: RutinaDelDia, onSalir: () -> Unit) {
                 }
             }
             Fase.FIN -> {
-                val minutos = maxOf(1, ((terminoMs - inicioMs) / 60_000).toInt())
-                val kcal = ejercicios.take(hechos).sumOf { it.kcal }
+                val minutos = ((terminoMs - inicioMs) / 60_000).toInt().coerceIn(1, Entrenamiento.MAX_MINUTOS)
+                val kcal = ejercicios.take(hechos).sumOf { it.kcal }.coerceAtMost(Entrenamiento.MAX_KCAL)
+                val terminado = Entrenamiento(fecha = terminoMs, enfoque = rutina.enfoque, minutos = minutos, kcal = kcal, hechos = hechos, total = total)
+                // al llegar aquí se guarda una vez (con ningún ejercicio hecho no hay entrenamiento que guardar)
+                LaunchedEffect(Unit) { if (hechos >= 1) vm.guardar(terminado) }
                 Column(Modifier.fillMaxSize().statusBarsPadding()) {
                     Column(
                         modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = MARGEN),
@@ -254,6 +267,26 @@ fun EntrenarScreen(rutina: RutinaDelDia, onSalir: () -> Unit) {
                                 hechos.toString() to pluralStringResource(R.plurals.entrenar_resumen_ejercicios, hechos),
                             ),
                         )
+                        if (terminado.cuentaParaLaRacha) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Icon(painterResource(R.drawable.ic_llama), contentDescription = null, modifier = Modifier.size(18.dp), tint = colores.primary)
+                                Text(stringResource(R.string.entrenar_racha_hoy), style = MaterialTheme.typography.titleSmall, color = colores.primary)
+                            }
+                        }
+                        val estadoGuardado = when {
+                            guardado.errorGuardar != null -> stringResource(guardado.errorGuardar!!)
+                            guardado.guardado -> stringResource(R.string.entrenar_guardado)
+                            guardado.guardando -> stringResource(R.string.entrenar_guardando)
+                            else -> null
+                        }
+                        estadoGuardado?.let {
+                            Text(
+                                text = it,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = if (guardado.errorGuardar != null) colores.error else colores.onSurfaceVariant,
+                                textAlign = TextAlign.Center,
+                            )
+                        }
                     }
                     Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(MARGEN)) {
                         BotonPrimario(texto = stringResource(R.string.entrenar_terminar), onClick = onSalir, modifier = Modifier.fillMaxWidth())

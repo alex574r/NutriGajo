@@ -1,5 +1,6 @@
 package com.example.nutrigajo.ui.paciente.inicio
 
+import com.example.nutrigajo.ui.paciente.rutina.HistorialEntrenamientosScreen
 import com.example.nutrigajo.ui.shared.ejercicios.EjerciciosViewModel
 import com.example.nutrigajo.ui.shared.ejercicios.EjerciciosEstado
 import com.example.nutrigajo.ui.paciente.rutina.EntrenarScreen
@@ -140,6 +141,7 @@ fun InicioPacienteScreen(
     // el ejercicio que se tocó en el inicio: Explorar lo abre directo; null abre la lista
     var ejercicioInicial by rememberSaveable { mutableStateOf<String?>(null) }
     var enRutina by rememberSaveable { mutableStateOf(false) }
+    var enHistorial by rememberSaveable { mutableStateOf(false) }
     // la pantalla de métricas abierta desde las tarjetas y el agua de hoy, que sube con el + y se ve también en la tarjeta
     var metrica by rememberSaveable { mutableStateOf<Metrica?>(null) }
     // «Ver todas» de las métricas: la cuadrícula se queda abierta debajo de la pantalla de la métrica que se abre desde ella
@@ -182,7 +184,7 @@ fun InicioPacienteScreen(
 
     val vinculo = estado.vinculo
     // la racha: días seguidos con la meta de pasos del reloj o con una caminata o carrera guardada (al volver del Modo carrera se cuenta otra vez)
-    val diasCarrera = remember(enCarrera, reloj.resumen) { AlmacenWidget.diasCarrera(contexto) }
+    val diasCarrera = remember(enCarrera, enRutina, enHistorial, reloj.resumen) { AlmacenWidget.diasCarrera(contexto) }
     val rachaDeHoy = remember(reloj.resumen, diasCarrera, vinculo?.metas?.pasos) {
         racha(LocalDate.now(), reloj.resumen?.pasosPorDia.orEmpty(), diasCarrera, vinculo?.metas?.pasos ?: DatosWidget.META_PASOS)
     }
@@ -255,6 +257,8 @@ fun InicioPacienteScreen(
         enReloj -> RelojScreen(onVolver = { enReloj = false }, vm = relojVm)
         // «Entrenar ahora»: la rutina del día paso a paso
         enRutina && rutina != null -> EntrenarScreen(rutina, onSalir = { enRutina = false })
+        // lo ya entrenado
+        enHistorial -> HistorialEntrenamientosScreen(onVolver = { enHistorial = false })
         // el banco global de ejercicios de los entrenadores
         enEjercicios -> ExplorarEjerciciosScreen(
             abrirId = ejercicioInicial,
@@ -417,6 +421,7 @@ fun InicioPacienteScreen(
                     ejercicios = ejercicios,
                     rutina = rutina,
                     onRutina = { enRutina = true },
+                    onHistorial = { enHistorial = true },
                     racha = rachaDeHoy,
                     onDieta = {
                         dietaInicio = it
@@ -493,6 +498,8 @@ private fun InicioPaciente(
     ejercicios: EjerciciosEstado,
     rutina: RutinaDelDia?,
     onRutina: () -> Unit,
+    // abre el historial de entrenamientos
+    onHistorial: () -> Unit,
     // los días seguidos que lleva cumpliendo algo (se ven en el encabezado)
     racha: Racha,
     // abre Mis comidas (-1) o la comida que se tocó (su lugar en `platos`)
@@ -557,7 +564,7 @@ private fun InicioPaciente(
                     onClick = onReloj,
                 )
             }
-            item { RutinaDeHoy(rutina, ejercicios.cargando, onRutina) }
+            item { RutinaDeHoy(rutina, ejercicios.cargando, onRutina, onHistorial) }
             item { DietaNutricion(comidas, onVerTodas = { onDieta(-1) }, onComida = { onDieta(platos.indexOf(it)) }) }
             item { ActividadReciente() }
             item {
