@@ -1,5 +1,9 @@
 package com.example.nutrigajo.ui.paciente.inicio
 
+import com.example.nutrigajo.ui.shared.platillos.PlatillosViewModel
+import com.example.nutrigajo.ui.shared.platillos.PlatillosEstado
+import com.example.nutrigajo.ui.paciente.platillos.ExplorarPlatillosScreen
+import com.example.nutrigajo.domain.model.paraPaciente
 import com.example.nutrigajo.ui.paciente.rutina.HistorialEntrenamientosScreen
 import com.example.nutrigajo.ui.shared.ejercicios.EjerciciosViewModel
 import com.example.nutrigajo.ui.shared.ejercicios.EjerciciosEstado
@@ -142,6 +146,9 @@ fun InicioPacienteScreen(
     var enCarrera by rememberSaveable { mutableStateOf(false) }
     var enReloj by rememberSaveable { mutableStateOf(false) }
     var enEjercicios by rememberSaveable { mutableStateOf(false) }
+    // el banco global de platillos: Explorar abre la lista (null) o el platillo que se tocó en el inicio
+    var enPlatillos by rememberSaveable { mutableStateOf(false) }
+    var platilloInicial by rememberSaveable { mutableStateOf<String?>(null) }
     // el ejercicio que se tocó en el inicio: Explorar lo abre directo; null abre la lista
     var ejercicioInicial by rememberSaveable { mutableStateOf<String?>(null) }
     var enRutina by rememberSaveable { mutableStateOf(false) }
@@ -187,6 +194,10 @@ fun InicioPacienteScreen(
     val ejercicios by ejerciciosVm.estado.collectAsState()
     LaunchedEffect(Unit) { ejerciciosVm.cargarPublicados() }
     val rutina = remember(ejercicios.items) { rutinaDelDia(LocalDate.now(), ejercicios.items) }
+    // el banco global de platillos alimenta «Dieta & nutrición»; Explorar usa la misma instancia
+    val platillosVm: PlatillosViewModel = viewModel(key = "explorar-platillos")
+    val platillos by platillosVm.estado.collectAsState()
+    LaunchedEffect(Unit) { platillosVm.cargarPublicados() }
 
     val vinculo = estado.vinculo
     // la racha: días seguidos con la meta de pasos del reloj o con una caminata o carrera guardada (al volver del Modo carrera se cuenta otra vez)
@@ -294,6 +305,25 @@ fun InicioPacienteScreen(
                 ejercicioInicial = null
             },
         )
+        // el banco global de platillos de los nutriólogos y entrenadores, con las alergias y la dieta del expediente
+        enPlatillos && vinculo != null -> {
+            val expedienteVm: ExpedienteViewModel = viewModel(key = "expediente-${vinculo.pacienteId}-${Rol.PACIENTE.name}")
+            val expediente by expedienteVm.estado.collectAsState()
+            // al volver tras cerrar el proceso nadie más lo ha leído: se pide aquí, porque sin las alergias no se muestra nada
+            LaunchedEffect(vinculo.pacienteId) { expedienteVm.cargar(vinculo.pacienteId) }
+            ExplorarPlatillosScreen(
+                abrirId = platilloInicial,
+                alergias = expediente.expediente.alergias,
+                dieta = expediente.expediente.dieta,
+                expedienteListo = !expediente.cargando && expediente.error == null,
+                expedienteCargando = expediente.cargando,
+                onActualizarExpediente = { expedienteVm.cargar(vinculo.pacienteId) },
+                onVolver = {
+                    enPlatillos = false
+                    platilloInicial = null
+                },
+            )
+        }
         enCitas -> {
             BackHandler { enCitas = false }
             AgendaScreen(
@@ -454,6 +484,11 @@ fun InicioPacienteScreen(
                         dietaInicio = it
                         dietaAbierta = true
                     },
+                    platillos = platillos,
+                    onPlatillos = { id ->
+                        platilloInicial = id
+                        enPlatillos = true
+                    },
                 )
             }
         }
@@ -531,6 +566,9 @@ private fun InicioPaciente(
     racha: Racha,
     // abre Mis comidas (-1) o la comida que se tocó (su lugar en `platos`)
     onDieta: (Int) -> Unit,
+    // los platillos publicados del banco global y lo que abre su fila: la lista (null) o el platillo que se tocó
+    platillos: PlatillosEstado,
+    onPlatillos: (String?) -> Unit,
     // misma clave que el flujo del expediente: la tarjeta refleja lo que se guarda ahí
     expedienteVm: ExpedienteViewModel = viewModel(key = "expediente-${vinculo.pacienteId}-${Rol.PACIENTE.name}"),
 ) {
@@ -592,7 +630,15 @@ private fun InicioPaciente(
                 )
             }
             item { RutinaDeHoy(rutina, ejercicios.cargando, onRutina, onHistorial) }
-            item { DietaNutricion(comidas, onVerTodas = { onDieta(-1) }, onComida = { onDieta(platos.indexOf(it)) }) }
+            item {
+                // se esconden los platillos que nombran una alergia del expediente y se prefieren los de su dieta
+                // y mientras el expediente no se haya leído no se muestra ninguno (se ven esqueletos o, si falló, la entrada a Explorar)
+                val expedienteListo = !expediente.cargando && expediente.error == null
+                val visibles = remember(platillos.items, expediente.expediente, expedienteListo) {
+                    platillos.items.paraPaciente(expediente.expediente.alergias, expediente.expediente.dieta, expedienteListo)
+                }
+                DietaNutricion(platillos.copy(cargando = platillos.cargando || expediente.cargando), visibles, onAbrir = onPlatillos, onMisComidas = { onDieta(-1) })
+            }
             item { ActividadReciente() }
             item {
                 // las etiquetas dicen qué trae el plan que aún no ha visto

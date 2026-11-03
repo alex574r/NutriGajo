@@ -1,5 +1,6 @@
 package com.example.nutrigajo.ui.entrenador.inicio
 
+import com.example.nutrigajo.ui.shared.platillos.MisPlatillosScreen
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -53,6 +54,7 @@ import com.example.nutrigajo.ui.components.BarraInferior
 import com.example.nutrigajo.ui.components.CabeceraUsuario
 import com.example.nutrigajo.ui.components.CambioConAvatar
 import com.example.nutrigajo.ui.components.Esqueleto
+import com.example.nutrigajo.ui.components.FilaAjuste
 import com.example.nutrigajo.ui.components.ItemBarra
 import com.example.nutrigajo.ui.components.PantallaCarga
 import com.example.nutrigajo.ui.components.TransicionPerfil
@@ -91,6 +93,7 @@ fun InicioEntrenadorScreen(
     val ejercicios by vm.estado.collectAsState()
     var pestana by rememberSaveable { mutableStateOf(Pestana.INICIO) }
     var enFormulario by rememberSaveable { mutableStateOf(false) }
+    var enPlatillos by rememberSaveable { mutableStateOf(false) }
     var abiertoId by rememberSaveable { mutableStateOf<String?>(null) }
     var editando by remember { mutableStateOf<Ejercicio?>(null) }
     val contexto = LocalContext.current
@@ -130,6 +133,7 @@ fun InicioEntrenadorScreen(
 
     val enEdicion = editando
     when {
+        enPlatillos -> MisPlatillosScreen(perfil = perfil, puedeCrear = aprobada, onVolver = { enPlatillos = false })
         enEdicion != null -> EditorEjercicio(
             inicial = enEdicion,
             guardando = ejercicios.guardando,
@@ -190,6 +194,7 @@ fun InicioEntrenadorScreen(
                                 onVerificar = verificar,
                                 onActualizar = actualizar,
                                 onEjercicio = { abiertoId = it.id },
+                                onPlatillos = { enPlatillos = true },
                                 transicion = transicion,
                             )
                             Pestana.PERFIL -> TabPerfilEntrenador(
@@ -234,6 +239,7 @@ private fun TabEjercicios(
     onVerificar: () -> Unit,
     onActualizar: () -> Unit,
     onEjercicio: (Ejercicio) -> Unit,
+    onPlatillos: () -> Unit,
     modifier: Modifier = Modifier,
     transicion: TransicionPerfil? = null,
 ) {
@@ -263,6 +269,15 @@ private fun TabEjercicios(
         item { AvisoInformativo(stringResource(R.string.entrenador_aviso)) }
         if (!aprobada) {
             item { TarjetaVerificacion(verificacion, onVerificar, Modifier.padding(horizontal = MARGEN), onActualizar = onActualizar, entrenador = true) }
+        }
+        item {
+            FilaAjuste(
+                icono = R.drawable.ic_documento,
+                titulo = stringResource(R.string.platillo_mis_platillos),
+                modifier = Modifier.padding(horizontal = MARGEN),
+                etiqueta = stringResource(R.string.platillo_entrada_etiqueta),
+                onClick = onPlatillos,
+            )
         }
         ejercicios.error?.let { item { AlertaError(stringResource(it), Modifier.padding(horizontal = MARGEN)) } }
         item { EncabezadoSeccion(stringResource(R.string.entrenador_mis_ejercicios), contador = "(${ejercicios.items.size})") }

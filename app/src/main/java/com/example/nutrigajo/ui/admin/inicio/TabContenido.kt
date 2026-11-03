@@ -1,5 +1,14 @@
 package com.example.nutrigajo.ui.admin.inicio
 
+import com.example.nutrigajo.ui.shared.platillos.TarjetaPlatillo
+import com.example.nutrigajo.ui.shared.platillos.PlatillosEstado
+import com.example.nutrigajo.ui.components.SelectorPestanas
+import com.example.nutrigajo.domain.model.Platillo
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.getValue
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
@@ -36,18 +45,24 @@ import com.example.nutrigajo.ui.shared.perfil.rememberFotoAvatar
 
 private val MARGEN = 20.dp
 
-// La cola de ejercicios que esperan revisión, del más antiguo al más reciente. Tocar uno abre su detalle para publicarlo o rechazarlo.
+// Las colas de ejercicios y de platillos que esperan revisión, cada una del más antiguo al más reciente. Tocar uno abre su detalle para
+// publicarlo o rechazarlo.
 @Composable
 fun TabContenido(
     perfil: Perfil,
-    estado: EjerciciosEstado,
+    ejercicios: EjerciciosEstado,
+    platillos: PlatillosEstado,
     onEjercicio: (Ejercicio) -> Unit,
+    onPlatillo: (Platillo) -> Unit,
     onActualizar: () -> Unit,
     onPerfil: () -> Unit,
     modifier: Modifier = Modifier,
     transicion: TransicionPerfil? = null,
 ) {
     val colores = MaterialTheme.colorScheme
+    var seccion by rememberSaveable { mutableIntStateOf(0) }
+    val deEjercicios = seccion == 0
+    val error = if (deEjercicios) ejercicios.error else platillos.error
     LazyColumn(
         modifier = modifier.fillMaxSize().statusBarsPadding(),
         contentPadding = PaddingValues(
@@ -70,25 +85,49 @@ fun TabContenido(
                 transicion = transicion,
             )
         }
-        item { AvisoInformativo(stringResource(R.string.admin_contenido_aviso)) }
-        estado.error?.let { item { AlertaError(stringResource(it), Modifier.padding(horizontal = MARGEN)) } }
-        item { EncabezadoSeccion(stringResource(R.string.admin_contenido_titulo), contador = "(${estado.items.size})") }
-        when {
-            estado.cargando && estado.items.isEmpty() -> items(3) {
-                Esqueleto(Modifier.fillMaxWidth().padding(horizontal = MARGEN).height(104.dp), RoundedCornerShape(28.dp))
+        item {
+            SelectorPestanas(
+                titulos = listOf(R.string.admin_contenido_ejercicios, R.string.admin_contenido_platillos),
+                seleccionada = seccion,
+                onSeleccionar = { seccion = it },
+                modifier = Modifier.padding(horizontal = MARGEN),
+            )
+        }
+        item { AvisoInformativo(stringResource(if (deEjercicios) R.string.admin_contenido_aviso else R.string.admin_contenido_aviso_platillos)) }
+        error?.let { item { AlertaError(stringResource(it), Modifier.padding(horizontal = MARGEN)) } }
+        if (deEjercicios) {
+            item { EncabezadoSeccion(stringResource(R.string.admin_contenido_titulo), contador = "(${ejercicios.items.size})") }
+            when {
+                ejercicios.cargando && ejercicios.items.isEmpty() -> items(3) {
+                    Esqueleto(Modifier.fillMaxWidth().padding(horizontal = MARGEN).height(104.dp), RoundedCornerShape(28.dp))
+                }
+                ejercicios.items.isEmpty() -> item { Vacio(R.string.admin_contenido_vacio) }
+                else -> items(ejercicios.items, key = { it.id }) { ejercicio ->
+                    TarjetaEjercicio(ejercicio, onClick = { onEjercicio(ejercicio) }, modifier = Modifier.padding(horizontal = MARGEN))
+                }
             }
-            estado.items.isEmpty() -> item {
-                Text(
-                    text = stringResource(R.string.admin_contenido_vacio),
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = MARGEN),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = colores.onSurfaceVariant,
-                    textAlign = TextAlign.Center,
-                )
-            }
-            else -> items(estado.items, key = { it.id }) { ejercicio ->
-                TarjetaEjercicio(ejercicio, onClick = { onEjercicio(ejercicio) }, modifier = Modifier.padding(horizontal = MARGEN))
+        } else {
+            item { EncabezadoSeccion(stringResource(R.string.admin_contenido_titulo_platillos), contador = "(${platillos.items.size})") }
+            when {
+                platillos.cargando && platillos.items.isEmpty() -> items(2) {
+                    Esqueleto(Modifier.fillMaxWidth().padding(horizontal = MARGEN).height(233.dp), RoundedCornerShape(28.dp))
+                }
+                platillos.items.isEmpty() -> item { Vacio(R.string.admin_contenido_vacio_platillos) }
+                else -> items(platillos.items, key = { it.id }) { platillo ->
+                    TarjetaPlatillo(platillo, onClick = { onPlatillo(platillo) }, modifier = Modifier.fillMaxWidth().padding(horizontal = MARGEN))
+                }
             }
         }
     }
+}
+
+@Composable
+private fun Vacio(@StringRes texto: Int) {
+    Text(
+        text = stringResource(texto),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = MARGEN),
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        textAlign = TextAlign.Center,
+    )
 }

@@ -265,6 +265,7 @@
     <string name="nutri_atajo_pacientes">Pacientes</string>
     <string name="nutri_atajo_codigo">Código</string>
     <string name="nutri_atajo_mapa">Mapa</string>
+    <string name="nutri_atajo_platillos">Platillos</string>
     <plurals name="nutri_aviso_pacientes">
         <item quantity="one">Tienes %d paciente vinculado.</item>
         <item quantity="other">Tienes %d pacientes vinculados.</item>
@@ -1126,6 +1127,12 @@
     <string name="admin_publicar">Publicar</string>
     <string name="admin_ver_detalle">Ver detalle</string>
     <string name="admin_rechazar_ejercicio">Rechazar ejercicio</string>
+    <string name="admin_rechazar_platillo">Rechazar platillo</string>
+    <string name="admin_contenido_ejercicios">Ejercicios</string>
+    <string name="admin_contenido_platillos">Platillos</string>
+    <string name="admin_contenido_titulo_platillos">Platillos por revisar</string>
+    <string name="admin_contenido_vacio_platillos">No hay platillos por revisar.</string>
+    <string name="admin_contenido_aviso_platillos">Revisa que la foto sea del platillo y que los macros, las calorías y los pasos sean razonables antes de publicar.</string>
     <string name="admin_error_ejercicio">No pudimos completar la acción. Inténtalo de nuevo.</string>
 
     <string name="entrenador_nav_inicio">Ejercicios</string>
@@ -1205,13 +1212,6 @@
     <string name="ejercicio_error_cargar">No pudimos cargar los ejercicios. Revisa tu conexión.</string>
     <string name="ejercicio_error_guardar">No pudimos guardar. Inténtalo de nuevo.</string>
     <string name="ejercicio_error_foto">No pudimos leer esa foto. Elige otra.</string>
-    <string name="ejercicio_sin_foto">Sin foto</string>
-    <string name="ejercicio_por">Por %1$s</string>
-    <string name="ejercicio_minutos">%1$d min</string>
-    <string name="ejercicio_calorias">%1$d kcal</string>
-    <string name="ejercicio_como_hacerlo">Cómo hacerlo</string>
-    <string name="ejercicio_volver">Regresar</string>
-    <string name="ejercicio_desliza">Desliza para ver</string>
     <string name="platillo_error_foto">No pudimos leer esa foto. Elige otra.</string>
     <string name="platillo_etiqueta_sin_gluten">Sin gluten</string>
     <string name="platillo_etiqueta_sin_lactosa">Sin lactosa</string>
@@ -1278,6 +1278,13 @@
     <string name="banco_mis_comidas">Mis comidas</string>
     <string name="banco_globales">Globales</string>
     <string name="banco_vacio_globales">Aún no hay platillos publicados para este momento.</string>
+    <string name="ejercicio_sin_foto">Sin foto</string>
+    <string name="ejercicio_por">Por %1$s</string>
+    <string name="ejercicio_minutos">%1$d min</string>
+    <string name="ejercicio_calorias">%1$d kcal</string>
+    <string name="ejercicio_como_hacerlo">Cómo hacerlo</string>
+    <string name="ejercicio_volver">Regresar</string>
+    <string name="ejercicio_desliza">Desliza para ver</string>
     <string name="ejercicio_ver">Ver</string>
 
     <string name="inicio_extra">Más ejercicios extra</string>

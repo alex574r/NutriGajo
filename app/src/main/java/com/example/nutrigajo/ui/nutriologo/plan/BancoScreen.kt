@@ -1,5 +1,11 @@
 package com.example.nutrigajo.ui.nutriologo.plan
 
+import com.example.nutrigajo.ui.shared.platillos.PlatillosViewModel
+import com.example.nutrigajo.ui.shared.platillos.PlatillosEstado
+import com.example.nutrigajo.ui.shared.platillos.FilaPlatillo
+import com.example.nutrigajo.domain.model.comoItemDelBanco
+import com.example.nutrigajo.domain.model.Platillo
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.activity.compose.BackHandler
 import androidx.annotation.StringRes
 import androidx.compose.animation.animateColorAsState
@@ -83,13 +89,24 @@ internal fun MomentoComida.titulo(): Int = when (this) {
 }
 
 // El banco de comidas y ejercicios del nutriólogo: lista de lo guardado (las comidas se filtran por tiempo de comida) y el
-// formulario para crear o editar uno. Cubre toda la pantalla; regresar desde el formulario vuelve a la lista.
+// formulario para crear o editar uno. Cubre toda la pantalla; regresar desde el formulario vuelve a la lista. Al elegir una comida para
+// un plan hay además una pestaña «Globales» con los platillos publicados del banco de todos (`globales`).
 @Composable
-internal fun BancoScreen(destino: DestinoBanco, vm: BancoViewModel, onSalir: () -> Unit) {
+internal fun BancoScreen(
+    destino: DestinoBanco,
+    vm: BancoViewModel,
+    onSalir: () -> Unit,
+    globales: PlatillosViewModel = viewModel(key = "banco-globales"),
+) {
     val colores = MaterialTheme.colorScheme
     val estado by vm.estado.collectAsState()
     LaunchedEffect(Unit) { vm.cargar() }
     val elegir = destino.onElegir
+    val platillos by globales.estado.collectAsState()
+    var verGlobales by remember { mutableStateOf(false) }
+    // la pestaña «Globales» solo existe al elegir una comida; administrando el banco propio no hay
+    val enGlobales = verGlobales && elegir != null && destino.tipo == TipoBanco.COMIDA
+    LaunchedEffect(enGlobales) { if (enGlobales) globales.cargarPublicados() }
     var tipo by remember { mutableStateOf(destino.tipo) }
     var filtro by remember { mutableStateOf(destino.momento) }
     var formulario by remember { mutableStateOf<ItemBanco?>(null) }
@@ -132,6 +149,14 @@ internal fun BancoScreen(destino: DestinoBanco, vm: BancoViewModel, onSalir: () 
                 modifier = Modifier.padding(horizontal = MARGEN, vertical = 4.dp),
             )
         }
+        if (elegir != null && tipo == TipoBanco.COMIDA) {
+            SelectorPestanas(
+                titulos = listOf(R.string.banco_mis_comidas, R.string.banco_globales),
+                seleccionada = if (verGlobales) 1 else 0,
+                onSeleccionar = { verGlobales = it == 1 },
+                modifier = Modifier.padding(horizontal = MARGEN, vertical = 4.dp),
+            )
+        }
         if (tipo == TipoBanco.COMIDA) {
             Row(
                 modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = MARGEN, vertical = 8.dp),
@@ -143,6 +168,7 @@ internal fun BancoScreen(destino: DestinoBanco, vm: BancoViewModel, onSalir: () 
         }
         Box(Modifier.weight(1f).fillMaxWidth()) {
             when {
+                enGlobales -> ListaGlobales(platillos, filtro) { elegir?.invoke(it.comoItemDelBanco()) }
                 estado.cargando -> Column(Modifier.padding(horizontal = MARGEN, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     val descripcion = stringResource(R.string.cargando)
                     repeat(3) {
@@ -174,7 +200,7 @@ internal fun BancoScreen(destino: DestinoBanco, vm: BancoViewModel, onSalir: () 
                 }
             }
         }
-        Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(MARGEN)) {
+        if (!enGlobales) Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(MARGEN)) {
             BotonPrimario(
                 texto = stringResource(if (tipo == TipoBanco.COMIDA) R.string.banco_nueva_comida else R.string.banco_nuevo_ejercicio),
                 onClick = {
@@ -187,6 +213,38 @@ internal fun BancoScreen(destino: DestinoBanco, vm: BancoViewModel, onSalir: () 
                 },
                 modifier = Modifier.fillMaxWidth(),
             )
+        }
+    }
+}
+
+// Los platillos publicados del banco global, del momento que se filtra (todos si es null): tocar uno lo pone en el plan.
+@Composable
+private fun ListaGlobales(estado: PlatillosEstado, momento: MomentoComida?, onElegir: (Platillo) -> Unit) {
+    val colores = MaterialTheme.colorScheme
+    val visibles = estado.items.filter { momento == null || it.momento == momento }
+    when {
+        estado.cargando && estado.items.isEmpty() -> Column(Modifier.padding(horizontal = MARGEN, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            repeat(3) { Esqueleto(Modifier.fillMaxWidth().height(107.dp), RoundedCornerShape(34.dp)) }
+        }
+        visibles.isEmpty() -> Column(
+            modifier = Modifier.fillMaxSize().padding(horizontal = MARGEN * 2),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            estado.error?.let { AlertaError(stringResource(it), Modifier.padding(bottom = 16.dp)) }
+            Text(
+                text = stringResource(R.string.banco_vacio_globales),
+                style = MaterialTheme.typography.bodyMedium,
+                color = colores.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+            )
+        }
+        else -> LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(horizontal = MARGEN, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            items(visibles, key = { it.id }) { platillo -> FilaPlatillo(platillo, onClick = { onElegir(platillo) }) }
         }
     }
 }

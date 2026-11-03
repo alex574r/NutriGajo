@@ -1,5 +1,6 @@
 package com.example.nutrigajo.ui.nutriologo.inicio
 
+import com.example.nutrigajo.ui.shared.platillos.MisPlatillosScreen
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -80,6 +81,7 @@ fun InicioNutriologoScreen(
     var enFormulario by rememberSaveable { mutableStateOf(false) }
     var enMapa by rememberSaveable { mutableStateOf(false) }
     var enCitas by rememberSaveable { mutableStateOf(false) }
+    var enPlatillos by rememberSaveable { mutableStateOf(false) }
     var codigoAbierto by rememberSaveable { mutableStateOf(false) }
     var pacienteAbierto by rememberSaveable { mutableStateOf<String?>(null) }
     // el panel del plan se abre desde el expediente del paciente abierto
@@ -140,6 +142,7 @@ fun InicioNutriologoScreen(
 
     when {
         enMapa -> UbicacionScreen(perfil = perfil, onVolver = { enMapa = false })
+        enPlatillos -> MisPlatillosScreen(perfil = perfil, puedeCrear = aprobada, onVolver = { enPlatillos = false })
         enCitas -> {
             BackHandler { enCitas = false }
             AgendaScreen(
@@ -232,6 +235,7 @@ fun InicioNutriologoScreen(
                                 onCodigo = { codigoAbierto = true },
                                 onGenerar = { vm.generarCodigo(perfil.nombre) },
                                 onMapa = irAlMapa,
+                                onPlatillos = { enPlatillos = true },
                                 citas = citas,
                                 onCitas = { enCitas = true },
                                 onVerificar = verificar,

@@ -1,5 +1,9 @@
 package com.example.nutrigajo.ui.paciente.inicio
 
+import com.example.nutrigajo.ui.shared.platillos.TarjetaPlatillo
+import com.example.nutrigajo.ui.shared.platillos.PlatillosEstado
+import com.example.nutrigajo.ui.components.FilaAjuste
+import com.example.nutrigajo.domain.model.Platillo
 import com.example.nutrigajo.ui.shared.ejercicios.titulo
 import com.example.nutrigajo.ui.shared.ejercicios.intensidad
 import com.example.nutrigajo.ui.shared.ejercicios.FotoEjercicio
@@ -141,75 +145,44 @@ fun RutinaDeHoy(rutina: RutinaDelDia?, cargando: Boolean, onIniciar: () -> Unit,
     }
 }
 
+// «Dieta & nutrición»: los platillos publicados del banco global (los que crean los nutriólogos y entrenadores verificados) en tarjetas;
+// tocar una abre su receta y «Ver todas», el banco con búsqueda y filtros. Mientras cargan se ven esqueletos; sin platillos o sin red queda
+// la entrada de siempre, para no perder el acceso. Debajo, «Mis comidas» abre el día comida por comida (de muestra por ahora).
 @Composable
-fun DietaNutricion(comidas: List<Comida>, onVerTodas: () -> Unit, onComida: (Comida) -> Unit, modifier: Modifier = Modifier) {
+fun DietaNutricion(
+    estado: PlatillosEstado,
+    platillos: List<Platillo>,
+    onAbrir: (String?) -> Unit,
+    onMisComidas: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     Column(modifier) {
-        EncabezadoSeccion(stringResource(R.string.inicio_dieta), verTodas = true, onVerTodas = onVerTodas)
+        EncabezadoSeccion(stringResource(R.string.inicio_dieta), verTodas = platillos.isNotEmpty(), onVerTodas = { onAbrir(null) })
         Spacer(Modifier.height(12.dp))
-        LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-            items(comidas) { comida -> TarjetaComida(comida, onClick = { onComida(comida) }) }
-        }
-    }
-}
-
-// Toda la tarjeta abre la comida, no solo la flecha.
-@Composable
-private fun TarjetaComida(comida: Comida, onClick: () -> Unit) {
-    val colores = MaterialTheme.colorScheme
-    val tipos = MaterialTheme.typography
-    Box(Modifier.size(283.dp, 233.dp).alPulsar(onClick, minimo = 0.97f).clip(RoundedCornerShape(28.dp)).background(colores.surfaceVariant)) {
-        // el plato sobresale por arriba y por la derecha: la tarjeta lo recorta
-        Image(
-            painter = painterResource(comida.foto),
-            contentDescription = null,
-            modifier = Modifier.align(Alignment.TopStart).offset(x = 73.dp, y = (-51).dp).size(284.dp),
-        )
-        Box(
-            Modifier
-                .align(Alignment.BottomStart)
-                .fillMaxWidth()
-                .height(137.dp)
-                .background(Brush.verticalGradient(listOf(MaterialTheme.colorScheme.background.copy(alpha = 0f), MaterialTheme.colorScheme.background.copy(alpha = 0.7f)))),
-        )
-        Column(Modifier.padding(start = 23.dp, top = 26.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-            Macro(stringResource(R.string.dieta_gramos, comida.proteinaG), stringResource(R.string.dieta_proteina))
-            Macro(stringResource(R.string.dieta_gramos, comida.grasasG), stringResource(R.string.dieta_grasas))
-        }
-        Column(Modifier.align(Alignment.BottomStart).padding(start = 14.dp, bottom = 16.dp)) {
-            Text(comida.titulo, style = tipos.titleMedium, color = colores.tertiary, maxLines = 1)
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                Icon(painterResource(R.drawable.ic_llama_solida), contentDescription = null, modifier = Modifier.size(16.dp), tint = colores.onSurfaceVariant)
-                Text(stringResource(R.string.rutina_kcal, comida.kcal), style = tipos.bodyMedium, color = colores.onSurfaceVariant)
+        when {
+            platillos.isNotEmpty() -> LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                items(platillos.take(PLATILLOS_RECIENTES), key = { it.id }) { platillo -> TarjetaPlatillo(platillo, onClick = { onAbrir(platillo.id) }) }
             }
-        }
-        Box(
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(end = 13.dp, bottom = 22.dp)
-                .size(55.dp, 56.dp)
-                .clip(RoundedCornerShape(17.dp))
-                .background(colores.primary),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                painter = painterResource(R.drawable.ic_flecha),
-                contentDescription = stringResource(R.string.dieta_ver),
-                modifier = Modifier.size(20.dp),
-                tint = Color.White,
+            estado.cargando -> LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                items(2) { Esqueleto(Modifier.size(283.dp, 233.dp), RoundedCornerShape(28.dp)) }
+            }
+            else -> FilaAjuste(
+                icono = R.drawable.ic_documento,
+                titulo = stringResource(R.string.inicio_dieta_explorar),
+                modifier = Modifier.padding(horizontal = 16.dp),
+                etiqueta = stringResource(R.string.inicio_dieta_etiqueta),
+                onClick = { onAbrir(null) },
             )
         }
+        Spacer(Modifier.height(10.dp))
+        FilaAjuste(
+            icono = R.drawable.ic_calendario,
+            titulo = stringResource(R.string.inicio_mis_comidas),
+            modifier = Modifier.padding(horizontal = 16.dp),
+            etiqueta = stringResource(R.string.inicio_mis_comidas_etiqueta),
+            onClick = onMisComidas,
+        )
     }
 }
 
-@Composable
-private fun Macro(valor: String, nombre: String) {
-    val tipos = MaterialTheme.typography
-    Column(
-        modifier = Modifier.size(52.dp, 47.dp).background(MaterialTheme.colorScheme.background, RoundedCornerShape(10.dp)),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Text(valor, style = tipos.titleSmall, color = MaterialTheme.colorScheme.tertiary)
-        Text(nombre, style = tipos.labelLarge.copy(fontSize = 11.sp), color = MaterialTheme.colorScheme.tertiary, maxLines = 1)
-    }
-}
+private const val PLATILLOS_RECIENTES = 6

@@ -1,5 +1,8 @@
 package com.example.nutrigajo.ui.admin.inicio
 
+import com.example.nutrigajo.ui.shared.platillos.PlatillosViewModel
+import com.example.nutrigajo.ui.shared.platillos.DetallePlatillo
+import com.example.nutrigajo.domain.model.Platillo
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Intent
@@ -65,19 +68,29 @@ fun InicioAdminScreen(
     // clave propia: el uid ya la usan otros ViewModels del mismo usuario
     vm: VerificacionesViewModel = viewModel(key = "admin-${perfil.uid}"),
     ejerciciosVm: EjerciciosViewModel = viewModel(key = "admin-ejercicios-${perfil.uid}"),
+    platillosVm: PlatillosViewModel = viewModel(key = "admin-platillos-${perfil.uid}"),
 ) {
     val estado by vm.estado.collectAsState()
     val ejercicios by ejerciciosVm.estado.collectAsState()
+    val platillos by platillosVm.estado.collectAsState()
+    val recargarContenido = {
+        if (!ejercicios.cargando) ejerciciosVm.cargarEnRevision()
+        if (!platillos.cargando) platillosVm.cargarEnRevision()
+    }
     val recargar = {
         vm.cargar()
         ejerciciosVm.cargarEnRevision()
+        platillosVm.cargarEnRevision()
     }
     LaunchedEffect(Unit) { recargar() }
     var pestana by rememberSaveable { mutableStateOf(Pestana.SOLICITUDES) }
     var rechazando by remember { mutableStateOf<SolicitudVerificacion?>(null) }
     var abiertoId by rememberSaveable { mutableStateOf<String?>(null) }
     var rechazandoEjercicio by remember { mutableStateOf<Ejercicio?>(null) }
+    var platilloAbiertoId by rememberSaveable { mutableStateOf<String?>(null) }
+    var rechazandoPlatillo by remember { mutableStateOf<Platillo?>(null) }
     val abierto = ejercicios.items.firstOrNull { it.id == abiertoId }
+    val platilloAbierto = platillos.items.firstOrNull { it.id == platilloAbiertoId }
     val contexto = LocalContext.current
     val abrirSep = { contexto.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(CONSULTA_SEP))) }
     // el portal pide la cédula: se deja en el portapapeles para pegarla allí
@@ -97,22 +110,26 @@ fun InicioAdminScreen(
             ejercicio = abierto,
             onVolver = { abiertoId = null },
             acciones = {
-                ejercicios.error?.let { AlertaError(stringResource(it)) }
-                val ocupado = ejercicios.trabajando != null
-                val colores = MaterialTheme.colorScheme
-                Button(
-                    onClick = { ejerciciosVm.publicar(abierto) { abiertoId = null } },
-                    enabled = !ocupado,
-                    modifier = Modifier.fillMaxWidth().height(48.dp),
-                    shape = RoundedCornerShape(21.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = colores.onBackground, contentColor = colores.background),
-                ) { Text(stringResource(R.string.admin_publicar)) }
-                OutlinedButton(
-                    onClick = { rechazandoEjercicio = abierto },
-                    enabled = !ocupado,
-                    modifier = Modifier.fillMaxWidth().height(48.dp),
-                    shape = RoundedCornerShape(21.dp),
-                ) { Text(stringResource(R.string.admin_rechazar)) }
+                AccionesRevision(
+                    error = ejercicios.error,
+                    ocupado = ejercicios.trabajando != null,
+                    onPublicar = { ejerciciosVm.publicar(abierto) { abiertoId = null } },
+                    onRechazar = { rechazandoEjercicio = abierto },
+                )
+            },
+        )
+    } else if (platilloAbierto != null) {
+        // el detalle del platillo que se revisa: se publica o se rechaza con motivo
+        DetallePlatillo(
+            platillo = platilloAbierto,
+            onVolver = { platilloAbiertoId = null },
+            acciones = {
+                AccionesRevision(
+                    error = platillos.error,
+                    ocupado = platillos.trabajando != null,
+                    onPublicar = { platillosVm.publicar(platilloAbierto) { platilloAbiertoId = null } },
+                    onRechazar = { rechazandoPlatillo = platilloAbierto },
+                )
             },
         )
     } else if (estado.cargando && estado.solicitudes.isEmpty() && estado.error == null) {
@@ -122,7 +139,7 @@ fun InicioAdminScreen(
         Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
             // deslizar hacia abajo en cualquiera de las pestañas vuelve a cargar las colas
             ActualizarAlDeslizar(
-                refrescando = estado.cargando || ejercicios.cargando,
+                refrescando = estado.cargando || ejercicios.cargando || platillos.cargando,
                 onActualizar = { if (estado.trabajando == null) recargar() },
                 modifier = Modifier.fillMaxSize(),
             ) {
@@ -141,9 +158,11 @@ fun InicioAdminScreen(
                         )
                         Pestana.CONTENIDO -> TabContenido(
                             perfil = perfil,
-                            estado = ejercicios,
+                            ejercicios = ejercicios,
+                            platillos = platillos,
                             onEjercicio = { abiertoId = it.id },
-                            onActualizar = { if (!ejercicios.cargando) ejerciciosVm.cargarEnRevision() },
+                            onPlatillo = { platilloAbiertoId = it.id },
+                            onActualizar = { recargarContenido() },
                             onPerfil = { pestana = Pestana.PERFIL },
                             transicion = transicion,
                         )
@@ -185,6 +204,17 @@ fun InicioAdminScreen(
         )
     }
 
+    rechazandoPlatillo?.let { platillo ->
+        DialogoRechazo(
+            titulo = R.string.admin_rechazar_platillo,
+            onConfirmar = { motivo ->
+                platillosVm.rechazar(platillo, motivo) { platilloAbiertoId = null }
+                rechazandoPlatillo = null
+            },
+            onCancelar = { rechazandoPlatillo = null },
+        )
+    }
+
     rechazando?.let { solicitud ->
         DialogoRechazo(
             titulo = R.string.admin_rechazar_titulo,
@@ -195,6 +225,26 @@ fun InicioAdminScreen(
             onCancelar = { rechazando = null },
         )
     }
+}
+
+// Los dos botones de la revisión de un ejercicio o de un platillo: publicar o rechazar con motivo.
+@Composable
+private fun AccionesRevision(@StringRes error: Int?, ocupado: Boolean, onPublicar: () -> Unit, onRechazar: () -> Unit) {
+    val colores = MaterialTheme.colorScheme
+    error?.let { AlertaError(stringResource(it)) }
+    Button(
+        onClick = onPublicar,
+        enabled = !ocupado,
+        modifier = Modifier.fillMaxWidth().height(48.dp),
+        shape = RoundedCornerShape(21.dp),
+        colors = ButtonDefaults.buttonColors(containerColor = colores.onBackground, contentColor = colores.background),
+    ) { Text(stringResource(R.string.admin_publicar)) }
+    OutlinedButton(
+        onClick = onRechazar,
+        enabled = !ocupado,
+        modifier = Modifier.fillMaxWidth().height(48.dp),
+        shape = RoundedCornerShape(21.dp),
+    ) { Text(stringResource(R.string.admin_rechazar)) }
 }
 
 @Composable

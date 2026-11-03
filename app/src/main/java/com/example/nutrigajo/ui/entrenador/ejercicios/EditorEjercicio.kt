@@ -257,9 +257,9 @@ private fun Ejercicio.paraGuardar(): Ejercicio = copy(
     kcal = kcal.coerceIn(0, Ejercicio.MAX_KCAL),
 )
 
-// La foto elegida, reducida para verla antes de subirla; null mientras se lee o si no se pudo.
+// La foto elegida, reducida para verla antes de subirla; null mientras se lee o si no se pudo. La usa también el editor de platillos.
 @Composable
-private fun rememberVistaPrevia(uri: Uri?): ImageBitmap? {
+internal fun rememberVistaPrevia(uri: Uri?): ImageBitmap? {
     val resolver = LocalContext.current.contentResolver
     val imagen by produceState<ImageBitmap?>(null, uri) {
         value = if (uri == null) {

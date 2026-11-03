@@ -83,6 +83,7 @@ fun TabInicio(
     onCodigo: () -> Unit,
     onGenerar: () -> Unit,
     onMapa: () -> Unit,
+    onPlatillos: () -> Unit,
     citas: CitasEstado,
     onCitas: () -> Unit,
     onVerificar: () -> Unit,
@@ -117,7 +118,7 @@ fun TabInicio(
                 transicion = transicion,
             )
         }
-        item { Atajos(aprobada, onPacientes, onCodigo, onCitas, onMapa) }
+        item { Atajos(aprobada, onPacientes, onCodigo, onCitas, onMapa, onPlatillos) }
         item {
             AvisoInformativo(
                 if (estado.pacientes.isEmpty()) stringResource(R.string.nutri_aviso_vacio)
@@ -192,9 +193,9 @@ fun TabInicio(
     }
 }
 
-// Atajos a lo que el nutriólogo usa más; los de citas y mapa solo aparecen con la cuenta verificada.
+// Atajos a lo que el nutriólogo usa más; los de citas, mapa y platillos solo aparecen con la cuenta verificada.
 @Composable
-private fun Atajos(aprobada: Boolean, onPacientes: () -> Unit, onCodigo: () -> Unit, onCitas: () -> Unit, onMapa: () -> Unit) {
+private fun Atajos(aprobada: Boolean, onPacientes: () -> Unit, onCodigo: () -> Unit, onCitas: () -> Unit, onMapa: () -> Unit, onPlatillos: () -> Unit) {
     Row(
         modifier = Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = MARGEN),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -204,6 +205,7 @@ private fun Atajos(aprobada: Boolean, onPacientes: () -> Unit, onCodigo: () -> U
         if (aprobada) {
             Atajo(R.drawable.ic_calendario, R.string.nutri_atajo_citas, onCitas)
             Atajo(R.drawable.ic_ubicacion, R.string.nutri_atajo_mapa, onMapa)
+            Atajo(R.drawable.ic_documento, R.string.nutri_atajo_platillos, onPlatillos)
         }
     }
 }
