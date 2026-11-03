@@ -4,6 +4,7 @@ import android.os.SystemClock
 import com.example.nutrigajo.domain.model.PuntoRuta
 import com.example.nutrigajo.domain.model.Ruta
 import com.example.nutrigajo.domain.model.TipoActividad
+import com.example.nutrigajo.domain.model.Tramo
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -22,6 +23,8 @@ data class RastreoEstado(
     val acumuladoMs: Long = 0,
     // el reloj (SystemClock) cuando empezó el tramo en curso; solo vale mientras se corre
     val reanudadoEn: Long = 0,
+    // los tramos de una sesión con intervalos, en orden; vacío en una carrera o caminata libre
+    val intervalos: List<Tramo> = emptyList(),
 ) {
     fun duracionMs(reloj: Long): Long = acumuladoMs + if (fase == Fase.CORRIENDO) reloj - reanudadoEn else 0
 }
@@ -38,9 +41,9 @@ class RastreoRuta(private val reloj: () -> Long) {
     private var ultimo: PuntoRuta? = null
     private var ultimoMs = 0L
 
-    fun iniciar(tipo: TipoActividad, ahoraEpoch: Long) {
+    fun iniciar(tipo: TipoActividad, ahoraEpoch: Long, intervalos: List<Tramo> = emptyList()) {
         ultimo = null
-        _estado.value = RastreoEstado(Fase.CORRIENDO, tipo, ahoraEpoch, reanudadoEn = reloj())
+        _estado.value = RastreoEstado(Fase.CORRIENDO, tipo, ahoraEpoch, reanudadoEn = reloj(), intervalos = intervalos)
     }
 
     fun pausar() {

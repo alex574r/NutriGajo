@@ -83,6 +83,9 @@ const ruta_plan = (uid) => `usuarios/${uid}/modoCarrera/plan`;
 const plan = (extra = {}) => ({ plan: "PRIMEROS_PASOS", inicio: ahora, ...extra });
 assert.equal(await commit(yo.token, { update: doc(ruta_plan(yo.uid), plan()) }), 200, "elige un plan");
 assert.equal(await commit(yo.token, { update: doc(ruta_plan(yo.uid), plan({ plan: "RESISTENCIA" })) }), 200, "cambia de plan");
+for (const nombre of ["INTERVALOS_PRINCIPIANTE", "INTERVALOS_INTERMEDIO", "INTERVALOS_AVANZADO", "QUEMAGRASA"]) {
+  assert.equal(await commit(yo.token, { update: doc(ruta_plan(yo.uid), plan({ plan: nombre })) }), 200, `elige ${nombre}`);
+}
 assert.equal(await commit(yo.token, { update: doc(ruta_plan(yo.uid), plan({ plan: "MARATON" })) }), 403, "plan que no existe");
 assert.equal(await commit(yo.token, { update: doc(ruta_plan(yo.uid), plan({ inicio: "hoy" })) }), 403, "el día es un número");
 assert.equal(await commit(yo.token, { update: doc(ruta_plan(yo.uid), plan({ extra: 1 })) }), 403, "campos de más");

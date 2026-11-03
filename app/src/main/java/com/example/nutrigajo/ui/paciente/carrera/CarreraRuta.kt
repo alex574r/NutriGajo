@@ -68,6 +68,7 @@ import com.example.nutrigajo.domain.model.Carrera
 import com.example.nutrigajo.domain.model.PuntoRuta
 import com.example.nutrigajo.domain.model.Ruta
 import com.example.nutrigajo.domain.model.TipoActividad
+import com.example.nutrigajo.domain.model.avance
 import com.example.nutrigajo.ui.components.AlertaError
 import com.example.nutrigajo.ui.components.BotonPrimario
 import com.example.nutrigajo.ui.components.CENTRO_POR_DEFECTO
@@ -129,23 +130,34 @@ internal fun CarreraEnCurso(
             estado.puntos.isEmpty() -> R.string.carrera_buscando_gps
             else -> null
         }
-        aviso?.let {
-            Text(
-                text = stringResource(it),
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .statusBarsPadding()
-                    .padding(top = 16.dp, start = 16.dp, end = 16.dp)
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(colores.background.copy(alpha = 0.94f))
-                    .padding(horizontal = 14.dp, vertical = 8.dp),
-                style = MaterialTheme.typography.labelLarge,
-                color = colores.onBackground,
-                textAlign = TextAlign.Center,
-            )
+        // arriba, sobre el mapa: lo que toca en la sesión con intervalos (si la hay) y los avisos
+        Column(
+            modifier = Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            if (estado.intervalos.isNotEmpty()) TarjetaIntervalo(estado.intervalos, estado.intervalos.avance(estado.duracionMs(reloj)))
+            aviso?.let {
+                Text(
+                    text = stringResource(it),
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(colores.background.copy(alpha = 0.94f))
+                        .padding(horizontal = 14.dp, vertical = 8.dp),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = colores.onBackground,
+                    textAlign = TextAlign.Center,
+                )
+            }
         }
         TarjetaRuta(
-            titulo = stringResource(if (estado.tipo == TipoActividad.CORRER) R.string.carrera_correr else R.string.carrera_caminar),
+            titulo = stringResource(
+                when {
+                    estado.intervalos.isNotEmpty() -> R.string.carrera_intervalos
+                    estado.tipo == TipoActividad.CORRER -> R.string.carrera_correr
+                    else -> R.string.carrera_caminar
+                },
+            ),
             fecha = null,
             distanciaM = estado.distanciaM,
             segundos = segundos,

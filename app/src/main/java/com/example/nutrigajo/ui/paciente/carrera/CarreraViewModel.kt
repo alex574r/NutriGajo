@@ -15,6 +15,7 @@ import com.example.nutrigajo.domain.model.Carrera
 import com.example.nutrigajo.domain.model.PlanCaminata
 import com.example.nutrigajo.domain.model.Ruta
 import com.example.nutrigajo.domain.model.TipoActividad
+import com.example.nutrigajo.domain.model.Tramo
 import com.example.nutrigajo.ui.shared.mensajeDeFirestore
 import com.example.nutrigajo.widgets.AlmacenWidget
 import com.example.nutrigajo.widgets.actualizarWidgets
@@ -43,7 +44,8 @@ data class CarreraDatos(
 )
 
 // Lo que pasa entre tocar «comenzar» y salir: se ve el mapa y, cuando está listo, corre la cuenta de 5 a 1 (`cuenta` es null antes).
-data class Preparacion(val tipo: TipoActividad, val cuenta: Int? = null)
+// `intervalos` son los tramos de la sesión del plan que se va a hacer; vacío en una actividad libre.
+data class Preparacion(val tipo: TipoActividad, val intervalos: List<Tramo> = emptyList(), val cuenta: Int? = null)
 
 private const val SEGUNDOS_CUENTA = 5
 
@@ -107,15 +109,15 @@ class CarreraViewModel @JvmOverloads constructor(
     private var cuenta: Job? = null
 
     // «Comenzar»: abre la preparación (el mapa). Quien llama ya comprobó el permiso de ubicación precisa (el servicio en primer plano lo exige).
-    fun preparar(tipo: TipoActividad) {
+    fun preparar(tipo: TipoActividad, intervalos: List<Tramo> = emptyList()) {
         limpiarError()
-        _preparacion.value = Preparacion(tipo)
+        _preparacion.value = Preparacion(tipo, intervalos)
     }
 
     // El mapa y el GPS ya están listos: 5, 4, 3, 2, 1 con una vibración por segundo y, al final, sale la carrera.
     // Llamarla otra vez con la cuenta en marcha no la reinicia.
     fun contar() {
-        val tipo = _preparacion.value?.tipo ?: return
+        val (tipo, intervalos) = _preparacion.value ?: return
         if (cuenta?.isActive == true) return
         cuenta = viewModelScope.launch {
             for (n in SEGUNDOS_CUENTA downTo 1) {
@@ -125,7 +127,7 @@ class CarreraViewModel @JvmOverloads constructor(
             }
             vibrar(500)
             _preparacion.value = null
-            comenzar(tipo)
+            comenzar(tipo, intervalos)
         }
     }
 
@@ -134,8 +136,8 @@ class CarreraViewModel @JvmOverloads constructor(
         _preparacion.value = null
     }
 
-    private fun comenzar(tipo: TipoActividad) {
-        rastreo.iniciar(tipo, System.currentTimeMillis())
+    private fun comenzar(tipo: TipoActividad, intervalos: List<Tramo>) {
+        rastreo.iniciar(tipo, System.currentTimeMillis(), intervalos)
         arrancarServicio()
     }
 

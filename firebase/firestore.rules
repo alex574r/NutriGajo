@@ -315,7 +315,7 @@ service cloud.firestore {
         && docId == 'plan'
         && request.resource.data.keys().hasOnly(['plan', 'inicio'])
         && request.resource.data.keys().hasAll(['plan', 'inicio'])
-        && request.resource.data.plan in ['PRIMEROS_PASOS', 'RITMO_CONSTANTE', 'RESISTENCIA']
+        && request.resource.data.plan in ['PRIMEROS_PASOS', 'RITMO_CONSTANTE', 'RESISTENCIA', 'INTERVALOS_PRINCIPIANTE', 'INTERVALOS_INTERMEDIO', 'INTERVALOS_AVANZADO', 'QUEMAGRASA']
         && request.resource.data.inicio is int;
       allow delete: if request.auth != null && request.auth.uid == uid;
     }

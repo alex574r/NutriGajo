@@ -1,11 +1,16 @@
 package com.example.nutrigajo.domain
 
+import com.example.nutrigajo.domain.model.CALENTAMIENTO_SEG
 import com.example.nutrigajo.domain.model.Carrera
 import com.example.nutrigajo.domain.model.DIA_MS
+import com.example.nutrigajo.domain.model.ENFRIAMIENTO_SEG
 import com.example.nutrigajo.domain.model.PlanCaminata
 import com.example.nutrigajo.domain.model.PuntoRuta
+import com.example.nutrigajo.domain.model.Ritmo
 import com.example.nutrigajo.domain.model.Ruta
 import com.example.nutrigajo.domain.model.TipoActividad
+import com.example.nutrigajo.domain.model.Tramo
+import com.example.nutrigajo.domain.model.avance
 import com.example.nutrigajo.domain.model.progreso
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -86,6 +91,57 @@ class CarreraTest {
         assertEquals(2, p.hechas)
         assertEquals(3, p.meta.sesiones)
         assertFalse(p.terminado)
+    }
+
+    @Test
+    fun la_sesion_con_intervalos_empieza_y_termina_caminando_y_repite_la_ronda() {
+        val semana = PlanCaminata.INTERVALOS_INTERMEDIO.semanas.first() // 5 × (1 min caminar, 2 trotar, 1 correr)
+        val tramos = semana.tramos
+        assertEquals(1 + 5 * 3 + 1, tramos.size)
+        assertEquals(Tramo(Ritmo.CAMINAR, CALENTAMIENTO_SEG), tramos.first())
+        assertEquals(Tramo(Ritmo.CAMINAR, ENFRIAMIENTO_SEG), tramos.last())
+        assertEquals(listOf(Ritmo.CAMINAR, Ritmo.TROTAR, Ritmo.CORRER), tramos.subList(1, 4).map { it.ritmo })
+        assertEquals(semana.minutos * 60, tramos.sumOf { it.segundos }) // 30 min exactos
+        assertTrue("una caminata libre no trae tramos", PlanCaminata.PRIMEROS_PASOS.semanas.all { it.tramos.isEmpty() })
+    }
+
+    @Test
+    fun los_planes_con_intervalos_van_de_menos_a_mas_y_principiante_no_corre() {
+        val con = PlanCaminata.entries.filter { it.conIntervalos }
+        assertEquals(4, con.size)
+        con.forEach { plan -> assertTrue(plan.name, plan.semanas.all { it.tramos.sumOf { t -> t.segundos } <= it.minutos * 60 }) }
+        val principiante = PlanCaminata.INTERVALOS_PRINCIPIANTE.semanas.flatMap { it.tramos }
+        assertTrue(principiante.none { it.ritmo == Ritmo.CORRER })
+        // los tramos de correr de cada semana no se acortan
+        val avanzado = PlanCaminata.INTERVALOS_AVANZADO.semanas.map { s -> s.ronda.first { it.ritmo == Ritmo.CORRER }.segundos }
+        assertEquals(avanzado.sorted(), avanzado)
+    }
+
+    @Test
+    fun el_avance_dice_en_que_tramo_se_va_y_cuanto_falta() {
+        val tramos = listOf(Tramo(Ritmo.CAMINAR, 60), Tramo(Ritmo.TROTAR, 30), Tramo(Ritmo.CORRER, 30))
+        val inicio = tramos.avance(0)!!
+        assertEquals(0, inicio.indice)
+        assertEquals(60_000L, inicio.restanteMs)
+        assertEquals(Ritmo.TROTAR, inicio.siguiente?.ritmo)
+        val justo = tramos.avance(60_000)!! // en el segundo exacto ya es el siguiente
+        assertEquals(1, justo.indice)
+        assertEquals(30_000L, justo.restanteMs)
+        val ultimo = tramos.avance(119_999)!!
+        assertEquals(2, ultimo.indice)
+        assertNull(ultimo.siguiente)
+        assertNull("pasados todos los tramos", tramos.avance(120_000))
+        assertNull(emptyList<Tramo>().avance(0))
+    }
+
+    @Test
+    fun en_un_plan_con_intervalos_suma_la_carrera_y_en_uno_de_caminata_la_caminata() {
+        val inicio = 1_000_000_000_000L
+        val semana = PlanCaminata.INTERVALOS_PRINCIPIANTE.semanas.first() // 3 sesiones de 28 min
+        val sesion = caminata(1, semana.minutos, inicio).copy(tipo = TipoActividad.CORRER)
+        val p = PlanCaminata.INTERVALOS_PRINCIPIANTE.progreso(inicio, listOf(sesion, caminata(2, 40, inicio)), inicio + 3 * DIA_MS)
+        assertEquals("la caminata no cuenta en un plan de intervalos", 1, p.hechas)
+        assertEquals(0, PlanCaminata.PRIMEROS_PASOS.progreso(inicio, listOf(sesion), inicio + 3 * DIA_MS).hechas)
     }
 
     @Test

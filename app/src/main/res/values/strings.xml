@@ -948,9 +948,9 @@
     <string name="carrera_tarjeta_titulo">Tu ruta en el mapa</string>
     <string name="carrera_tarjeta_detalle">Distancia, ritmo y calorías, también con la pantalla apagada.</string>
     <string name="carrera_tarjeta_volver">Toca para volver al mapa.</string>
-    <string name="carrera_tarjeta_planes">%1$d planes de caminata</string>
+    <string name="carrera_tarjeta_planes">%1$d planes con y sin intervalos</string>
     <string name="carrera_pestana_actividad">Actividad</string>
-    <string name="carrera_pestana_planes">Planes de caminata</string>
+    <string name="carrera_pestana_planes">Planes</string>
     <string name="carrera_caminar">Caminar</string>
     <string name="carrera_correr">Correr</string>
     <string name="carrera_caminar_ayuda">Paso tranquilo</string>
@@ -1083,9 +1083,9 @@
     <string name="carrera_error_guardar">No pudimos guardar la actividad. Revisa tu conexión e inténtalo de nuevo.</string>
     <string name="carrera_tu_plan">Tu plan</string>
     <string name="carrera_plan_semana">Semana %1$d de %2$d</string>
-    <string name="carrera_plan_avance">%1$d de %2$d caminatas de %3$d minutos</string>
+    <string name="carrera_plan_avance">%1$d de %2$d sesiones de %3$d minutos</string>
     <string name="carrera_plan_terminado">Plan terminado. ¡Buen trabajo!</string>
-    <string name="carrera_plan_resumen">%1$d semanas · %2$s caminatas por semana · %3$s min</string>
+    <string name="carrera_plan_resumen">%1$d semanas · %2$s sesiones por semana · %3$s min</string>
     <string name="carrera_plan_elegir">elegir</string>
     <string name="carrera_plan_en_curso">En curso</string>
     <string name="carrera_plan_dejar">dejar el plan</string>
@@ -1095,7 +1095,32 @@
     <string name="carrera_plan_ritmo_constante_ayuda">Para volver la caminata un hábito de casi todos los días.</string>
     <string name="carrera_plan_resistencia">Resistencia</string>
     <string name="carrera_plan_resistencia_ayuda">Para ganar fondo con caminatas largas y seguidas.</string>
-    <string name="carrera_plan_nota">Una caminata suma a la semana si dura al menos el 90 % del tiempo que pide.</string>
+    <string name="carrera_plan_nota">Una sesión suma a la semana si dura al menos el 90 % del tiempo que pide.</string>
+    <string name="carrera_planes_caminatas">Caminatas</string>
+    <string name="carrera_planes_caminatas_ayuda">A tu paso: tú decides cómo caminar y cuándo parar.</string>
+    <string name="carrera_planes_intervalos">Intervalos</string>
+    <string name="carrera_planes_intervalos_ayuda">Caminar, trotar y correr por tramos, con cuenta regresiva. El teléfono vibra en cada cambio: una vez larga al caminar, dos cortas al trotar y tres al correr.</string>
+    <string name="carrera_plan_intervalos_principiante">Intervalos principiante</string>
+    <string name="carrera_plan_intervalos_principiante_ayuda">Alterna caminar y trotar, sin correr. Para cuando apenas empiezas a trotar.</string>
+    <string name="carrera_plan_intervalos_intermedio">Intervalos intermedio</string>
+    <string name="carrera_plan_intervalos_intermedio_ayuda">Caminar, trotar y correr en rondas cortas para subir el ritmo poco a poco.</string>
+    <string name="carrera_plan_intervalos_avanzado">Intervalos avanzado</string>
+    <string name="carrera_plan_intervalos_avanzado_ayuda">Rondas con tramos largos corriendo y recuperación breve, para ganar velocidad y fondo.</string>
+    <string name="carrera_plan_quemagrasa">Quemagrasa</string>
+    <string name="carrera_plan_quemagrasa_ayuda">Muchas rondas con ráfagas rápidas y descansos cortos para mantener el pulso alto y gastar más calorías.</string>
+    <string name="carrera_trotar">Trotar</string>
+    <string name="carrera_intervalos">Intervalos</string>
+    <string name="carrera_plan_ronda_ejemplo">Semana 1: %1$d rondas de %2$s</string>
+    <string name="carrera_plan_ronda_hoy">Hoy: %1$d rondas de %2$s</string>
+    <string name="carrera_plan_ronda_entre">Más %1$d min de calentamiento y %2$d de enfriamiento, caminando.</string>
+    <string name="carrera_plan_comenzar_sesion">comenzar sesión</string>
+    <string name="carrera_tramo_min">%1$d min %2$s</string>
+    <string name="carrera_tramo_seg">%1$d s %2$s</string>
+    <string name="carrera_tramo_min_seg">%1$d min %2$d s %3$s</string>
+    <string name="carrera_intervalo_sigue">Sigue: %1$s · %2$s</string>
+    <string name="carrera_intervalo_ultimo">Último tramo</string>
+    <string name="carrera_intervalo_fin">¡Sesión completa!</string>
+    <string name="carrera_intervalo_fin_ayuda">Puedes seguir o terminar cuando quieras.</string>
 
     <!-- Entrenador y banco global de ejercicios -->
     <string name="rol_entrenador">Entrenador</string>
