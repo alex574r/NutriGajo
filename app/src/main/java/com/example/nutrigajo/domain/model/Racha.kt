@@ -10,7 +10,7 @@ data class Racha(val dias: Int, val hoyCumplido: Boolean)
 // `pasosPorDia` y `diasCarrera` (los días con actividad guardada: caminatas, carreras y rutinas) van por día (LocalDate.toEpochDay). Con una meta de 0 pasos los pasos no cuentan: si no, todos los
 // días serían de racha.
 fun racha(hoy: LocalDate, pasosPorDia: Map<Long, Int>, diasCarrera: Set<Long>, metaPasos: Int): Racha {
-    fun cumplido(dia: Long) = (metaPasos > 0 && (pasosPorDia[dia] ?: 0) >= metaPasos) || dia in diasCarrera
+    fun cumplido(dia: Long) = diaCumplido(dia, pasosPorDia, diasCarrera, metaPasos)
     val hoyDia = hoy.toEpochDay()
     val cumpleHoy = cumplido(hoyDia)
     var dia = if (cumpleHoy) hoyDia else hoyDia - 1
@@ -22,5 +22,9 @@ fun racha(hoy: LocalDate, pasosPorDia: Map<Long, Int>, diasCarrera: Set<Long>, m
     }
     return Racha(dias, cumpleHoy)
 }
+
+// Un día cuenta si llegó a la meta de pasos o si hubo una caminata, carrera o rutina guardada.
+internal fun diaCumplido(dia: Long, pasosPorDia: Map<Long, Int>, diasCarrera: Set<Long>, metaPasos: Int): Boolean =
+    (metaPasos > 0 && (pasosPorDia[dia] ?: 0) >= metaPasos) || dia in diasCarrera
 
 private const val MAX_RACHA = 3650

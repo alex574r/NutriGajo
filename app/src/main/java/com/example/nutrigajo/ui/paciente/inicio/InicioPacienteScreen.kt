@@ -9,7 +9,11 @@ import com.example.nutrigajo.domain.model.RutinaDelDia
 import java.time.LocalDate
 import com.example.nutrigajo.widgets.PerfilWidget
 import com.example.nutrigajo.widgets.DatosWidget
+import com.example.nutrigajo.data.local.AguaDeHoy
+import com.example.nutrigajo.domain.model.MetasDiarias
+import com.example.nutrigajo.domain.model.avanceSemanal
 import com.example.nutrigajo.domain.model.racha
+import com.example.nutrigajo.domain.model.scoreDelDia
 import com.example.nutrigajo.domain.model.Racha
 import android.Manifest
 import androidx.activity.compose.BackHandler
@@ -151,7 +155,6 @@ fun InicioPacienteScreen(
     var dietaAbierta by rememberSaveable { mutableStateOf(false) }
     var dietaInicio by rememberSaveable { mutableIntStateOf(-1) }
     val comidasAgregadas = remember { mutableStateListOf<Comida>() }
-    var aguaMl by rememberSaveable { mutableIntStateOf(resumenDia.hidratacionMl) }
     // la hoja de las metas diarias, abierta desde el engrane de las pantallas de métricas
     var metasAbiertas by rememberSaveable { mutableStateOf(false) }
     // sube al volver del chat para que los pendientes de la tarjeta se cuenten de nuevo
@@ -161,6 +164,9 @@ fun InicioPacienteScreen(
     // hasta qué plan ha visto en sus notificaciones (guardado en el teléfono); `vistoAlAbrir` congela ese valor mientras se ve la
     // lista, para que los puntos de «nuevo» no desaparezcan en cuanto se abre
     val contexto = LocalContext.current
+    // el agua de hoy: se guarda en el teléfono (por cuenta) y vale solo el día en que se anotó
+    var aguaMl by remember(perfil.uid) { mutableIntStateOf(AguaDeHoy.leer(contexto, perfil.uid)) }
+    LaunchedEffect(aguaMl) { AguaDeHoy.guardar(contexto, perfil.uid, aguaMl) }
     // sus planes le llegan por aviso: desde Android 13 el permiso se pide al abrir su inicio, no solo al agendar una cita
     val pedirAvisos = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
     LaunchedEffect(Unit) { if (Avisos.sinPermiso(contexto)) pedirAvisos.launch(Manifest.permission.POST_NOTIFICATIONS) }
@@ -187,6 +193,27 @@ fun InicioPacienteScreen(
     val diasCarrera = remember(enCarrera, enRutina, enHistorial, reloj.resumen) { AlmacenWidget.diasCarrera(contexto) }
     val rachaDeHoy = remember(reloj.resumen, diasCarrera, vinculo?.metas?.pasos) {
         racha(LocalDate.now(), reloj.resumen?.pasosPorDia.orEmpty(), diasCarrera, vinculo?.metas?.pasos ?: DatosWidget.META_PASOS)
+    }
+    // los números del encabezado y de las tarjetas. Score: el promedio de lo cumplido hoy de cada meta (pasos, kcal y minutos del reloj
+    // si está conectado, agua, y si hubo una caminata, carrera o rutina). Avance: los días de la semana en que se cumplió algo.
+    // «Pro» no se calcula: este inicio (con su encabezado) solo existe con un nutriólogo vinculado.
+    val metas = vinculo?.metas ?: MetasDiarias()
+    val resumenHoy = remember(aguaMl, reloj.resumen, diasCarrera, metas) {
+        val hoy = LocalDate.now()
+        val actividad = reloj.resumen?.actividad
+        resumenDia.copy(
+            hidratacionMl = aguaMl.coerceAtMost(metas.aguaMl),
+            score = scoreDelDia(
+                listOfNotNull(
+                    aguaMl to metas.aguaMl,
+                    (if (hoy.toEpochDay() in diasCarrera) 1 else 0) to 1,
+                    actividad?.let { it.pasos to metas.pasos },
+                    actividad?.let { it.kcal to metas.kcal },
+                    actividad?.let { it.minutos to metas.minutos },
+                ),
+            ),
+            avance = avanceSemanal(hoy, reloj.resumen?.pasosPorDia.orEmpty(), diasCarrera, metas.pasos),
+        )
     }
     // los anillos del widget «Resumen de hoy» se miden contra estas metas
     LaunchedEffect(vinculo?.metas) {
@@ -320,7 +347,7 @@ fun InicioPacienteScreen(
         // las pantallas de «Métricas fitness»
         metricaAbierta != null && vinculo != null -> MetricaScreen(
             metrica = metricaAbierta,
-            resumen = resumenDia.copy(hidratacionMl = aguaMl.coerceAtMost(vinculo.metas.aguaMl)),
+            resumen = resumenHoy,
             metas = vinculo.metas,
             onAgregarAgua = { delta -> aguaMl = (aguaMl.coerceAtMost(vinculo.metas.aguaMl) + delta).coerceIn(0, vinculo.metas.aguaMl) },
             onAbrir = { metrica = it },
@@ -331,7 +358,7 @@ fun InicioPacienteScreen(
             onVolver = { metrica = null },
         )
         todasMetricas && vinculo != null -> TodasLasMetricasScreen(
-            resumen = resumenDia.copy(hidratacionMl = aguaMl.coerceAtMost(vinculo.metas.aguaMl)),
+            resumen = resumenHoy,
             onAbrir = { metrica = it },
             onVolver = { todasMetricas = false },
         )
@@ -409,7 +436,7 @@ fun InicioPacienteScreen(
                     },
                     chatPendientes = chatPendientes,
                     onChat = { enChat = true },
-                    aguaMl = aguaMl,
+                    resumen = resumenHoy,
                     onMetrica = { metrica = it },
                     onVerTodasMetricas = { todasMetricas = true },
                     onCarrera = { enCarrera = true },
@@ -484,8 +511,8 @@ private fun InicioPaciente(
     // cuántos mensajes de su nutriólogo no ha visto: la tarjeta del coach los cuenta y abre el chat
     chatPendientes: Int,
     onChat: () -> Unit,
-    // el agua de hoy (la tarjeta de hidratación la muestra) y la apertura de la pantalla de cada métrica
-    aguaMl: Int,
+    // los números de hoy (score, avance, agua…) que ven el encabezado y las tarjetas, y la apertura de la pantalla de cada métrica
+    resumen: ResumenDia,
     onMetrica: (Metrica) -> Unit,
     onVerTodasMetricas: () -> Unit,
     // abre el modo carrera
@@ -534,7 +561,7 @@ private fun InicioPaciente(
             contentPadding = WindowInsets.navigationBars.asPaddingValues(),
             verticalArrangement = Arrangement.spacedBy(24.dp),
         ) {
-            item { CabeceraInicio(perfil.nombre, resumenDia, onPerfil, imagenAvatar = rememberFotoAvatar(perfil), imagenPortada = rememberFotoPortada(perfil), transicion = transicion, sinLeer = sinLeer, onNotificaciones = onNotificaciones, racha = racha) }
+            item { CabeceraInicio(perfil.nombre, resumen, onPerfil, imagenAvatar = rememberFotoAvatar(perfil), imagenPortada = rememberFotoPortada(perfil), transicion = transicion, sinLeer = sinLeer, onNotificaciones = onNotificaciones, racha = racha) }
             // una vez completo, el expediente se consulta desde el perfil
             if (expediente.cargando || !expediente.expediente.completo) {
                 item { TarjetaExpediente(expediente, onExpediente, Modifier.padding(horizontal = 16.dp)) }
@@ -550,7 +577,7 @@ private fun InicioPaciente(
                     )
                 }
             }
-            item { MetricasFitness(resumenDia.copy(hidratacionMl = aguaMl.coerceAtMost(vinculo.metas.aguaMl)), onMetrica, onVerTodasMetricas) }
+            item { MetricasFitness(resumen, onMetrica, onVerTodasMetricas) }
             item {
                 val fase = RastreoRuta.global.estado.collectAsState().value.fase
                 TarjetaCarrera(enCurso = fase == Fase.CORRIENDO || fase == Fase.PAUSADA, onAbrir = onCarrera)
