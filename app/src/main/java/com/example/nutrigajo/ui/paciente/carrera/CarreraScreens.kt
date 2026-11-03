@@ -9,19 +9,16 @@ import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -38,14 +35,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.core.content.ContextCompat
 import com.example.nutrigajo.R
 import com.example.nutrigajo.data.carrera.Fase
 import com.example.nutrigajo.data.carrera.RastreoRuta
-import com.example.nutrigajo.data.repository.PlanElegido
 import com.example.nutrigajo.domain.model.CALENTAMIENTO_SEG
 import com.example.nutrigajo.domain.model.Carrera
 import com.example.nutrigajo.domain.model.DIA_MS
@@ -53,7 +48,6 @@ import com.example.nutrigajo.domain.model.ENFRIAMIENTO_SEG
 import com.example.nutrigajo.domain.model.PlanCaminata
 import com.example.nutrigajo.domain.model.TipoActividad
 import com.example.nutrigajo.domain.model.Tramo
-import com.example.nutrigajo.domain.model.progreso
 import com.example.nutrigajo.ui.components.AlertaError
 import com.example.nutrigajo.ui.components.BotonPrimario
 import com.example.nutrigajo.ui.components.Esqueleto
@@ -66,8 +60,8 @@ import java.util.Locale
 
 private const val PESO_POR_DEFECTO_KG = 70.0
 
-// «Modo carrera»: registra con el GPS la ruta de una carrera o una caminata y la dibuja en el mapa, guarda un historial y propone
-// planes de caminata. Según la fase del rastreo se ve el inicio, la carrera en curso o el resumen. `pesoKg` (del expediente) afina
+// «Modo carrera»: registra con el GPS la ruta de una carrera o una caminata y la dibuja en el mapa, guarda un historial y ofrece
+// planes: entrenamientos guiados que empiezan al elegirlos. Según la fase del rastreo se ve el inicio, la carrera en curso o el resumen. `pesoKg` (del expediente) afina
 // las calorías; sin él se supone 70 kg.
 @Composable
 fun CarreraFlujo(pesoKg: Double?, onSalir: () -> Unit, vm: CarreraViewModel) {
@@ -90,8 +84,6 @@ fun CarreraFlujo(pesoKg: Double?, onSalir: () -> Unit, vm: CarreraViewModel) {
             datos = datos,
             onComenzar = vm::preparar,
             onAbrir = { abierta = it },
-            onElegirPlan = vm::elegirPlan,
-            onQuitarPlan = vm::quitarPlan,
             onVolver = onSalir,
         )
     }
@@ -102,8 +94,6 @@ private fun CarreraInicio(
     datos: CarreraDatos,
     onComenzar: (TipoActividad, List<Tramo>) -> Unit,
     onAbrir: (String) -> Unit,
-    onElegirPlan: (PlanCaminata) -> Unit,
-    onQuitarPlan: () -> Unit,
     onVolver: () -> Unit,
 ) {
     var pestana by rememberSaveable { mutableIntStateOf(0) }
@@ -113,7 +103,7 @@ private fun CarreraInicio(
             SelectorPestanas(listOf(R.string.carrera_pestana_actividad, R.string.carrera_pestana_planes), pestana, { pestana = it })
             datos.error?.let { AlertaError(stringResource(it)) }
             arranque.aviso?.let { AlertaError(stringResource(it)) }
-            if (pestana == 0) PestanaActividad(datos, arranque.empezar, onAbrir) else PestanaPlanes(datos, arranque.empezar, onElegirPlan, onQuitarPlan)
+            if (pestana == 0) PestanaActividad(datos, arranque.empezar, onAbrir) else PestanaPlanes(arranque.empezar)
         }
     }
 }
@@ -240,129 +230,48 @@ private fun ResumenSemana(carreras: List<Carrera>) {
     }
 }
 
-// ---- Planes de caminata
+/// ---- Planes: entrenamientos guiados que se empiezan al elegirlos
 
 @Composable
-private fun PestanaPlanes(datos: CarreraDatos, empezar: (TipoActividad, List<Tramo>) -> Unit, onElegir: (PlanCaminata) -> Unit, onQuitar: () -> Unit) {
+private fun PestanaPlanes(empezar: (TipoActividad, List<Tramo>) -> Unit) {
     val colores = MaterialTheme.colorScheme
-    datos.plan?.let { PlanActivo(it, datos.carreras, empezar, onQuitar) }
-    // primero los de caminar a tu paso y luego los de intervalos (caminar, trotar y correr por tramos)
-    listOf(false, true).forEach { conIntervalos ->
-        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(
-                stringResource(if (conIntervalos) R.string.carrera_planes_intervalos else R.string.carrera_planes_caminatas),
-                style = MaterialTheme.typography.titleLarge,
-                color = colores.onBackground,
-            )
-            Text(
-                stringResource(if (conIntervalos) R.string.carrera_planes_intervalos_ayuda else R.string.carrera_planes_caminatas_ayuda),
-                style = MaterialTheme.typography.bodySmall.copy(lineHeight = 1.3.em),
-                color = colores.onSurfaceVariant,
-            )
-        }
-        PlanCaminata.entries.filter { it.conIntervalos == conIntervalos }.forEach { plan ->
-            TarjetaPlan(plan, activo = datos.plan?.plan == plan, onElegir = { onElegir(plan) })
-        }
-    }
-    Text(stringResource(R.string.carrera_plan_nota), style = MaterialTheme.typography.bodySmall, color = colores.onSurfaceVariant)
-}
-
-// El plan que sigue, en la tarjeta oscura: la semana en que va y un círculo por cada sesión que pide (lleno si ya la hizo). Si es de
-// intervalos, también la sesión de la semana (perfil y rondas) y el botón que la empieza con su guía de tramos.
-@Composable
-private fun PlanActivo(elegido: PlanElegido, carreras: List<Carrera>, empezar: (TipoActividad, List<Tramo>) -> Unit, onQuitar: () -> Unit) {
-    val colores = MaterialTheme.colorScheme
-    val progreso = elegido.plan.progreso(elegido.inicio, carreras, System.currentTimeMillis())
-    Column(
-        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(34.dp)).background(colores.onBackground).padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Text(stringResource(R.string.carrera_tu_plan), style = MaterialTheme.typography.bodySmall, color = colores.background.copy(alpha = 0.7f))
-        Text(stringResource(elegido.plan.titulo), style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold), color = colores.background)
-        if (progreso.terminado) {
-            Text(stringResource(R.string.carrera_plan_terminado), style = MaterialTheme.typography.bodyMedium, color = colores.background)
-        } else {
-            Text(
-                stringResource(R.string.carrera_plan_semana, progreso.semana + 1, elegido.plan.semanas.size),
-                style = MaterialTheme.typography.titleMedium,
-                color = colores.background,
-            )
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            repeat(progreso.meta.sesiones) { i ->
-                Box(
-                    Modifier.size(28.dp).clip(CircleShape).background(if (i < progreso.hechas) colores.primary else colores.background.copy(alpha = 0.2f)),
-                )
-            }
-        }
+    Text(
+        text = stringResource(R.string.carrera_planes_intro, CALENTAMIENTO_SEG / 60, ENFRIAMIENTO_SEG / 60),
+        style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 1.3.em),
+        color = colores.onSurfaceVariant,
+    )
+    // primero los de caminata y luego los que llevan trote y carrera
+    listOf(false, true).forEach { conTrote ->
         Text(
-            stringResource(R.string.carrera_plan_avance, progreso.hechas.coerceAtMost(progreso.meta.sesiones), progreso.meta.sesiones, progreso.meta.minutos),
-            style = MaterialTheme.typography.bodySmall,
-            color = colores.background.copy(alpha = 0.7f),
+            stringResource(if (conTrote) R.string.carrera_planes_intervalos else R.string.carrera_planes_caminatas),
+            style = MaterialTheme.typography.titleLarge,
+            color = colores.onBackground,
         )
-        if (elegido.plan.conIntervalos) {
-            val semana = progreso.meta
-            PerfilSesion(semana.tramos)
-            Text(
-                stringResource(R.string.carrera_plan_ronda_hoy, semana.rondas, textoRonda(semana.ronda)),
-                style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 1.3.em),
-                color = colores.background,
-            )
-            Text(
-                stringResource(R.string.carrera_plan_ronda_entre, CALENTAMIENTO_SEG / 60, ENFRIAMIENTO_SEG / 60),
-                style = MaterialTheme.typography.bodySmall,
-                color = colores.background.copy(alpha = 0.7f),
-            )
-            BotonPrimario(stringResource(R.string.carrera_plan_comenzar_sesion), { empezar(TipoActividad.CORRER, semana.tramos) }, Modifier.fillMaxWidth())
-        }
-        TextButton(onClick = onQuitar) {
-            Text(stringResource(R.string.carrera_plan_dejar), style = MaterialTheme.typography.titleMedium, color = colores.background)
+        PlanCaminata.entries.filter { it.conTrote == conTrote }.forEach { plan ->
+            TarjetaPlan(plan, onComenzar = { empezar(plan.tipo, plan.tramos) })
         }
     }
 }
 
+// Un entrenamiento: qué es, el perfil de la sesión (una barra por tramo), cuánto dura y qué se repite en cada ronda. Elegirlo lo empieza.
 @Composable
-private fun TarjetaPlan(plan: PlanCaminata, activo: Boolean, onElegir: () -> Unit) {
+private fun TarjetaPlan(plan: PlanCaminata, onComenzar: () -> Unit) {
     val colores = MaterialTheme.colorScheme
-    val sesiones = plan.semanas.map { it.sesiones }
-    val minutos = plan.semanas.map { it.minutos }
     Column(
         modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(colores.surfaceVariant).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(stringResource(plan.titulo), Modifier.weight(1f), style = MaterialTheme.typography.titleLarge, color = colores.onBackground)
-            if (activo) {
-                // el tag del diseño: fondo naranja claro y texto naranja
-                Text(
-                    text = stringResource(R.string.carrera_plan_en_curso),
-                    modifier = Modifier.clip(RoundedCornerShape(9.dp)).background(colores.primaryContainer).padding(horizontal = 10.dp, vertical = 6.dp),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = colores.primary,
-                )
-            }
-        }
+        Text(stringResource(plan.titulo), style = MaterialTheme.typography.titleLarge, color = colores.onBackground)
         Text(stringResource(plan.ayuda), style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 1.3.em), color = colores.onSurfaceVariant)
-        if (plan.conIntervalos) {
-            // cómo es la primera semana: el perfil de la sesión y lo que se repite en cada ronda
-            val semana = plan.semanas.first()
-            PerfilSesion(semana.tramos, Modifier.padding(top = 4.dp))
-            Text(
-                stringResource(R.string.carrera_plan_ronda_ejemplo, semana.rondas, textoRonda(semana.ronda)),
-                style = MaterialTheme.typography.bodySmall,
-                color = colores.onSurfaceVariant,
-            )
-        }
+        PerfilSesion(plan.tramos, Modifier.padding(top = 4.dp))
         Text(
-            stringResource(R.string.carrera_plan_resumen, plan.semanas.size, rango(sesiones.min(), sesiones.max()), rango(minutos.min(), minutos.max())),
-            style = MaterialTheme.typography.bodySmall,
+            stringResource(R.string.carrera_plan_resumen, plan.minutos, plan.rondas, textoRonda(plan.ronda)),
+            style = MaterialTheme.typography.bodySmall.copy(lineHeight = 1.3.em),
             color = colores.onSurfaceVariant,
         )
-        if (!activo) BotonPrimario(stringResource(R.string.carrera_plan_elegir), onElegir, Modifier.fillMaxWidth(), altura = 48.dp)
+        BotonPrimario(stringResource(R.string.carrera_comenzar), onComenzar, Modifier.fillMaxWidth(), altura = 48.dp)
     }
 }
-
-private fun rango(minimo: Int, maximo: Int) = if (minimo == maximo) "$minimo" else "$minimo a $maximo"
 
 @get:StringRes
 private val PlanCaminata.titulo: Int

@@ -2,7 +2,6 @@ package com.example.nutrigajo.data.repository
 
 import com.example.nutrigajo.data.remote.firebase.firestore.FirestorePaths
 import com.example.nutrigajo.domain.model.Carrera
-import com.example.nutrigajo.domain.model.PlanCaminata
 import com.example.nutrigajo.domain.model.PuntoRuta
 import com.example.nutrigajo.domain.model.Ruta
 import com.example.nutrigajo.domain.model.TipoActividad
@@ -15,11 +14,7 @@ import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.math.roundToLong
 
-// El plan de caminata que sigue el paciente y el día (milisegundos desde 1970) en que lo eligió.
-data class PlanElegido(val plan: PlanCaminata, val inicio: Long)
-
-// El modo carrera es personal: lo que se guarda vive bajo el propio usuario (usuarios/{uid}/carreras/{id} y
-// usuarios/{uid}/modoCarrera/plan) y solo él lo lee. La ruta se guarda como una lista plana [lat, lng, lat, lng…] para no pasar
+// El modo carrera es personal: lo que se guarda vive bajo el propio usuario (usuarios/{uid}/carreras/{id}) y solo él lo lee. La ruta se guarda como una lista plana [lat, lng, lat, lng…] para no pasar
 // de un documento con miles de mapas.
 class CarrerasRepository(
     private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
@@ -50,20 +45,6 @@ class CarrerasRepository(
         usuario().collection(FirestorePaths.CARRERAS).document(id).delete().esperarUnPoco()
     }
 
-    suspend fun plan(): PlanElegido? {
-        val doc = usuario().collection(FirestorePaths.MODO_CARRERA).document(DOC_PLAN).get().await()
-        val plan = PlanCaminata.entries.firstOrNull { it.name == doc.getString("plan") } ?: return null
-        return PlanElegido(plan, doc.getLong("inicio") ?: return null)
-    }
-
-    suspend fun elegirPlan(plan: PlanCaminata, inicio: Long) {
-        usuario().collection(FirestorePaths.MODO_CARRERA).document(DOC_PLAN).set(mapOf("plan" to plan.name, "inicio" to inicio)).esperarUnPoco()
-    }
-
-    suspend fun quitarPlan() {
-        usuario().collection(FirestorePaths.MODO_CARRERA).document(DOC_PLAN).delete().esperarUnPoco()
-    }
-
     // Firestore solo confirma una escritura cuando el servidor la recibe. Sin conexión el cambio ya está en la caché del teléfono y
     // sale al volver la red, así que no se espera más que unos segundos: con red, la confirmación (o el rechazo de las reglas) llega
     // mucho antes. Se corre al aire libre, donde muchas veces no hay datos.
@@ -76,7 +57,6 @@ class CarrerasRepository(
     private fun redondear(grados: Double) = (grados * 1e6).roundToLong() / 1e6
 
     private companion object {
-        const val DOC_PLAN = "plan"
         const val ESPERA_ESCRITURA_MS = 4_000L
     }
 }

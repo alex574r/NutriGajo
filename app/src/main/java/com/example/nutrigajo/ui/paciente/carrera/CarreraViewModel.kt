@@ -10,9 +10,7 @@ import com.example.nutrigajo.R
 import com.example.nutrigajo.data.carrera.RastreoRuta
 import com.example.nutrigajo.data.carrera.ServicioCarrera
 import com.example.nutrigajo.data.repository.CarrerasRepository
-import com.example.nutrigajo.data.repository.PlanElegido
 import com.example.nutrigajo.domain.model.Carrera
-import com.example.nutrigajo.domain.model.PlanCaminata
 import com.example.nutrigajo.domain.model.Ruta
 import com.example.nutrigajo.domain.model.TipoActividad
 import com.example.nutrigajo.domain.model.Tramo
@@ -22,8 +20,6 @@ import com.example.nutrigajo.widgets.actualizarWidgets
 import com.google.firebase.firestore.FirebaseFirestoreException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -34,11 +30,10 @@ import java.time.Instant
 import java.time.ZoneId
 import kotlin.math.roundToInt
 
-// Lo guardado en Firestore (historial y plan); lo que va pasando en la carrera vive en RastreoRuta.global.
+// Lo guardado en Firestore (el historial); lo que va pasando en la carrera vive en RastreoRuta.global.
 data class CarreraDatos(
     val cargando: Boolean = true,
     val carreras: List<Carrera> = emptyList(),
-    val plan: PlanElegido? = null,
     @param:StringRes val error: Int? = null,
     val guardando: Boolean = false,
 )
@@ -62,23 +57,13 @@ class CarreraViewModel @JvmOverloads constructor(
     fun cargar() {
         _datos.update { it.copy(cargando = true, error = null) }
         viewModelScope.launch {
-            // cada lectura por su lado: sin conexión una puede fallar (un documento que nunca se bajó) y no debe esconder la otra
-            val (carreras, plan) = coroutineScope {
-                val historial = async { leer { repo.listar() } }
-                val elegido = async { leer { repo.plan() } }
-                historial.await() to elegido.await()
-            }
+            val carreras = leer { repo.listar() }
             // lo que ya se guardó también cuenta para la racha (los días se guardan en el teléfono)
             carreras.getOrNull()?.let { lista -> registrarDiasConCarrera(lista.map { it.inicio }) }
             // sin conexión no es un error: se queda lo que ya se tenía (la caché del teléfono) y se puede salir a correr igual
-            val fallo = listOf(carreras, plan).firstNotNullOfOrNull { it.exceptionOrNull() as? Exception }?.takeUnless(::sinConexion)
+            val fallo = (carreras.exceptionOrNull() as? Exception)?.takeUnless(::sinConexion)
             _datos.update {
-                it.copy(
-                    cargando = false,
-                    carreras = carreras.getOrDefault(it.carreras),
-                    plan = if (plan.isSuccess) plan.getOrNull() else it.plan,
-                    error = fallo?.let(::mensajeDeFirestore),
-                )
+                it.copy(cargando = false, carreras = carreras.getOrDefault(it.carreras), error = fallo?.let(::mensajeDeFirestore))
             }
         }
     }
@@ -196,17 +181,11 @@ class CarreraViewModel @JvmOverloads constructor(
         }
     }
 
-    fun eliminar(id: String, alTerminar: () -> Unit) = escribir(alTerminar = alTerminar) { repo.eliminar(id) }
-
-    fun elegirPlan(plan: PlanCaminata) = escribir { repo.elegirPlan(plan, System.currentTimeMillis()) }
-
-    fun quitarPlan() = escribir { repo.quitarPlan() }
-
-    // Una escritura suelta (borrar, elegir o quitar plan): al terminar se vuelve a leer todo.
-    private fun escribir(alTerminar: () -> Unit = {}, accion: suspend () -> Unit) {
+    // Borra una actividad; al terminar se vuelve a leer el historial.
+    fun eliminar(id: String, alTerminar: () -> Unit) {
         viewModelScope.launch {
             try {
-                accion()
+                repo.eliminar(id)
                 alTerminar()
                 cargar()
             } catch (e: CancellationException) {

@@ -103,12 +103,14 @@ class ServicioCarrera : Service() {
         }
     }
 
-    // Se distingue sin mirar: una larga al caminar, dos cortas al trotar, tres al correr y una secuencia larga al terminar.
+    // Se distingue sin mirar: una larga al caminar, y una más por cada ritmo más fuerte (dos al paso rápido, tres al trotar, cuatro al
+    // correr), cada vez más cortas; al terminar, una secuencia larga.
     private fun vibrarCambio(ritmo: Ritmo?) {
         val patron = when (ritmo) {
             Ritmo.CAMINAR -> longArrayOf(0, 600)
-            Ritmo.TROTAR -> longArrayOf(0, 200, 120, 200)
-            Ritmo.CORRER -> longArrayOf(0, 150, 100, 150, 100, 150)
+            Ritmo.RAPIDO -> longArrayOf(0, 250, 120, 250)
+            Ritmo.TROTAR -> longArrayOf(0, 180, 100, 180, 100, 180)
+            Ritmo.CORRER -> longArrayOf(0, 150, 80, 150, 80, 150, 80, 150)
             null -> longArrayOf(0, 300, 150, 300, 150, 900)
         }
         runCatching { getSystemService(Vibrator::class.java)?.vibrate(VibrationEffect.createWaveform(patron, -1)) }

@@ -33,6 +33,7 @@ import com.example.nutrigajo.domain.model.Tramo
 internal val Ritmo.nombre: Int
     get() = when (this) {
         Ritmo.CAMINAR -> R.string.carrera_caminar
+        Ritmo.RAPIDO -> R.string.carrera_paso_rapido
         Ritmo.TROTAR -> R.string.carrera_trotar
         Ritmo.CORRER -> R.string.carrera_correr
     }
@@ -40,7 +41,8 @@ internal val Ritmo.nombre: Int
 private val Ritmo.alto: Dp
     get() = when (this) {
         Ritmo.CAMINAR -> 8.dp
-        Ritmo.TROTAR -> 18.dp
+        Ritmo.RAPIDO -> 14.dp
+        Ritmo.TROTAR -> 22.dp
         Ritmo.CORRER -> 30.dp
     }
 
@@ -49,7 +51,8 @@ private fun Ritmo.color(): Color {
     val colores = MaterialTheme.colorScheme
     return when (this) {
         Ritmo.CAMINAR -> colores.outline
-        Ritmo.TROTAR -> colores.primary.copy(alpha = 0.55f)
+        Ritmo.RAPIDO -> colores.primary.copy(alpha = 0.35f)
+        Ritmo.TROTAR -> colores.primary.copy(alpha = 0.65f)
         Ritmo.CORRER -> colores.primary
     }
 }

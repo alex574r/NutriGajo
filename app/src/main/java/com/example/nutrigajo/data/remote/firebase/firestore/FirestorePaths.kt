@@ -6,8 +6,7 @@ package com.example.nutrigajo.data.remote.firebase.firestore
  * usuarios/{uid}                      rol, verificado, activo… (ADMIN se crea a mano en la consola)
  *   ├─ banco/{id}                     comida o ejercicio que el nutriólogo guarda para reutilizar en sus planes; solo lo ve él
  *   ├─ entrenamientos/{id}            rutina de «Entrenar ahora» terminada (fecha, enfoque, minutos, kcal, hechos, total); solo la ve su dueño
- *   ├─ carreras/{id}                  carrera o caminata del modo carrera (tipo, inicio, duracionSeg, distanciaM, kcal, ruta[]); solo la ve su dueño
- *   └─ modoCarrera/plan               plan de caminata que sigue (plan, inicio); solo lo ve su dueño
+ *   └─ carreras/{id}                  carrera o caminata del modo carrera (tipo, inicio, duracionSeg, distanciaM, kcal, ruta[]); solo la ve su dueño
  * codigosVinculacion/{codigo}         nutriologoId, expiraEn, usado, canjeadoPor… (el id es el código)
  * verificaciones/{uid}                solicitud de verificación del nutriólogo (cédula) o del entrenador (credencial); estado PENDIENTE|APROBADA|RECHAZADA
  * ejercicios/{id}                    banco global: ejercicio que crea un entrenador verificado (estado BORRADOR|EN_REVISION|PUBLICADO|RECHAZADO|RETIRADO); lo publicado lo ve cualquier sesión, su foto vive en R2
@@ -34,7 +33,6 @@ object FirestorePaths {
     const val BANCO = "banco"
     const val CARRERAS = "carreras"
     const val ENTRENAMIENTOS = "entrenamientos"
-    const val MODO_CARRERA = "modoCarrera"
     const val CODIGOS_VINCULACION = "codigosVinculacion"
     const val VERIFICACIONES = "verificaciones"
     const val EJERCICIOS = "ejercicios"

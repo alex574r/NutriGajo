@@ -92,14 +92,14 @@ object Ruta {
     }
 }
 
-// ---- Planes de caminata
+/// ---- Planes: entrenamientos guiados
 
-// Cómo se mueve uno en un tramo de una sesión con intervalos.
-enum class Ritmo { CAMINAR, TROTAR, CORRER }
+// Cómo se mueve uno en un tramo: caminando tranquilo, a paso rápido, trotando o corriendo.
+enum class Ritmo { CAMINAR, RAPIDO, TROTAR, CORRER }
 
 data class Tramo(val ritmo: Ritmo, val segundos: Int)
 
-// Dónde va una sesión con intervalos: el tramo en curso (el `indice` es su lugar en la lista), lo que le queda y el que sigue.
+// Dónde va una sesión guiada: el tramo en curso (el `indice` es su lugar en la lista), lo que le queda y el que sigue.
 data class AvanceTramo(val indice: Int, val tramo: Tramo, val restanteMs: Long, val siguiente: Tramo?)
 
 // El tramo en el que se está a los `transcurridoMs` de empezar (sin contar pausas); null cuando ya pasaron todos.
@@ -112,109 +112,39 @@ fun List<Tramo>.avance(transcurridoMs: Long): AvanceTramo? {
     return null
 }
 
-// Cada sesión con intervalos empieza y termina caminando.
+// Cada entrenamiento empieza y termina caminando.
 const val CALENTAMIENTO_SEG = 300
 const val ENFRIAMIENTO_SEG = 300
 
-// Lo que pide una semana del plan: cuántas sesiones y de cuántos minutos cada una. En un plan con intervalos la sesión es el
-// calentamiento, la `ronda` repetida `rondas` veces y el enfriamiento; sin rondas es una caminata libre.
-data class SemanaPlan(val sesiones: Int, val minutos: Int, val ronda: List<Tramo> = emptyList(), val rondas: Int = 0) {
-    val tramos: List<Tramo>
-        get() = if (rondas == 0) {
-            emptyList()
-        } else {
-            listOf(Tramo(Ritmo.CAMINAR, CALENTAMIENTO_SEG)) + List(rondas) { ronda }.flatten() + Tramo(Ritmo.CAMINAR, ENFRIAMIENTO_SEG)
-        }
-}
+// Una ronda: los segundos de cada ritmo, siempre en este orden, de menos a más fuerte (el 0 se omite).
+private fun unaRonda(caminar: Int = 0, rapido: Int = 0, trotar: Int = 0, correr: Int = 0) =
+    listOf(Tramo(Ritmo.CAMINAR, caminar), Tramo(Ritmo.RAPIDO, rapido), Tramo(Ritmo.TROTAR, trotar), Tramo(Ritmo.CORRER, correr))
+        .filter { it.segundos > 0 }
 
-// Una semana con intervalos: la ronda es caminar, trotar y correr los segundos que se digan (0 se omite) y los minutos salen de sumar.
-private fun intervalos(sesiones: Int, rondas: Int, caminar: Int, trotar: Int, correr: Int): SemanaPlan {
-    val ronda = listOf(Tramo(Ritmo.CAMINAR, caminar), Tramo(Ritmo.TROTAR, trotar), Tramo(Ritmo.CORRER, correr)).filter { it.segundos > 0 }
-    val segundos = CALENTAMIENTO_SEG + ENFRIAMIENTO_SEG + rondas * ronda.sumOf { it.segundos }
-    return SemanaPlan(sesiones, minutos = ceil(segundos / 60.0).toInt(), ronda = ronda, rondas = rondas)
-}
-
-// Los planes que se ofrecen; el paciente elige uno y cada sesión que guarda suma a su semana. No renombrar valores: Firestore
-// guarda el nombre del enum como texto (y las reglas lo comparan con la lista de nombres).
-enum class PlanCaminata(val semanas: List<SemanaPlan>) {
-    PRIMEROS_PASOS(listOf(SemanaPlan(3, 20), SemanaPlan(3, 25), SemanaPlan(3, 30), SemanaPlan(4, 30))),
-    RITMO_CONSTANTE(
-        listOf(SemanaPlan(4, 30), SemanaPlan(4, 35), SemanaPlan(4, 40), SemanaPlan(5, 40), SemanaPlan(5, 45), SemanaPlan(5, 45)),
-    ),
-    RESISTENCIA(
-        listOf(
-            SemanaPlan(5, 40), SemanaPlan(5, 45), SemanaPlan(5, 50), SemanaPlan(5, 55),
-            SemanaPlan(6, 55), SemanaPlan(6, 60), SemanaPlan(6, 60), SemanaPlan(6, 60),
-        ),
-    ),
-
-    // Con intervalos: la app guía los tramos y el teléfono vibra en cada cambio. Principiante solo alterna caminar y trotar.
-    INTERVALOS_PRINCIPIANTE(
-        listOf(
-            intervalos(3, 6, caminar = 120, trotar = 60, correr = 0),
-            intervalos(3, 6, caminar = 120, trotar = 90, correr = 0),
-            intervalos(3, 6, caminar = 90, trotar = 120, correr = 0),
-            intervalos(3, 5, caminar = 90, trotar = 180, correr = 0),
-            intervalos(3, 4, caminar = 60, trotar = 240, correr = 0),
-            intervalos(3, 4, caminar = 60, trotar = 300, correr = 0),
-        ),
-    ),
-    // Intermedio mete tramos cortos corriendo entre el trote.
-    INTERVALOS_INTERMEDIO(
-        listOf(
-            intervalos(4, 5, caminar = 60, trotar = 120, correr = 60),
-            intervalos(4, 5, caminar = 60, trotar = 120, correr = 90),
-            intervalos(4, 5, caminar = 60, trotar = 90, correr = 120),
-            intervalos(4, 5, caminar = 60, trotar = 120, correr = 120),
-            intervalos(4, 4, caminar = 60, trotar = 180, correr = 180),
-            intervalos(4, 4, caminar = 60, trotar = 180, correr = 240),
-        ),
-    ),
-    // Avanzado: los tramos de correr son lo largo de cada ronda; caminar y trotar son la recuperación.
-    INTERVALOS_AVANZADO(
-        listOf(
-            intervalos(4, 6, caminar = 60, trotar = 60, correr = 120),
-            intervalos(4, 6, caminar = 60, trotar = 60, correr = 180),
-            intervalos(5, 5, caminar = 60, trotar = 60, correr = 240),
-            intervalos(5, 5, caminar = 60, trotar = 60, correr = 300),
-            intervalos(5, 4, caminar = 60, trotar = 60, correr = 360),
-            intervalos(5, 4, caminar = 60, trotar = 60, correr = 420),
-        ),
-    ),
-    // Quemagrasa: muchas rondas con recuperaciones cortas y ráfagas que cada semana duran más, para mantener el pulso alto.
-    QUEMAGRASA(
-        listOf(
-            intervalos(4, 8, caminar = 60, trotar = 90, correr = 30),
-            intervalos(4, 8, caminar = 60, trotar = 90, correr = 45),
-            intervalos(4, 8, caminar = 45, trotar = 90, correr = 60),
-            intervalos(5, 8, caminar = 45, trotar = 90, correr = 75),
-            intervalos(5, 8, caminar = 30, trotar = 90, correr = 90),
-            intervalos(5, 8, caminar = 30, trotar = 90, correr = 120),
-        ),
-    ),
+// Los entrenamientos que se ofrecen. Elegir uno lo empieza: la app lleva la cuenta de cada tramo y el teléfono vibra en cada cambio de
+// ritmo. La sesión es el calentamiento, la `ronda` repetida `rondas` veces y el enfriamiento. Los tres primeros son de caminata (con
+// tramos a paso rápido) y los demás llevan trote y carrera.
+enum class PlanCaminata(val rondas: Int, val ronda: List<Tramo>) {
+    PRIMEROS_PASOS(4, unaRonda(caminar = 180, rapido = 60)),
+    RITMO_CONSTANTE(6, unaRonda(caminar = 120, rapido = 120)),
+    RESISTENCIA(4, unaRonda(caminar = 120, rapido = 480)),
+    INTERVALOS_PRINCIPIANTE(6, unaRonda(caminar = 120, trotar = 90)),
+    INTERVALOS_INTERMEDIO(5, unaRonda(caminar = 60, trotar = 120, correr = 120)),
+    INTERVALOS_AVANZADO(5, unaRonda(caminar = 60, trotar = 60, correr = 240)),
+    // muchas rondas con ráfagas y descansos cortos, para mantener el pulso alto
+    QUEMAGRASA(8, unaRonda(caminar = 45, trotar = 90, correr = 60)),
     ;
 
-    // los planes con intervalos se hacen corriendo (con la guía de tramos); los otros, caminando
-    val conIntervalos: Boolean get() = semanas.first().rondas > 0
+    val tramos: List<Tramo>
+        get() = listOf(Tramo(Ritmo.CAMINAR, CALENTAMIENTO_SEG)) + List(rondas) { ronda }.flatten() + Tramo(Ritmo.CAMINAR, ENFRIAMIENTO_SEG)
+
+    val minutos: Int get() = ceil(tramos.sumOf { it.segundos } / 60.0).toInt()
+
+    // se guarda como caminata si nunca se trota ni se corre, y como carrera si sí (cambia las calorías)
+    val tipo: TipoActividad
+        get() = if (ronda.any { it.ritmo == Ritmo.TROTAR || it.ritmo == Ritmo.CORRER }) TipoActividad.CORRER else TipoActividad.CAMINAR
+
+    val conTrote: Boolean get() = tipo == TipoActividad.CORRER
 }
 
 const val DIA_MS = 86_400_000L
-
-// Dónde va quien sigue un plan: la semana en curso (desde 0), cuántas caminatas ha hecho en ella y qué pide. Con `terminado`, ya
-// pasaron todas las semanas y lo que se ve es la última.
-data class ProgresoPlan(val semana: Int, val hechas: Int, val meta: SemanaPlan, val terminado: Boolean)
-
-// Las semanas se cuentan desde el día en que se eligió el plan. Una sesión suma si dura al menos el 90 % de lo que pide la semana
-// (el GPS y el paso no dan la hora exacta) y cae dentro de ella: una caminata en los planes de caminata y una carrera (así se guarda
-// la sesión con intervalos) en los de intervalos.
-fun PlanCaminata.progreso(inicio: Long, carreras: List<Carrera>, ahora: Long): ProgresoPlan {
-    val transcurridas = ((ahora - inicio) / (7 * DIA_MS)).toInt().coerceAtLeast(0)
-    val semana = transcurridas.coerceAtMost(semanas.lastIndex)
-    val meta = semanas[semana]
-    val desde = inicio + semana * 7 * DIA_MS
-    val tipo = if (conIntervalos) TipoActividad.CORRER else TipoActividad.CAMINAR
-    val hechas = carreras.count {
-        it.tipo == tipo && it.inicio >= desde && it.inicio < desde + 7 * DIA_MS && it.duracionSeg * 10 >= meta.minutos * 60 * 9
-    }
-    return ProgresoPlan(semana, hechas, meta, terminado = transcurridas >= semanas.size)
-}
