@@ -1,5 +1,6 @@
 package com.example.nutrigajo.ui.shared.ejercicios
 
+import androidx.compose.ui.unit.em
 import com.example.nutrigajo.ui.components.BotonPrimario
 import com.example.nutrigajo.ui.components.BarraEstadoClara
 import androidx.compose.ui.text.style.TextAlign
@@ -453,7 +454,7 @@ fun DetalleEjercicio(
                 verticalArrangement = Arrangement.spacedBy(18.dp),
             ) {
                 if (ejercicio.descripcion.isNotBlank()) {
-                    Text(ejercicio.descripcion, style = MaterialTheme.typography.bodyLarge, color = colores.onSurfaceVariant)
+                    Text(ejercicio.descripcion, style = MaterialTheme.typography.bodyLarge.copy(lineHeight = 1.35.em), color = colores.onSurfaceVariant)
                 }
                 DatosEnColumnas(
                     listOf(
@@ -498,7 +499,7 @@ fun DetalleEjercicio(
                                 }
                                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                                     Text(stringResource(R.string.ejercicio_paso_n, i + 1), style = MaterialTheme.typography.labelLarge, color = colores.onSurfaceVariant)
-                                    Text(paso, style = MaterialTheme.typography.bodyMedium, color = colores.onBackground, maxLines = 3, overflow = TextOverflow.Ellipsis)
+                                    Text(paso, style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 1.3.em), color = colores.onBackground, maxLines = 3, overflow = TextOverflow.Ellipsis)
                                 }
                                 if (onEmpezar != null) {
                                     Icon(painterResource(R.drawable.ic_play), contentDescription = null, modifier = Modifier.size(20.dp), tint = colores.primary)
@@ -540,6 +541,6 @@ internal fun Parrafo(@StringRes titulo: Int, texto: String) {
     val colores = MaterialTheme.colorScheme
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(stringResource(titulo), style = MaterialTheme.typography.titleSmall, color = colores.onBackground)
-        Text(texto, style = MaterialTheme.typography.bodyMedium, color = colores.onSurfaceVariant)
+        Text(texto, style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 1.3.em), color = colores.onSurfaceVariant)
     }
 }

@@ -1,5 +1,6 @@
 package com.example.nutrigajo.ui.paciente.ejercicios
 
+import androidx.compose.ui.unit.em
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -134,7 +135,7 @@ fun ExplorarEjerciciosScreen(
                         Text(stringResource(R.string.explorar_titulo), style = MaterialTheme.typography.headlineLarge, color = Color.White)
                         Text(
                             text = stringResource(R.string.explorar_descripcion),
-                            style = MaterialTheme.typography.bodyMedium,
+                            style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 1.3.em),
                             color = Color.White.copy(alpha = 0.8f),
                             textAlign = TextAlign.Center,
                         )
