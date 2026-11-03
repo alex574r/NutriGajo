@@ -68,6 +68,12 @@ service cloud.firestore {
       return u.rol == 'ENTRENADOR' && u.verificado == true;
     }
 
+    // Quien publica platillos en el banco global: un nutriólogo o un entrenador ya verificados por el ADMIN.
+    function autorVerificado(uid) {
+      let u = get(/databases/$(database)/documents/usuarios/$(uid)).data;
+      return u.rol in ['NUTRIOLOGO', 'ENTRENADOR'] && u.verificado == true;
+    }
+
     // Ejercicio del banco global (ejercicios/{id}), con los topes de Ejercicio (domain/model/Ejercicio.kt). Un borrador solo necesita
     // título; para EN_REVISION el resto tiene que estar completo y con foto.
     // ponytail: las reglas no recorren una lista, así que el largo de cada paso lo comprueba la app (tope práctico: 1 MiB por documento).
@@ -94,6 +100,37 @@ service cloud.firestore {
         && d.creadoEn is int
         && d.actualizadoEn is int
         && (d.estado != 'EN_REVISION' || (d.descripcion.size() >= 10 && d.pasos.size() >= 1 && 'fotoVersion' in d.keys()));
+    }
+
+    // Platillo del banco global (platillos/{id}), con los topes de Platillo (domain/model/Platillo.kt). Un borrador solo necesita el nombre;
+    // para EN_REVISION el resto tiene que estar completo y con foto. `autorRol` dice si lo hizo un nutriólogo o un entrenador.
+    // ponytail: las reglas no recorren una lista, así que el largo de cada ingrediente y de cada paso lo comprueba la app (tope práctico:
+    // 1 MiB por documento).
+    function platilloValido(d) {
+      return d.keys().hasOnly(['autorId', 'autorNombre', 'autorRol', 'nombre', 'resumen', 'momento', 'proteinaG', 'grasasG', 'carbosG', 'kcal',
+                               'minutos', 'ingredientes', 'pasos', 'etiquetas', 'fotoVersion', 'estado', 'motivoRechazo', 'creadoEn',
+                               'actualizadoEn', 'publicadoEn', 'revisadoPor', 'revisadoEn'])
+        && d.keys().hasAll(['autorId', 'autorNombre', 'autorRol', 'nombre', 'resumen', 'momento', 'proteinaG', 'grasasG', 'carbosG', 'kcal',
+                            'minutos', 'ingredientes', 'pasos', 'etiquetas', 'estado', 'creadoEn', 'actualizadoEn'])
+        && d.autorNombre is string && d.autorNombre.size() >= 1 && d.autorNombre.size() <= 120
+        && d.autorRol in ['NUTRIOLOGO', 'ENTRENADOR']
+        && d.nombre is string && d.nombre.size() >= 3 && d.nombre.size() <= 80
+        && d.resumen is string && d.resumen.size() <= 300
+        && d.momento in ['DESAYUNO', 'COMIDA', 'CENA']
+        && d.proteinaG is int && d.proteinaG >= 0 && d.proteinaG <= 500
+        && d.grasasG is int && d.grasasG >= 0 && d.grasasG <= 500
+        && d.carbosG is int && d.carbosG >= 0 && d.carbosG <= 500
+        && d.kcal is int && d.kcal >= 0 && d.kcal <= 3000
+        && d.minutos is int && d.minutos >= 1 && d.minutos <= 240
+        && d.ingredientes is list && d.ingredientes.size() <= 20
+        && d.pasos is list && d.pasos.size() <= 12
+        && d.etiquetas is list && d.etiquetas.size() <= 4
+        && d.etiquetas.hasOnly(['SIN_GLUTEN', 'SIN_LACTOSA', 'VEGETARIANO', 'VEGANO', 'ALTO_PROTEINA', 'BAJO_CARBOHIDRATOS'])
+        && (!('fotoVersion' in d.keys()) || d.fotoVersion is int)
+        && d.estado in ['BORRADOR', 'EN_REVISION', 'PUBLICADO', 'RECHAZADO', 'RETIRADO']
+        && d.creadoEn is int
+        && d.actualizadoEn is int
+        && (d.estado != 'EN_REVISION' || (d.resumen.size() >= 10 && d.ingredientes.size() >= 1 && d.pasos.size() >= 1 && 'fotoVersion' in d.keys()));
     }
 
     // Expediente del paciente (mapa dentro de pacientes/{id}): todo opcional, con tipos y rangos razonables.
@@ -253,6 +290,81 @@ service cloud.firestore {
       allow update: if request.auth != null
         && resource.data.autorId == request.auth.uid
         && entrenadorVerificado(request.auth.uid)
+        && ((resource.data.estado == 'PUBLICADO' && request.resource.data.estado == 'RETIRADO')
+            || (resource.data.estado == 'EN_REVISION' && request.resource.data.estado == 'BORRADOR'))
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['estado', 'actualizadoEn']);
+
+      // el ADMIN publica...
+      allow update: if esAdmin()
+        && resource.data.estado == 'EN_REVISION'
+        && request.resource.data.estado == 'PUBLICADO'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['estado', 'publicadoEn', 'revisadoPor', 'revisadoEn', 'actualizadoEn'])
+        && request.resource.data.publicadoEn is int
+        && request.resource.data.revisadoPor == request.auth.uid
+        && request.resource.data.revisadoEn is int;
+
+      // ...rechaza con motivo...
+      allow update: if esAdmin()
+        && resource.data.estado == 'EN_REVISION'
+        && request.resource.data.estado == 'RECHAZADO'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['estado', 'motivoRechazo', 'revisadoPor', 'revisadoEn', 'actualizadoEn'])
+        && request.resource.data.motivoRechazo is string
+        && request.resource.data.motivoRechazo.size() > 0
+        && request.resource.data.motivoRechazo.size() <= 200
+        && request.resource.data.revisadoPor == request.auth.uid
+        && request.resource.data.revisadoEn is int;
+
+      // ...y retira lo ya publicado
+      allow update: if esAdmin()
+        && resource.data.estado == 'PUBLICADO'
+        && request.resource.data.estado == 'RETIRADO'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['estado', 'revisadoPor', 'revisadoEn', 'actualizadoEn'])
+        && request.resource.data.revisadoPor == request.auth.uid
+        && request.resource.data.revisadoEn is int;
+
+      // lo publicado no se borra: se retira
+      allow delete: if request.auth != null
+        && resource.data.autorId == request.auth.uid
+        && resource.data.estado in ['BORRADOR', 'RECHAZADO', 'RETIRADO'];
+    }
+
+    // Banco global de platillos, con las mismas reglas que el de ejercicios pero con dos tipos de autor: lo publicado lo ve cualquier
+    // sesión; un borrador, uno en revisión o uno rechazado, solo su autor y el ADMIN. Solo un nutriólogo o un entrenador verificado crea
+    // y edita lo suyo (mientras sea borrador o lo hayan rechazado), y no puede firmar con el rol del otro. Solo el ADMIN publica, rechaza
+    // (con motivo) o retira lo ajeno. El autor puede sacar uno de revisión o retirar uno publicado.
+    match /platillos/{platilloId} {
+      allow read: if request.auth != null
+        && (resource.data.estado == 'PUBLICADO' || resource.data.autorId == request.auth.uid || esAdmin());
+
+      allow create: if request.auth != null
+        && autorVerificado(request.auth.uid)
+        && request.resource.data.autorId == request.auth.uid
+        && request.resource.data.autorRol == rolDe(request.auth.uid)
+        && request.resource.data.estado in ['BORRADOR', 'EN_REVISION']
+        && !('motivoRechazo' in request.resource.data.keys())
+        && !('publicadoEn' in request.resource.data.keys())
+        && !('revisadoPor' in request.resource.data.keys())
+        && !('revisadoEn' in request.resource.data.keys())
+        && platilloValido(request.resource.data);
+
+      // el autor edita (y reenvía) lo que es borrador o lo rechazaron; lo que puso el ADMIN no se toca
+      allow update: if request.auth != null
+        && resource.data.autorId == request.auth.uid
+        && autorVerificado(request.auth.uid)
+        && resource.data.estado in ['BORRADOR', 'RECHAZADO']
+        && request.resource.data.estado in ['BORRADOR', 'EN_REVISION']
+        && request.resource.data.autorId == resource.data.autorId
+        && request.resource.data.autorRol == resource.data.autorRol
+        && request.resource.data.creadoEn == resource.data.creadoEn
+        && request.resource.data.get('publicadoEn', null) == resource.data.get('publicadoEn', null)
+        && request.resource.data.get('revisadoPor', null) == resource.data.get('revisadoPor', null)
+        && request.resource.data.get('revisadoEn', null) == resource.data.get('revisadoEn', null)
+        && platilloValido(request.resource.data);
+
+      // el autor retira uno publicado o lo saca de revisión para seguir editándolo
+      allow update: if request.auth != null
+        && resource.data.autorId == request.auth.uid
+        && autorVerificado(request.auth.uid)
         && ((resource.data.estado == 'PUBLICADO' && request.resource.data.estado == 'RETIRADO')
             || (resource.data.estado == 'EN_REVISION' && request.resource.data.estado == 'BORRADOR'))
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['estado', 'actualizadoEn']);
