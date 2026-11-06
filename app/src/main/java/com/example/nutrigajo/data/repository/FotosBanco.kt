@@ -46,6 +46,7 @@ class FotosBanco(
 
     // La foto de ese elemento en su versión: de la caché o descargada del Worker.
     suspend fun bajar(ruta: String, autorId: String, id: String, version: Long, cache: File): Bitmap? = withContext(Dispatchers.IO) {
+        decodificadas[clave(ruta, autorId, id, version)]?.let { return@withContext it }
         val archivo = archivoDe(cache, ruta, autorId, id, version)
         if (!archivo.exists()) {
             val conexion = (URL("$base/$ruta/$autorId/$id?v=$version").openConnection() as HttpURLConnection).apply {
@@ -59,7 +60,19 @@ class FotosBanco(
                 conexion.disconnect()
             }
         }
-        BitmapFactory.decodeFile(archivo.path)
+        BitmapFactory.decodeFile(archivo.path)?.also {
+            // la textura se sube ahora, en este hilo, y no en el cuadro en que la foto aparece al hacer scroll
+            it.prepareToDraw()
+            decodificadas[clave(ruta, autorId, id, version)] = it
+        }
+    }
+
+    private companion object {
+        // Fotos ya decodificadas, compartidas por todos los repositorios: volver a una lista no las decodifica otra vez. Un octavo del heap;
+        // la versión va en la clave, así que una foto cambiada no se confunde con la anterior (que sale sola por LRU).
+        val decodificadas = CacheLru<Bitmap>(Runtime.getRuntime().maxMemory() / 8) { it.allocationByteCount.toLong() }
+
+        fun clave(ruta: String, autor: String, id: String, version: Long) = "$ruta/$autor/$id/$version"
     }
 
     private fun archivoDe(cache: File, ruta: String, autor: String, id: String, version: Long) = File(cache, "$ruta-$autor-$id-$version.jpg")
