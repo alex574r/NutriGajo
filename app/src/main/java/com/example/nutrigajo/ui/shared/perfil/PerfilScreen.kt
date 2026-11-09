@@ -206,12 +206,15 @@ fun PerfilScreen(
                 ) { actual ->
                     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         if (actual == 0) {
-                            datos.forEachIndexed { indice, dato ->
-                                Aparece(indice, huboCambio) {
-                                    FilaAjuste(dato.icono, titulo = dato.valor, modifier = Modifier.padding(horizontal = MARGEN), etiqueta = stringResource(dato.etiqueta))
+                            // los datos de la cuenta, todos en una sola tarjeta sin contorno
+                            Aparece(0, huboCambio) {
+                                TarjetaAjustes(Modifier.padding(horizontal = MARGEN)) {
+                                    datos.forEach { dato ->
+                                        FilaAjuste(dato.icono, titulo = dato.valor, etiqueta = stringResource(dato.etiqueta), plana = true)
+                                    }
                                 }
                             }
-                            Aparece(datos.size, huboCambio) { datosExtra() }
+                            Aparece(1, huboCambio) { datosExtra() }
                         } else {
                             Configuracion(
                                 huboCambio,

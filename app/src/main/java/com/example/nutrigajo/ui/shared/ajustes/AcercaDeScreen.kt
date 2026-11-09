@@ -1,6 +1,13 @@
 package com.example.nutrigajo.ui.shared.ajustes
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -25,6 +32,7 @@ import com.example.nutrigajo.ui.actualizacion.ActualizacionViewModel
 import com.example.nutrigajo.ui.actualizacion.FaseActualizacion
 import com.example.nutrigajo.ui.actualizacion.actualizacion
 import com.example.nutrigajo.ui.components.FilaAjuste
+import com.example.nutrigajo.ui.components.TarjetaAjustes
 
 @Composable
 fun AcercaDeScreen(versionApp: String, onVolver: () -> Unit, espacioInferior: Dp) {
@@ -49,8 +57,42 @@ fun AcercaDeScreen(versionApp: String, onVolver: () -> Unit, espacioInferior: Dp
         Spacer(Modifier.height(16.dp))
         Text(stringResource(R.string.acerca_descripcion), style = MaterialTheme.typography.bodyMedium, color = colores.onBackground)
         Spacer(Modifier.height(8.dp))
-        FilaAjuste(R.drawable.ic_informacion, titulo = versionApp, etiqueta = stringResource(R.string.perfil_version))
-        FilaActualizacion()
+        TarjetaAjustes {
+            FilaAjuste(R.drawable.ic_informacion, titulo = versionApp, etiqueta = stringResource(R.string.perfil_version), plana = true)
+            FilaActualizacion()
+        }
+        GrupoAjustes(stringResource(R.string.acerca_notas_titulo))
+        NOTAS_DE_VERSION.forEach { TarjetaNotas(it, instalada = esLaInstalada(it.version, versionApp)) }
+    }
+}
+
+// Las notas de una versión en una tarjeta gris: su número, si es la instalada, cuándo salió y una viñeta por nota.
+@Composable
+private fun TarjetaNotas(version: VersionNotas, instalada: Boolean) {
+    val colores = MaterialTheme.colorScheme
+    val notas = stringArrayResource(version.notas)
+    Column(
+        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(colores.surfaceVariant).padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(stringResource(R.string.acerca_notas_version, version.version), style = MaterialTheme.typography.titleMedium, color = colores.onBackground)
+            if (instalada) {
+                Text(
+                    text = stringResource(R.string.acerca_notas_instalada),
+                    modifier = Modifier.clip(RoundedCornerShape(9.dp)).background(colores.primaryContainer).padding(horizontal = 8.dp, vertical = 3.dp),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = colores.primary,
+                )
+            }
+        }
+        version.fecha?.let { Text(stringResource(it), style = MaterialTheme.typography.bodySmall, color = colores.onSurfaceVariant) }
+        notas.forEach { nota ->
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("•", style = MaterialTheme.typography.bodyMedium, color = colores.onSurfaceVariant)
+                Text(nota, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium, color = colores.onBackground)
+            }
+        }
     }
 }
 
@@ -70,5 +112,5 @@ private fun FilaActualizacion() {
         actual is FaseActualizacion.AlDia -> stringResource(R.string.actualiza_fila_al_dia) to { vm.verificar(manual = true) }
         else -> stringResource(R.string.actualiza_fila_buscar) to { vm.verificar(manual = true) }
     }
-    FilaAjuste(R.drawable.ic_refrescar, titulo = fila.first, etiqueta = stringResource(R.string.actualiza_fila_buscar), onClick = fila.second)
+    FilaAjuste(R.drawable.ic_refrescar, titulo = fila.first, etiqueta = stringResource(R.string.actualiza_fila_buscar), plana = true, onClick = fila.second)
 }

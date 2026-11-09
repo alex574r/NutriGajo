@@ -689,6 +689,24 @@
     <string name="seguridad_confirma">Confirma que eres tú para activarlo.</string>
 
     <string name="acerca_titulo">Acerca de</string>
+    <string name="acerca_notas_titulo">Notas de versión</string>
+    <string name="acerca_notas_version">Versión %1$s</string>
+    <string name="acerca_notas_instalada">Instalada</string>
+    <string name="notas_proxima">Próxima versión</string>
+    <string name="notas_fecha_1_3">Publicada el 8 nov 2026</string>
+    <string-array name="notas_1_4">
+        <item>Puedes desvincularte de tu nutriólogo o cambiar a otro con su código; tu expediente, tus planes y tu chat anteriores quedan guardados en «Vínculos anteriores»</item>
+        <item>Tu nutriólogo puede dar de baja a un paciente</item>
+        <item>Puedes eliminar tu cuenta desde Configuración, confirmando con un enlace que llega a tu correo</item>
+        <item>Permisos más claros: solo son obligatorios la ubicación en Modo carrera y Health Connect en «Tu reloj», y hay una pantalla «Permisos» en Configuración</item>
+        <item>Las opciones de Configuración, Datos y Acerca de van en tarjetas sin contorno, y se agregan estas notas de versión</item>
+    </string-array>
+    <string-array name="notas_1_3">
+        <item>Ejercicios con animación y pasos, que tu nutriólogo te asigna desde un catálogo</item>
+        <item>Planes de varios días, con ejercicios y menú por día</item>
+        <item>Las rachas ya no se pierden al cerrar sesión o cambiar de cuenta</item>
+        <item>Nuevo menú con tarjetas en el expediente del nutriólogo</item>
+    </string-array>
     <string name="acerca_descripcion">Seguimiento nutricional que conecta a pacientes con su nutriólogo: expediente, plan de alimentación, citas, chat y métricas.</string>
 
     <string name="ayuda_titulo">Centro de ayuda</string>
