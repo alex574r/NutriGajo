@@ -692,10 +692,10 @@
     <string name="acerca_notas_titulo">Notas de versión</string>
     <string name="acerca_notas_version">Versión %1$s</string>
     <string name="acerca_notas_instalada">Instalada</string>
-    <string name="notas_proxima">Próxima versión</string>
+    <string name="notas_fecha_1_4">Publicada el 9 nov 2026</string>
     <string name="notas_fecha_1_3">Publicada el 8 nov 2026</string>
     <string-array name="notas_1_4">
-        <item>Puedes desvincularte de tu nutriólogo o cambiar a otro con su código; tu expediente, tus planes y tu chat anteriores quedan guardados en «Vínculos anteriores»</item>
+        <item>Puedes desvincularte de tu nutriólogo o cambiar a otro con su código. Tu expediente, tus planes y tu chat anteriores quedan guardados en «Vínculos anteriores»</item>
         <item>Tu nutriólogo puede dar de baja a un paciente</item>
         <item>Puedes eliminar tu cuenta desde Configuración, confirmando con un enlace que llega a tu correo</item>
         <item>Permisos más claros: solo son obligatorios la ubicación en Modo carrera y Health Connect en «Tu reloj», y hay una pantalla «Permisos» en Configuración</item>
