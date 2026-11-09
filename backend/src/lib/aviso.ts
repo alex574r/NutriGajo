@@ -1,4 +1,5 @@
-// Texto del aviso que recibe el paciente cuando su nutriólogo confirma la cita. Sin dependencias, para probarlo con `npm test`.
+// Texto de los avisos que recibe el paciente sobre su cita: la confirma su nutriólogo, se la agenda o se la cancela. Sin dependencias,
+// para probarlos con `npm run test:aviso`.
 
 // ponytail: si el teléfono del paciente no manda su zona horaria, se usa la del centro del país.
 export const ZONA_POR_DEFECTO = "America/Mexico_City";
@@ -36,9 +37,29 @@ export function cuando(inicio: number, zona: string): string {
   return `${conMayuscula(partes.weekday)} ${partes.day} de ${partes.month}, ${partes.hour}:${partes.minute}`;
 }
 
+const consultorio = (direccion?: string) => (direccion ? ` Consultorio: ${direccion}.` : "");
+
 export function avisoDeConfirmacion(nutriologo: string, inicio: number, zona: string, direccion?: string) {
-  return {
-    titulo: "Cita confirmada",
-    cuerpo: `${nutriologo} confirmó tu cita: ${cuando(inicio, zona)}.` + (direccion ? ` Consultorio: ${direccion}.` : ""),
-  };
+  return { titulo: "Cita confirmada", cuerpo: `${nutriologo} confirmó tu cita: ${cuando(inicio, zona)}.` + consultorio(direccion) };
+}
+
+// La cita la creó el nutriólogo: el paciente no la pidió, así que el aviso dice que se la agendaron.
+export function avisoDeAgendada(nutriologo: string, inicio: number, zona: string, direccion?: string) {
+  return { titulo: "Cita agendada", cuerpo: `${nutriologo} te agendó una cita: ${cuando(inicio, zona)}.` + consultorio(direccion) };
+}
+
+// Se cerró el vínculo entre un paciente y su nutriólogo: el aviso es para la otra persona y `quien` es el nombre de quien lo cerró. Con
+// `CUENTA_ELIMINADA`, `cuentaDe` dice de quién era la cuenta: la de un paciente «eliminó su cuenta»; la de un nutriólogo «cerró el vínculo».
+export function avisoDeBaja(quien: string, por: "PACIENTE" | "NUTRIOLOGO" | "CUENTA_ELIMINADA", cuentaDe?: "PACIENTE" | "NUTRIOLOGO") {
+  const cuerpo =
+    por === "PACIENTE"
+      ? `${quien} dejó de ser tu paciente.`
+      : por === "CUENTA_ELIMINADA" && cuentaDe === "PACIENTE"
+        ? `${quien} eliminó su cuenta.`
+        : `${quien} cerró el vínculo contigo.`;
+  return { titulo: "Vínculo cerrado", cuerpo };
+}
+
+export function avisoDeCancelacion(nutriologo: string, inicio: number, zona: string) {
+  return { titulo: "Cita cancelada", cuerpo: `${nutriologo} canceló tu cita del ${cuando(inicio, zona)}.` };
 }

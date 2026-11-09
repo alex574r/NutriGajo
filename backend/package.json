@@ -10,9 +10,17 @@
     "check": "tsc --noEmit",
     "test": "node test/humo.mjs",
     "test:foto": "node test/fotoBanco.mjs",
+    "test:clip": "node test/clipBanco.mjs",
+    "test:catalogo": "node test/catalogoImportar.mjs",
+    "test:catalogoRutas": "node test/catalogoRutas.mjs",
     "test:aviso": "node test/aviso.mjs",
+    "test:app": "node test/app.mjs",
+    "test:publicar": "node test/publicar.mjs",
+    "publicar-apk": "node scripts/publicar-apk.mjs",
     "test:plan": "node test/plan.mjs",
-    "test:chat": "node test/chat.mjs"
+    "test:chat": "node test/chat.mjs",
+    "test:vinculos": "node test/vinculos.mjs",
+    "test:cuenta": "node test/cuenta.mjs"
   },
   "dependencies": {
     "jose": "^6.2.13"
