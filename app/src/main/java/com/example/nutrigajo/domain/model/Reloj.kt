@@ -28,6 +28,8 @@ data class ActividadHoy(
     val minutos: Int,
     val pasosAyer: Int? = null,
     val pasosPorHora: List<Int> = emptyList(),
+    // las calorías activas de hoy hora por hora (24 valores); vacío si no hay permiso de calorías
+    val kcalPorHora: List<Int> = emptyList(),
 )
 
 // Lo dormido en una noche, contada en el día en que despertó, y cuánto fue de cada etapa (en minutos; despierto no cuenta en `minutos`).
@@ -65,6 +67,8 @@ data class ResumenReloj(
     val faltanPermisos: Boolean = false,
     // los pasos de cada uno de los últimos 60 días (toEpochDay), para la racha
     val pasosPorDia: Map<Long, Int> = emptyMap(),
+    // las calorías activas de cada uno de los últimos 366 días (toEpochDay), para la pantalla «Calorías» y la tarjeta «Actividades»
+    val kcalPorDia: Map<Long, Int> = emptyMap(),
 )
 
 // «hace 5 min», «hace 2 h», «hace 3 d»

@@ -40,12 +40,14 @@ fun EncabezadoSeccion(
         Text(titulo, style = MaterialTheme.typography.titleMedium, color = colores.tertiary)
         contador?.let {
             Spacer(Modifier.width(8.dp))
-            Text(it, style = MaterialTheme.typography.titleMedium, color = colores.outline)
+            // toma lo que sobra y se parte en líneas si no cabe («(1) · asignada por tu nutriólogo»): así «Ver todas» no se aprieta en vertical
+            Text(it, modifier = Modifier.weight(1f), style = MaterialTheme.typography.titleMedium, color = colores.outline)
         }
-        Spacer(Modifier.weight(1f))
+        if (contador == null) Spacer(Modifier.weight(1f))
         if (verTodas) {
             Text(
                 text = stringResource(etiquetaVerTodas),
+                softWrap = false,
                 modifier = if (onVerTodas != null) Modifier.clickable(role = Role.Button, onClick = onVerTodas).padding(vertical = 8.dp) else Modifier,
                 style = MaterialTheme.typography.labelLarge,
                 color = colores.primary,

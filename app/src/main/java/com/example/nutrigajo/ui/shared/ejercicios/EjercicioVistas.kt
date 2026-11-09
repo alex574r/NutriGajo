@@ -9,6 +9,8 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.Spacer
 import com.example.nutrigajo.domain.model.EnfoqueDia
+import com.example.nutrigajo.domain.model.FuenteEjercicio
+import com.example.nutrigajo.data.repository.CatalogoRepository
 import androidx.compose.ui.text.font.FontWeight
 import androidx.activity.compose.BackHandler
 import androidx.annotation.DrawableRes
@@ -67,6 +69,7 @@ import com.example.nutrigajo.domain.model.Ejercicio
 import com.example.nutrigajo.domain.model.EquipoEjercicio
 import com.example.nutrigajo.domain.model.EstadoEjercicio
 import com.example.nutrigajo.domain.model.NivelEjercicio
+import com.example.nutrigajo.domain.model.ProblemaClip
 import com.example.nutrigajo.domain.model.ProblemaEjercicio
 import com.example.nutrigajo.domain.model.TipoEjercicio
 import com.example.nutrigajo.domain.model.ZonaCuerpo
@@ -155,17 +158,39 @@ fun ProblemaEjercicio.mensaje(): Int = when (this) {
     ProblemaEjercicio.FOTO -> R.string.ejercicio_problema_foto
 }
 
+@StringRes
+fun ProblemaClip.mensaje(): Int = when (this) {
+    ProblemaClip.TIPO -> R.string.ejercicio_clip_tipo
+    ProblemaClip.SIN_DURACION -> R.string.ejercicio_clip_sin_duracion
+    ProblemaClip.MUY_LARGO -> R.string.ejercicio_clip_largo
+    ProblemaClip.MUY_PESADO -> R.string.ejercicio_clip_pesado
+}
+
 // ---- foto
 
 // La foto del ejercicio, de la caché o del Worker; null mientras llega o si no tiene.
 @Composable
 fun rememberFotoEjercicio(ejercicio: Ejercicio): ImageBitmap? {
+    if (ejercicio.fuente == FuenteEjercicio.CATALOGO) return rememberFotoCatalogo(ejercicio.id).imagen
     val cache = LocalContext.current.cacheDir
     val repo = remember { EjerciciosRepository() }
     val imagen by produceState<ImageBitmap?>(null, ejercicio.id, ejercicio.fotoVersion) {
         value = runCatching { repo.foto(ejercicio, cache)?.asImageBitmap() }.getOrNull()
     }
     return imagen
+}
+
+// La foto de un ejercicio del catálogo: `intentada` dice que ya se pidió (con o sin éxito), para distinguir «en camino» de «no hay».
+private class FotoCatalogo(val imagen: ImageBitmap?, val intentada: Boolean)
+
+@Composable
+private fun rememberFotoCatalogo(id: String): FotoCatalogo {
+    val cache = LocalContext.current.cacheDir
+    val repo = remember { CatalogoRepository(directorio = cache) }
+    val foto by produceState(FotoCatalogo(null, false), id) {
+        value = FotoCatalogo(runCatching { repo.foto(id)?.asImageBitmap() }.getOrNull(), true)
+    }
+    return foto
 }
 
 // La foto de cada tipo que se ve cuando el ejercicio no tiene la suya (el marcador gris queda para el editor).
@@ -178,6 +203,16 @@ fun TipoEjercicio.imagenPorDefecto(): Int = when (this) {
 
 @Composable
 fun FotoEjercicio(ejercicio: Ejercicio, modifier: Modifier = Modifier, forma: Shape = RoundedCornerShape(24.dp)) {
+    if (ejercicio.fuente == FuenteEjercicio.CATALOGO) {
+        // mientras llega, el marcador gris; si no llega (sin red, sin foto), la del tipo
+        val foto = rememberFotoCatalogo(ejercicio.id)
+        if (foto.imagen == null && foto.intentada) {
+            Image(painterResource(ejercicio.tipo.imagenPorDefecto()), contentDescription = null, modifier = modifier.clip(forma), contentScale = ContentScale.Crop)
+        } else {
+            FotoOMarcador(foto.imagen, modifier, forma)
+        }
+        return
+    }
     val imagen = rememberFotoEjercicio(ejercicio)
     // con foto propia pendiente de llegar se ve el marcador; sin ella, la del tipo
     if (imagen == null && ejercicio.fotoVersion == null) {
@@ -276,7 +311,7 @@ fun TarjetaEjercicio(
         when {
             foto != null -> Image(bitmap = foto, contentDescription = null, modifier = Modifier.matchParentSize(), contentScale = ContentScale.Crop)
             // la foto propia está en camino: un fondo oscuro, no la del tipo, para que no parpadee al llegar
-            ejercicio.fotoVersion != null -> Box(Modifier.matchParentSize().background(Color(0xFF2A2A2A)))
+            ejercicio.fotoVersion != null || ejercicio.fuente == FuenteEjercicio.CATALOGO -> Box(Modifier.matchParentSize().background(Color(0xFF2A2A2A)))
             else -> Image(
                 painter = painterResource(ejercicio.tipo.imagenPorDefecto()),
                 contentDescription = null,
@@ -431,7 +466,7 @@ fun DetalleEjercicio(
     val barraAbajo = onEmpezar != null || acciones != null
     Box(modifier.fillMaxSize().background(colores.background)) {
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-            CabeceraOscura(alto = 320.dp, foto = { FotoEjercicio(ejercicio, Modifier.matchParentSize(), RectangleShape) }) {
+            CabeceraOscura(alto = 320.dp, foto = { MediaEjercicio(ejercicio, Modifier.matchParentSize(), RectangleShape) }) {
                 Etiqueta(stringResource(ejercicio.zona.titulo()).uppercase())
                 Text(
                     text = ejercicio.titulo,

@@ -42,6 +42,7 @@ import androidx.compose.ui.unit.sp
 import com.example.nutrigajo.R
 import com.example.nutrigajo.domain.model.Cita
 import com.example.nutrigajo.domain.model.EstadoCita
+import com.example.nutrigajo.domain.model.OrigenCita
 import com.example.nutrigajo.domain.model.Rol
 import com.example.nutrigajo.ui.components.ActualizarAlDeslizar
 import com.example.nutrigajo.ui.components.AlertaError
@@ -179,6 +180,7 @@ private fun TarjetaCita(cita: Cita, rol: Rol, ahora: Long, trabajando: Boolean, 
             Icon(painterResource(R.drawable.ic_calendario), contentDescription = null, modifier = Modifier.size(20.dp), tint = colores.onBackground)
             Text(diaYHora(cita.inicio), style = MaterialTheme.typography.bodyMedium, color = colores.onBackground)
         }
+        OrigenYNota(cita, rol)
         if (vigente) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (rol == Rol.NUTRIOLOGO && cita.estado == EstadoCita.PENDIENTE) {
@@ -191,6 +193,23 @@ private fun TarjetaCita(cita: Cita, rol: Rol, ahora: Long, trabajando: Boolean, 
                 }
             }
         }
+    }
+}
+
+// Quién la agendó, si fue el nutriólogo («Agendada por tu nutriólogo» al paciente y «Agendada por ti» a él), y la nota que dejó.
+@Composable
+internal fun OrigenYNota(cita: Cita, rol: Rol, modifier: Modifier = Modifier) {
+    if (cita.origen != OrigenCita.NUTRIOLOGO && cita.nota.isEmpty()) return
+    val colores = MaterialTheme.colorScheme
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        if (cita.origen == OrigenCita.NUTRIOLOGO) {
+            Text(
+                text = stringResource(if (rol == Rol.NUTRIOLOGO) R.string.cita_agendada_por_ti else R.string.cita_agendada_por_nutriologo),
+                style = MaterialTheme.typography.labelLarge,
+                color = colores.primary,
+            )
+        }
+        if (cita.nota.isNotEmpty()) Text(cita.nota, style = MaterialTheme.typography.bodyMedium, color = colores.onSurfaceVariant)
     }
 }
 

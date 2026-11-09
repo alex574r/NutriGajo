@@ -46,30 +46,34 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.nutrigajo.R
+import com.example.nutrigajo.ui.components.Esqueleto
+import java.time.Instant
+import java.time.ZoneId
 import java.util.Locale
 import kotlin.math.abs
 
-private const val MINIMO = 400f
-private const val MAXIMO = 900f
-private val EJE = listOf(900, 800, 700, 600, 500, 400)
-private val MARGEN_EJE = 26.dp
+// cabe una etiqueta de 4 dígitos («9000») con su hueco; las de 5 se abrevian (etiquetaEje)
+private val MARGEN_EJE = 34.dp
 private val ARRIBA = 6.dp
 private val ALTO_PLOT = 119.dp
 
+// «Actividades» del inicio: las calorías gastadas por rango (las del reloj y las de la app, ver CaloriasSerie.kt).
 @Composable
-fun ActividadReciente(modifier: Modifier = Modifier) {
+fun ActividadReciente(onVerTodas: () -> Unit, modifier: Modifier = Modifier) {
     val colores = MaterialTheme.colorScheme
     val tipos = MaterialTheme.typography
+    val estado = LocalCalorias.current
     var rango by rememberSaveable { mutableStateOf(Rango.DIA) }
-    val serie = seriesActividad.getValue(rango)
-    // al cambiar de rango la selección vuelve a un punto intermedio
-    var seleccion by remember(rango) { mutableIntStateOf((serie.valores.size * 0.7f).toInt()) }
+    val serie = remember(rango, estado.datos) { serieKcal(rango, estado.datos, Instant.now(), ZoneId.systemDefault()) }
+    // al cambiar de rango, o al llegar los datos, la burbuja va al punto más reciente
+    var seleccion by remember(rango, serie.valores.size) { mutableIntStateOf((serie.valores.size - 1).coerceAtLeast(0)) }
 
     Column(modifier) {
-        EncabezadoSeccion(stringResource(R.string.inicio_actividades), verTodas = true)
+        EncabezadoSeccion(stringResource(R.string.inicio_actividades), verTodas = true, onVerTodas = onVerTodas)
         Spacer(Modifier.height(12.dp))
         Column(
             modifier = Modifier
@@ -81,37 +85,63 @@ fun ActividadReciente(modifier: Modifier = Modifier) {
         ) {
             SelectorRango(rango, onRango = { rango = it })
             Spacer(Modifier.height(14.dp))
-            GraficaKcal(serie.valores, seleccion, onSeleccion = { seleccion = it })
+            GraficaDelRango(serie, estado, seleccion, onSeleccion = { seleccion = it })
             Spacer(Modifier.height(24.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Text(
-                        text = stringResource(R.string.actividad_total, String.format(Locale.getDefault(), "%,d", serie.total)),
-                        style = tipos.headlineMedium.copy(fontWeight = FontWeight.Bold),
-                        color = colores.onBackground,
-                    )
-                    Row(
-                        modifier = Modifier.padding(top = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    ) {
-                        Icon(painterResource(R.drawable.ic_corredor), contentDescription = null, modifier = Modifier.size(16.dp), tint = colores.outline)
+                    if (estado.cargando) {
+                        Esqueleto(Modifier.size(width = 120.dp, height = 30.dp), RoundedCornerShape(8.dp))
+                    } else {
                         Text(
-                            text = String.format(Locale.getDefault(), "%+d", serie.variacion),
-                            style = tipos.bodyMedium,
-                            color = colores.outline,
+                            text = stringResource(R.string.actividad_total, String.format(Locale.getDefault(), "%,d", serie.total)),
+                            style = tipos.headlineMedium.copy(fontWeight = FontWeight.Bold),
+                            color = colores.onBackground,
                         )
-                        Icon(
-                            painter = painterResource(R.drawable.ic_bombilla),
-                            contentDescription = null,
-                            modifier = Modifier.padding(start = 10.dp).size(20.dp),
-                            tint = colores.outline,
-                        )
-                        Text(stringResource(R.string.actividad_sugerencias), style = tipos.bodyMedium, color = colores.outline, maxLines = 1)
+                    }
+                    // contra el periodo anterior; el año y «Todo» no tienen con qué compararse
+                    if (!estado.cargando && serie.variacion != null) {
+                        Row(
+                            modifier = Modifier.padding(top = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        ) {
+                            Icon(painterResource(R.drawable.ic_corredor), contentDescription = null, modifier = Modifier.size(16.dp), tint = colores.outline)
+                            Text(
+                                text = String.format(Locale.getDefault(), "%+d", serie.variacion),
+                                style = tipos.bodyMedium,
+                                color = colores.outline,
+                            )
+                        }
                     }
                 }
                 Image(painterResource(R.drawable.ic_naranja), contentDescription = null, modifier = Modifier.size(56.dp))
             }
+        }
+    }
+}
+
+// La gráfica de un rango con sus tres estados, del mismo alto para que nada salte: esqueleto mientras se lee, un aviso si el rango no
+// tiene calorías (con la causa si la lectura de la app falló) y la línea cuando las hay.
+@Composable
+internal fun GraficaDelRango(serie: SerieKcal, estado: EstadoKcal, seleccion: Int, onSeleccion: (Int) -> Unit, modifier: Modifier = Modifier) {
+    val alto = ARRIBA * 2 + ALTO_PLOT
+    Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        when {
+            estado.cargando -> Esqueleto(Modifier.fillMaxWidth().height(alto), RoundedCornerShape(16.dp))
+            serie.total <= 0 -> Box(Modifier.fillMaxWidth().height(alto), contentAlignment = Alignment.Center) {
+                Text(
+                    text = stringResource(R.string.calorias_vacio),
+                    modifier = Modifier.padding(horizontal = 12.dp),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                )
+            }
+            else -> GraficaKcal(serie.valores, serie.rotulos, seleccion, onSeleccion)
+        }
+        // la lectura de la app falló: lo que se ve puede estar incompleto
+        if (!estado.cargando && estado.error != null) {
+            Text(stringResource(estado.error), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
         }
     }
 }
@@ -149,13 +179,15 @@ internal fun SelectorRango(rango: Rango, onRango: (Rango) -> Unit, modifier: Mod
     }
 }
 
-// Línea suave por los valores, con la cuadrícula punteada y una burbuja sobre el punto elegido (toque o arrastre).
+// Línea suave por los valores, con la cuadrícula punteada (de 0 al máximo, según los datos) y una burbuja con el rótulo y el valor del
+// punto elegido (toque o arrastre).
 @Composable
-internal fun GraficaKcal(valores: List<Float>, seleccion: Int, onSeleccion: (Int) -> Unit, modifier: Modifier = Modifier) {
+internal fun GraficaKcal(valores: List<Int>, rotulos: List<String>, seleccion: Int, onSeleccion: (Int) -> Unit, modifier: Modifier = Modifier) {
     val colores = MaterialTheme.colorScheme
     val medidor = rememberTextMeasurer()
     val estiloEje = MaterialTheme.typography.labelLarge.copy(fontSize = 11.sp, color = colores.outline)
     val estiloBurbuja = MaterialTheme.typography.labelLarge.copy(fontSize = 12.sp, color = colores.onPrimary)
+    val eje = remember(valores) { ejeKcal(valores.maxOrNull() ?: 0) }
 
     Canvas(
         modifier = modifier
@@ -176,14 +208,15 @@ internal fun GraficaKcal(valores: List<Float>, seleccion: Int, onSeleccion: (Int
         val arriba = ARRIBA.toPx()
         val alto = ALTO_PLOT.toPx()
         val ancho = size.width - izquierda
+        val tope = eje.first().toFloat()
         val puntos = valores.mapIndexed { i, v ->
             val x = izquierda + if (valores.size > 1) ancho * i / (valores.size - 1) else 0f
-            Offset(x, arriba + alto * (1f - (v.coerceIn(MINIMO, MAXIMO) - MINIMO) / (MAXIMO - MINIMO)))
+            Offset(x, arriba + alto * (1f - v.coerceIn(0, eje.first()) / tope))
         }
 
-        EJE.forEachIndexed { i, etiqueta ->
-            val y = arriba + alto * i / (EJE.size - 1)
-            val texto = medidor.measure(etiqueta.toString(), estiloEje)
+        eje.forEachIndexed { i, valorEje ->
+            val y = arriba + alto * i / (eje.size - 1)
+            val texto = medidor.measure(etiquetaEje(valorEje), estiloEje)
             drawText(texto, topLeft = Offset(0f, y - texto.size.height / 2f))
             drawLine(
                 color = colores.outline,
@@ -202,9 +235,10 @@ internal fun GraficaKcal(valores: List<Float>, seleccion: Int, onSeleccion: (Int
                 val b = puntos[i]
                 val c = puntos[i + 1]
                 val d = puntos[minOf(i + 2, puntos.size - 1)]
+                // los puntos de control no salen de la cuadrícula: sin esto la curva se hunde bajo el 0 junto a un tramo plano
                 cubicTo(
-                    b.x + (c.x - a.x) / 6f, b.y + (c.y - a.y) / 6f,
-                    c.x - (d.x - b.x) / 6f, c.y - (d.y - b.y) / 6f,
+                    b.x + (c.x - a.x) / 6f, (b.y + (c.y - a.y) / 6f).coerceIn(arriba, arriba + alto),
+                    c.x - (d.x - b.x) / 6f, (c.y - (d.y - b.y) / 6f).coerceIn(arriba, arriba + alto),
                     c.x, c.y,
                 )
             }
@@ -218,14 +252,15 @@ internal fun GraficaKcal(valores: List<Float>, seleccion: Int, onSeleccion: (Int
         drawPath(relleno, Brush.verticalGradient(listOf(colores.primary.copy(alpha = 0.4f), Color.Transparent), startY = arriba, endY = arriba + alto))
         drawPath(linea, colores.primary, style = Stroke(width = 4.dp.toPx(), cap = StrokeCap.Round))
 
-        val elegido = puntos[seleccion.coerceIn(0, puntos.lastIndex)]
+        val elegida = seleccion.coerceIn(0, puntos.lastIndex)
+        val elegido = puntos[elegida]
         drawCircle(colores.primary, radius = 6.dp.toPx(), center = elegido)
-        val burbuja = medidor.measure(valores[seleccion.coerceIn(0, valores.lastIndex)].toInt().toString(), estiloBurbuja)
+        val burbuja = medidor.measure("${rotulos.getOrElse(elegida) { "" }} · ${valores[elegida]}", estiloBurbuja)
         val ladoX = 7.dp.toPx()
         val ladoY = 3.dp.toPx()
         val anchoB = burbuja.size.width + ladoX * 2
         val altoB = burbuja.size.height + ladoY * 2
-        val izqB = (elegido.x - anchoB / 2).coerceIn(izquierda, size.width - anchoB)
+        val izqB = (elegido.x - anchoB / 2).coerceIn(izquierda, maxOf(izquierda, size.width - anchoB))
         val arribaB = (elegido.y - 6.dp.toPx() - 5.dp.toPx() - altoB).coerceAtLeast(0f)
         drawRoundRect(colores.primary, Offset(izqB, arribaB), Size(anchoB, altoB), CornerRadius(7.dp.toPx()))
         drawText(burbuja, topLeft = Offset(izqB + ladoX, arribaB + ladoY))

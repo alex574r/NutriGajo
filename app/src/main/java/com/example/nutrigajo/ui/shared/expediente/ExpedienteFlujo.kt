@@ -31,12 +31,18 @@ fun ExpedienteFlujo(
     chatSinLeer: Boolean = false,
     // el nutriólogo abre las metas diarias de su paciente
     onMetas: (() -> Unit)? = null,
+    // el nutriólogo agenda una cita a su paciente
+    onCita: (() -> Unit)? = null,
+    // el nutriólogo da de baja a su paciente (cierra el vínculo); quien llama pide la confirmación
+    onDarDeBaja: (() -> Unit)? = null,
     // clave propia: la tarjeta del inicio del paciente comparte este ViewModel
     vm: ExpedienteViewModel = viewModel(key = "expediente-$pacienteId-${editor.name}"),
 ) {
     val estado by vm.estado.collectAsState()
     // null: lo decide el rol y si el expediente está completo; true/false: lo eligió quien lo usa
     var enAsistente by rememberSaveable { mutableStateOf<Boolean?>(null) }
+    // el nutriólogo entra al menú general del paciente; aquí se guarda si ya abrió su expediente, para volver a él después del asistente
+    var enExpediente by rememberSaveable { mutableStateOf(false) }
     // la categoría que se está editando suelta y, ya guardada, la que da un pulso en el resumen durante un momento
     var enEdicion by remember { mutableStateOf<List<Int>?>(null) }
     var guardada by remember { mutableStateOf<List<Int>?>(null) }
@@ -100,6 +106,10 @@ fun ExpedienteFlujo(
             onChat = onChat,
             chatSinLeer = chatSinLeer,
             onMetas = onMetas,
+            onCita = onCita,
+            onDarDeBaja = onDarDeBaja,
+            enExpediente = enExpediente,
+            onEnExpediente = { enExpediente = it },
         )
     }
 }

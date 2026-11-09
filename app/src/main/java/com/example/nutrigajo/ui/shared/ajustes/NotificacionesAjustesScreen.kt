@@ -28,6 +28,7 @@ import com.example.nutrigajo.data.local.actividad
 import com.example.nutrigajo.data.push.Avisos
 import com.example.nutrigajo.domain.model.Rol
 import com.example.nutrigajo.ui.components.FilaAjuste
+import com.example.nutrigajo.ui.components.TarjetaAjustes
 
 private class TipoAviso(
     val canal: String,
@@ -81,20 +82,23 @@ fun NotificacionesAjustesScreen(rol: Rol, onVolver: () -> Unit, espacioInferior:
             )
         }
         GrupoAjustes(stringResource(R.string.notif_tipos))
-        tiposDe(rol).forEach { tipo ->
-            FilaAjuste(
-                icono = tipo.icono,
-                titulo = stringResource(tipo.titulo),
-                descripcion = stringResource(tipo.descripcion),
-                activa = generales && activos[tipo.canal] == true,
-                onActivaChange = {
-                    contexto.startActivity(
-                        Intent(Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS)
-                            .putExtra(Settings.EXTRA_APP_PACKAGE, contexto.packageName)
-                            .putExtra(Settings.EXTRA_CHANNEL_ID, tipo.canal),
-                    )
-                },
-            )
+        TarjetaAjustes {
+            tiposDe(rol).forEach { tipo ->
+                FilaAjuste(
+                    icono = tipo.icono,
+                    titulo = stringResource(tipo.titulo),
+                    descripcion = stringResource(tipo.descripcion),
+                    plana = true,
+                    activa = generales && activos[tipo.canal] == true,
+                    onActivaChange = {
+                        contexto.startActivity(
+                            Intent(Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS)
+                                .putExtra(Settings.EXTRA_APP_PACKAGE, contexto.packageName)
+                                .putExtra(Settings.EXTRA_CHANNEL_ID, tipo.canal),
+                        )
+                    },
+                )
+            }
         }
         Text(
             stringResource(R.string.notif_ayuda),

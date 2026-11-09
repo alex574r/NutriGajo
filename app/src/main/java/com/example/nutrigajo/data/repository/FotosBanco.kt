@@ -14,6 +14,10 @@ import java.io.OutputStream
 import java.net.HttpURLConnection
 import java.net.URL
 
+// El archivo del clip de un ejercicio en la caché. Su prefijo («ejercicio-clip-») no coincide con el de las fotos («ejercicio-{autor}-{id}-»),
+// así que limpiar las versiones viejas de una foto nunca borra el clip.
+internal fun nombreArchivoClip(autor: String, id: String, version: Long) = "ejercicio-clip-$autor-$id-$version.mp4"
+
 // Las fotos de los bancos globales (ejercicios y platillos) en R2, detrás del Worker. `ruta` es el segmento de la dirección del Worker
 // ("ejercicio" o "platillo") y también el prefijo de los archivos de la caché; cada foto vive bajo el uid de su autor.
 class FotosBanco(
@@ -65,6 +69,56 @@ class FotosBanco(
             it.prepareToDraw()
             decodificadas[clave(ruta, autorId, id, version)] = it
         }
+    }
+
+    // Sube el clip (MP4) de un ejercicio con el ID token de la sesión y devuelve su versión; lo deja en la caché para no bajarlo otra vez.
+    suspend fun subirClip(id: String, mp4: ByteArray, cache: File): Long = withContext(Dispatchers.IO) {
+        val uid = auth.currentUser?.uid ?: error("Sin sesión")
+        val token = auth.currentUser?.getIdToken(false)?.await()?.token ?: error("Sin token")
+        val conexion = (URL("$base/ejercicio/$id/clip").openConnection() as HttpURLConnection).apply {
+            requestMethod = "PUT"
+            doOutput = true
+            connectTimeout = 10_000
+            readTimeout = 30_000
+            setFixedLengthStreamingMode(mp4.size)
+            setRequestProperty("Authorization", "Bearer $token")
+            setRequestProperty("Content-Type", "video/mp4")
+        }
+        try {
+            conexion.outputStream.use { it.write(mp4) }
+            if (conexion.responseCode != HttpURLConnection.HTTP_OK) throw IOException("El Worker respondió ${conexion.responseCode}")
+            val version = JSONObject(conexion.inputStream.bufferedReader().readText()).getLong("version")
+            guardarClipEnCache(cache, uid, id, version) { it.write(mp4) }
+            version
+        } finally {
+            conexion.disconnect()
+        }
+    }
+
+    // El clip de ese ejercicio en su versión: de la caché o descargado del Worker; null si el Worker no lo tiene o no hay red.
+    suspend fun bajarClip(autorId: String, id: String, version: Long, cache: File): File? = withContext(Dispatchers.IO) {
+        val archivo = File(cache, nombreArchivoClip(autorId, id, version))
+        if (archivo.exists()) return@withContext archivo
+        val conexion = (URL("$base/ejercicio/$autorId/$id/clip?v=$version").openConnection() as HttpURLConnection).apply {
+            connectTimeout = 10_000
+            readTimeout = 30_000
+        }
+        try {
+            if (conexion.responseCode != HttpURLConnection.HTTP_OK) return@withContext null
+            guardarClipEnCache(cache, autorId, id, version) { salida -> conexion.inputStream.use { it.copyTo(salida) } }
+            archivo
+        } finally {
+            conexion.disconnect()
+        }
+    }
+
+    // Escribe en un archivo parcial y lo renombra al terminar; después quita las versiones anteriores de ese clip.
+    private fun guardarClipEnCache(cache: File, autor: String, id: String, version: Long, escribir: (OutputStream) -> Unit) {
+        val destino = File(cache, nombreArchivoClip(autor, id, version))
+        val parcial = File(cache, "${destino.name}.part")
+        parcial.outputStream().use(escribir)
+        parcial.renameTo(destino)
+        cache.listFiles { f -> f.name.startsWith("ejercicio-clip-$autor-$id-") && f != destino }?.forEach { it.delete() }
     }
 
     private companion object {

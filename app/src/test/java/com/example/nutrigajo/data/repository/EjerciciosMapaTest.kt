@@ -50,6 +50,16 @@ class EjerciciosMapaTest {
     }
 
     @Test
+    fun el_clip_viaja_en_el_mapa_y_sin_clip_no_hay_clave() {
+        val mapa = completo.copy(clipVersion = 1730000000123L).aMapa()
+        assertEquals(1730000000123L, mapa["clipVersion"])
+        assertEquals(1730000000123L, ejercicioDeMapa("e1", mapa)?.clipVersion)
+        val sinClip = completo.aMapa()
+        assertTrue("clipVersion" !in sinClip)
+        assertNull(ejercicioDeMapa("e1", sinClip)?.clipVersion)
+    }
+
+    @Test
     fun un_documento_de_una_version_futura_o_incompleto_no_se_muestra() {
         assertNull(ejercicioDeMapa("e1", completo.aMapa() + ("estado" to "ARCHIVADO")))
         assertNull(ejercicioDeMapa("e1", completo.aMapa() - "autorId"))

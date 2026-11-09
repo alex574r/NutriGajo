@@ -1,10 +1,5 @@
 package com.example.nutrigajo.ui.paciente.citas
 
-import android.Manifest
-import android.content.pm.PackageManager
-import android.os.Build
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -45,7 +40,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -54,7 +48,9 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
-import androidx.core.content.ContextCompat
+import com.example.nutrigajo.ui.permisos.rememberPermiso
+import com.example.nutrigajo.domain.PermisoApp
+import com.example.nutrigajo.domain.EstadoPermiso
 import com.example.nutrigajo.R
 import com.example.nutrigajo.domain.Agenda
 import com.example.nutrigajo.domain.model.Cita
@@ -91,18 +87,10 @@ fun AgendarCitaSheet(
     val reagendando = estado.reagendando
     val vigente = estado.citaVigente
     val colores = MaterialTheme.colorScheme
-    // desde Android 13 los avisos piden permiso: se pide al solicitar la primera cita y la solicitud sigue diga lo que diga
-    val contexto = LocalContext.current
-    val pedirPermiso = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { onEnviar() }
-    val enviar = {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-            ContextCompat.checkSelfPermission(contexto, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
-        ) {
-            pedirPermiso.launch(Manifest.permission.POST_NOTIFICATIONS)
-        } else {
-            onEnviar()
-        }
-    }
+    // desde Android 13 los avisos piden permiso: se ofrece al solicitar la cita mientras falte (y Android todavía deje pedirlo) y la solicitud sigue
+    // diga lo que diga la persona; con el permiso bloqueado no se insiste
+    val avisos = rememberPermiso(PermisoApp.NOTIFICACIONES, alResponder = onEnviar)
+    val enviar = { if (avisos.estado == EstadoPermiso.FALTA) avisos.pedir() else onEnviar() }
     val horarios = remember(estado.dia, estado.ocupados) {
         estado.dia?.let { Agenda.horarios(it, estado.ocupados, Instant.now(), ZoneId.systemDefault()) }.orEmpty()
     }
@@ -188,8 +176,9 @@ fun AgendarCitaSheet(
     }
 }
 
+// internal: la hoja con la que el nutriólogo agenda (NuevaCitaSheet) usa los mismos chips
 @Composable
-private fun Cargando() {
+internal fun Cargando() {
     val descripcion = stringResource(R.string.agendar_cargando)
     Column(Modifier.semantics { contentDescription = descripcion }, verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -202,7 +191,7 @@ private fun Cargando() {
 }
 
 @Composable
-private fun DiaChip(dia: LocalDate, elegido: Boolean, onClick: () -> Unit) {
+internal fun DiaChip(dia: LocalDate, elegido: Boolean, onClick: () -> Unit) {
     val colores = MaterialTheme.colorScheme
     val descripcion = diaLargo(dia)
     Column(
@@ -224,7 +213,7 @@ private fun DiaChip(dia: LocalDate, elegido: Boolean, onClick: () -> Unit) {
 // Una hora ocupada o que ya pasó se ve tachada y no se puede elegir.
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun FlowRowScope.HoraChip(hora: String, elegida: Boolean, libre: Boolean, onClick: () -> Unit) {
+internal fun FlowRowScope.HoraChip(hora: String, elegida: Boolean, libre: Boolean, onClick: () -> Unit) {
     val colores = MaterialTheme.colorScheme
     val forma = RoundedCornerShape(14.dp)
     Text(

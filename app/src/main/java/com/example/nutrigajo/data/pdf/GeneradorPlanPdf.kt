@@ -17,9 +17,12 @@ import androidx.annotation.StringRes
 import androidx.core.content.ContextCompat
 import androidx.core.content.res.ResourcesCompat
 import com.example.nutrigajo.R
+import com.example.nutrigajo.domain.model.EjercicioAsignado
 import com.example.nutrigajo.domain.model.GrupoAlimento
 import com.example.nutrigajo.domain.model.PlanContenido
 import com.example.nutrigajo.domain.model.RangoImc
+import com.example.nutrigajo.domain.model.dosis
+import com.example.nutrigajo.domain.model.opcionDelDia
 import com.example.nutrigajo.domain.model.rangoImc
 import com.example.nutrigajo.ui.theme.color
 import com.example.nutrigajo.ui.theme.titulo
@@ -62,6 +65,18 @@ private val COLORES_IMC = listOf(0xFF7BA7D1, 0xFF16A34A, 0xFFEAB308, 0xFFF97316,
 
 // Arma el PDF del plan con la API de Android (PdfDocument), sin librerías: portada, bienvenida con IMC y datos clave, metas,
 // plan nutricional (tabla de equivalentes), opciones de menú, plan de ejercicio y cierre. Solo salen las secciones con contenido.
+// Las filas de la tabla «Ejercicios asignados»: [día, ejercicio, dosis, nota], de lunes a domingo y, dentro de cada día, en el orden del plan.
+internal fun filasAsignadas(asignados: List<EjercicioAsignado>, nombreDia: (Int) -> String): List<List<String>> =
+    asignados.sortedBy { it.dia }.map { listOf(nombreDia(it.dia), it.titulo, it.dosis(), it.nota) }
+
+// Las filas de «Menú por día» de un plan con duración: [día, opción] de cada día que tiene menú, en orden; sin duración o sin menú no hay filas.
+internal fun filasMenuPorDia(plan: PlanContenido, etiquetaDia: (Int) -> String, etiquetaOpcion: (Int) -> String): List<List<String>> {
+    if (plan.duracionDias == null) return emptyList()
+    return plan.menuDias.indices.mapNotNull { i ->
+        plan.opcionDelDia(i + 1)?.let { listOf(etiquetaDia(i + 1), etiquetaOpcion(it + 1)) }
+    }
+}
+
 class GeneradorPlanPdf(private val contexto: Context) {
     private val base: Typeface = ResourcesCompat.getFont(contexto, R.font.inter) ?: Typeface.SANS_SERIF
 
@@ -78,7 +93,7 @@ class GeneradorPlanPdf(private val contexto: Context) {
                 if (plan.metas.isNotEmpty()) add { metas(lienzo, plan) }
                 if (plan.calorias != null || plan.equivalentes.isNotEmpty()) add { planNutricional(lienzo, plan) }
                 if (plan.opciones.isNotEmpty()) add { menu(lienzo, plan) }
-                if (plan.sesiones.isNotEmpty() || plan.ejercicioNotas.isNotBlank()) add { ejercicio(lienzo, plan) }
+                if (plan.sesiones.isNotEmpty() || plan.ejercicioNotas.isNotBlank() || plan.ejerciciosAsignados.isNotEmpty()) add { ejercicio(lienzo, plan) }
                 if (plan.notas.isNotBlank() || datos.telefono.isNotBlank() || datos.direccion.isNotBlank()) add { cierre(lienzo, datos) }
                 add {
                     lienzo.terminar()
@@ -236,6 +251,8 @@ class GeneradorPlanPdf(private val contexto: Context) {
         y += nombre.height + 6f
         c.drawText(s(R.string.pdf_subtitulo_portada, d.fecha), MARGEN, y + 14f, pincel(13f, 500, SECUNDARIO))
         c.drawText(s(R.string.pdf_con_nutriologo, d.nutriologo), MARGEN, y + 34f, pincel(13f, 500, SECUNDARIO))
+        // un plan con duración lo dice en la portada
+        d.contenido.duracionDias?.let { c.drawText(s(R.string.pdf_duracion_portada, it), MARGEN, y + 56f, pincel(13f, 700, NARANJA)) }
 
         // el lema, en una barra como la del formato de ejemplo
         c.caja(MARGEN, ALTO - 124f, 350f, 44f, SUPERFICIE, 22f)
@@ -419,6 +436,14 @@ class GeneradorPlanPdf(private val contexto: Context) {
             columnas = listOf(s(R.string.pdf_col_opcion) to 0.9f, s(R.string.pdf_col_desayuno) to 2f, s(R.string.pdf_col_comida) to 2f, s(R.string.pdf_col_cena) to 2f),
             filas = plan.opciones.mapIndexed { i, o -> listOf(s(R.string.pdf_opcion, i + 1), o.desayuno, o.comida, o.cena) },
         )
+        // con duración, qué opción toca cada día
+        val porDia = filasMenuPorDia(plan, { s(R.string.plan_dia_n, it) }, { s(R.string.pdf_opcion, it) })
+        if (porDia.isEmpty()) return
+        lz.y += 22f
+        val titulo = texto(s(R.string.plan_menu_por_dia), pincel(13f, 700), ANCHO_UTIL)
+        lz.c.dibujar(titulo, MARGEN, lz.y)
+        lz.y += titulo.height + 10f
+        tabla(lz, columnas = listOf(s(R.string.pdf_col_dia) to 1f, s(R.string.pdf_col_opcion) to 2f), filas = porDia)
     }
 
     private fun ejercicio(lz: Lienzo, plan: PlanContenido) {
@@ -428,11 +453,25 @@ class GeneradorPlanPdf(private val contexto: Context) {
             lz.c.dibujar(notas, MARGEN, lz.y)
             lz.y += notas.height + 18f
         }
-        if (plan.sesiones.isEmpty()) return
+        if (plan.sesiones.isNotEmpty()) {
+            tabla(
+                lz,
+                columnas = listOf(s(R.string.pdf_col_dia) to 1f, s(R.string.pdf_col_enfoque) to 1.6f, s(R.string.pdf_col_detalle) to 4.4f),
+                filas = plan.sesiones.map { listOf(it.dia, it.enfoque, it.detalle) },
+            )
+        }
+        if (plan.ejerciciosAsignados.isEmpty()) return
+        // los ejercicios concretos del banco, por día; un plan sin ellos no lleva esta tabla
+        if (plan.sesiones.isNotEmpty()) lz.y += 22f
+        val titulo = texto(s(R.string.pdf_asignados), pincel(13f, 700), ANCHO_UTIL)
+        lz.c.dibujar(titulo, MARGEN, lz.y)
+        lz.y += titulo.height + 10f
+        val dias = contexto.resources.getStringArray(R.array.plan_dias)
         tabla(
             lz,
-            columnas = listOf(s(R.string.pdf_col_dia) to 1f, s(R.string.pdf_col_enfoque) to 1.6f, s(R.string.pdf_col_detalle) to 4.4f),
-            filas = plan.sesiones.map { listOf(it.dia, it.enfoque, it.detalle) },
+            columnas = listOf(s(R.string.pdf_col_dia) to 1.3f, s(R.string.pdf_col_ejercicio) to 2.7f, s(R.string.pdf_col_dosis) to 1.5f, s(R.string.pdf_col_nota) to 2f),
+            // con duración los días son «Día 1…N»; sin ella, los de la semana
+            filas = filasAsignadas(plan.ejerciciosAsignados) { if (plan.duracionDias != null) s(R.string.plan_dia_n, it) else dias[it - 1] },
         )
     }
 

@@ -25,13 +25,42 @@ enum class EnfoqueDia(private val admite: (Ejercicio) -> Boolean) {
 private fun TipoEjercicio.esDeEstirar() = this == TipoEjercicio.FLEXIBILIDAD || this == TipoEjercicio.YOGA
 
 // La rutina que el inicio propone hoy: ejercicios del banco global según el enfoque del día.
-data class RutinaDelDia(val enfoque: EnfoqueDia, val ejercicios: List<Ejercicio>) {
+// `asignada` es true cuando sale de lo que el nutriólogo asignó ese día y false cuando es la rutina que se arma sola.
+data class RutinaDelDia(val enfoque: EnfoqueDia, val ejercicios: List<Ejercicio>, val asignada: Boolean = false) {
     val minutos: Int get() = ejercicios.sumOf { it.duracionMin }
     val kcal: Int get() = ejercicios.sumOf { it.kcal }
 
     // el nivel medio de sus ejercicios, redondeado
     val nivel: NivelEjercicio
         get() = NivelEjercicio.entries[ejercicios.map { it.nivel.ordinal }.average().let { if (it.isNaN()) 0 else Math.round(it).toInt() }]
+}
+
+// La rutina de `fecha` con lo que el nutriólogo asignó a ese día de la semana (`dayOfWeek.value`: 1 lunes … 7 domingo), en el orden del
+// plan. `resolver` da el ejercicio de cada asignado (null si ya no está disponible: se salta). Cada ejercicio sale con la duración asignada
+// y sus kcal escaladas a ella. null si ese día no queda ningún asignado resoluble: el inicio cae entonces a `rutinaDelDia`.
+// `dia` es el día de los asignados que toca hoy: el de la semana (por defecto) o, en un plan con duración, el día del plan.
+fun rutinaAsignada(
+    fecha: LocalDate,
+    asignados: List<EjercicioAsignado>,
+    resolver: (EjercicioAsignado) -> Ejercicio?,
+    dia: Int = fecha.dayOfWeek.value,
+): RutinaDelDia? {
+    val ejercicios = asignados.delDia(dia).mapNotNull { asignado ->
+        resolver(asignado)?.let { ejercicio ->
+            val minutos = asignado.duracionMin()
+            ejercicio.copy(duracionMin = minutos, kcal = if (ejercicio.duracionMin > 0) ejercicio.kcal * minutos / ejercicio.duracionMin else ejercicio.kcal)
+        }
+    }
+    if (ejercicios.isEmpty()) return null
+    return RutinaDelDia(EnfoqueDia.de(fecha.dayOfWeek), ejercicios, asignada = true)
+}
+
+// De dónde saca el paciente el ejercicio de cada asignado: del banco ya leído, y solo si sigue PUBLICADO (uno retirado o aún en revisión
+// ya no se entrena). Los de fuente CATALOGO se resuelven con la ficha ya bajada del catálogo (`catalogo`, por id): sin ficha todavía, o sin red,
+// no se resuelven y el inicio cae al baraje, igual que con uno retirado.
+fun resolverDelBanco(banco: List<Ejercicio>, catalogo: Map<String, Ejercicio> = emptyMap()): (EjercicioAsignado) -> Ejercicio? {
+    val publicados = banco.filter { it.estado == EstadoEjercicio.PUBLICADO }.associateBy { it.id }
+    return { asignado -> if (asignado.fuente == FuenteEjercicio.BANCO) publicados[asignado.id] else catalogo[asignado.id] }
 }
 
 const val EJERCICIOS_POR_RUTINA = 6

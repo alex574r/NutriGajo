@@ -61,6 +61,7 @@ import com.example.nutrigajo.ui.shared.ejercicios.BotonVolverCristal
 import com.example.nutrigajo.ui.shared.ejercicios.CabeceraOscura
 import com.example.nutrigajo.ui.shared.ejercicios.DatosEnColumnas
 import com.example.nutrigajo.ui.shared.ejercicios.FotoEjercicio
+import com.example.nutrigajo.ui.shared.ejercicios.MediaEjercicio
 import com.example.nutrigajo.ui.shared.ejercicios.PasosPager
 import com.example.nutrigajo.ui.shared.ejercicios.Parrafo
 import com.example.nutrigajo.ui.shared.ejercicios.intensidad
@@ -136,7 +137,7 @@ fun EntrenarScreen(
         when (fase) {
             Fase.INTRO -> {
                 Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-                    CabeceraOscura(alto = 300.dp, foto = { FotoEjercicio(ejercicios.first(), Modifier.matchParentSize(), RectangleShape) }) {
+                    CabeceraOscura(alto = 300.dp, foto = { MediaEjercicio(ejercicios.first(), Modifier.matchParentSize(), RectangleShape) }) {
                         Etiqueta(pluralStringResource(R.plurals.rutina_ejercicios, total, total).uppercase())
                         Text(
                             text = stringResource(rutina.enfoque.titulo()),
@@ -188,7 +189,7 @@ fun EntrenarScreen(
                 key(indice) {
                     val pasos = rememberPasosEstado(actual.pasos.size)
                     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-                        CabeceraOscura(alto = 300.dp, foto = { FotoEjercicio(actual, Modifier.matchParentSize(), RectangleShape) }) {
+                        CabeceraOscura(alto = 300.dp, foto = { MediaEjercicio(actual, Modifier.matchParentSize(), RectangleShape) }) {
                             Etiqueta(stringResource(R.string.entrenar_ejercicio_n, indice + 1, total).uppercase())
                             Text(
                                 text = actual.titulo,

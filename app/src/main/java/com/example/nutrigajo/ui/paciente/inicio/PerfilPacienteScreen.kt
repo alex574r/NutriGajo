@@ -1,12 +1,16 @@
 package com.example.nutrigajo.ui.paciente.inicio
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.res.stringResource
 import com.example.nutrigajo.R
 import com.example.nutrigajo.domain.model.Perfil
 import com.example.nutrigajo.domain.model.Vinculo
 import com.example.nutrigajo.ui.components.AccionPerfil
 import com.example.nutrigajo.ui.components.TransicionPerfil
+import com.example.nutrigajo.ui.shared.ajustes.MiNutriologoScreen
+import com.example.nutrigajo.ui.shared.ajustes.VinculosAnterioresScreen
 import com.example.nutrigajo.ui.shared.perfil.DatoPerfil
 import com.example.nutrigajo.ui.shared.perfil.PerfilScreen
 import com.example.nutrigajo.ui.shared.perfil.altaCorta
@@ -17,6 +21,8 @@ import com.example.nutrigajo.ui.shared.perfil.datosBase
 fun PerfilPacienteScreen(
     perfil: Perfil,
     vinculo: Vinculo,
+    // el mismo que usa el inicio: «Mi nutriólogo» cierra o cambia el vínculo y el inicio reacciona al nuevo estado
+    vinculoVm: VinculoViewModel,
     onExpediente: () -> Unit,
     onCitas: () -> Unit,
     onVolver: () -> Unit,
@@ -38,5 +44,19 @@ fun PerfilPacienteScreen(
         onCerrarSesion = onCerrarSesion,
         onVolver = onVolver,
         transicion = transicion,
+        miNutriologo = { volver ->
+            val estado by vinculoVm.estado.collectAsState()
+            MiNutriologoScreen(
+                vinculo = vinculo,
+                estado = estado,
+                onDesvincular = { vinculoVm.desvincular(perfil) },
+                onRevisarCodigo = vinculoVm::revisarCodigo,
+                onDescartarRevision = vinculoVm::descartarRevision,
+                onCambiar = { codigo, compartir -> vinculoVm.cambiar(codigo, compartir, perfil) },
+                onLimpiarError = vinculoVm::limpiarError,
+                onVolver = volver,
+            )
+        },
+        anteriores = { volver -> VinculosAnterioresScreen(comoPaciente = true, onVolver = volver) },
     )
 }

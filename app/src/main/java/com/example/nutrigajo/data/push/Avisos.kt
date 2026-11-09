@@ -13,6 +13,7 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import com.example.nutrigajo.MainActivity
 import com.example.nutrigajo.R
+import com.example.nutrigajo.domain.notificacionesPidenPermiso
 
 // Avisos del teléfono. FCM muestra solo los que llegan con la app en segundo plano o cerrada; los que llegan con ella
 // abierta los muestra `mostrar`, con el mismo aspecto.
@@ -24,6 +25,9 @@ object Avisos {
 
     // `tipo` de los datos del aviso de un plan nuevo; al tocarlo, la app abre el plan
     const val TIPO_PLAN_NUEVO = "PLAN_NUEVO"
+
+    // los avisos de cita llevan un `tipo` que empieza así (CITA_CONFIRMADA, CITA_AGENDADA, CITA_CANCELADA); al tocarlos, el paciente abre «Mis citas»
+    const val PREFIJO_TIPO_CITA = "CITA_"
 
     // `tipo` del aviso de un mensaje nuevo del chat; lleva el `pacienteId` de la conversación y, al tocarlo, la app abre ese chat
     const val TIPO_MENSAJE_NUEVO = "MENSAJE_NUEVO"
@@ -42,7 +46,7 @@ object Avisos {
     // Desde Android 13 los avisos piden permiso y la app no lo trae concedido: sin él el sistema descarta tanto los que muestra FCM
     // como los de `mostrar`. Se pide al abrir el inicio del paciente y al solicitar una cita.
     fun sinPermiso(contexto: Context): Boolean =
-        Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+        notificacionesPidenPermiso(Build.VERSION.SDK_INT) &&
             ContextCompat.checkSelfPermission(contexto, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
 
     // `datos` son los de la notificación de FCM: viajan en la intención, como cuando FCM muestra el aviso por su cuenta.

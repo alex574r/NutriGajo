@@ -44,9 +44,7 @@ enum class Rango(@StringRes val etiqueta: Int) {
     TODO(R.string.rango_todo),
 }
 
-// valores en kcal dentro de 400..900 (el rango de la gráfica)
-data class SerieActividad(val valores: List<Float>, val total: Int, val variacion: Int)
-
+// `calorias` aquí es de muestra: el inicio lo reemplaza con lo que se gastó hoy (CaloriasSerie.kt).
 val resumenDia = ResumenDia(score = 80, avance = 32, hidratacionMl = 781, calorias = 1503)
 
 // El plan de comidas de cada día (el mismo todos los días); la sección del inicio enseña las dos del almuerzo. La app solo trae una
@@ -126,26 +124,6 @@ val comidas = platos.filter { it.tipo == TipoComida.ALMUERZO }
 val comidaEscaneada = Comida(
     R.drawable.grupo_frutas, "Granada", proteinaG = 2, grasasG = 1, kcal = 83, carbosG = 19,
     tipo = TipoComida.DESAYUNO,
-)
-
-val seriesActividad = mapOf(
-    Rango.DIA to SerieActividad(
-        listOf(800f, 790f, 660f, 640f, 790f, 830f, 900f, 840f, 780f, 720f, 430f, 420f, 550f, 830f, 840f, 700f),
-        total = 1548,
-        variacion = 285,
-    ),
-    Rango.SEMANA to SerieActividad(listOf(620f, 700f, 540f, 810f, 760f, 690f, 850f), total = 10420, variacion = 640),
-    Rango.MES to SerieActividad(
-        listOf(700f, 640f, 720f, 600f, 780f, 820f, 700f, 650f, 730f, 810f, 760f, 690f),
-        total = 43870,
-        variacion = -1200,
-    ),
-    Rango.ANIO to SerieActividad(
-        listOf(580f, 640f, 700f, 660f, 720f, 780f, 840f, 810f, 760f, 790f, 830f, 870f),
-        total = 512300,
-        variacion = 8400,
-    ),
-    Rango.TODO to SerieActividad(listOf(520f, 600f, 680f, 740f, 790f, 830f), total = 1204500, variacion = 21000),
 )
 
 const val FRASE_DEL_DIA = "El dolor que sientes hoy será la fuerza que sentirás mañana"

@@ -1,6 +1,8 @@
 package com.example.nutrigajo.ui.entrenador.ejercicios
 
+import android.content.ContentResolver
 import android.graphics.ImageDecoder
+import android.media.MediaMetadataRetriever
 import android.net.Uri
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -34,6 +36,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
@@ -48,10 +51,12 @@ import com.example.nutrigajo.R
 import com.example.nutrigajo.domain.model.Ejercicio
 import com.example.nutrigajo.domain.model.EquipoEjercicio
 import com.example.nutrigajo.domain.model.NivelEjercicio
+import com.example.nutrigajo.domain.model.ProblemaClip
 import com.example.nutrigajo.domain.model.TipoEjercicio
 import com.example.nutrigajo.domain.model.ZonaCuerpo
 import com.example.nutrigajo.domain.model.problemaParaRevision
 import com.example.nutrigajo.domain.model.puedeGuardarseComoBorrador
+import com.example.nutrigajo.domain.model.validarClip
 import com.example.nutrigajo.ui.components.ANILLO_FOCO
 import com.example.nutrigajo.ui.components.AlertaError
 import com.example.nutrigajo.ui.components.BotonPrimario
@@ -60,9 +65,12 @@ import com.example.nutrigajo.ui.nutriologo.plan.BarraSuperior
 import com.example.nutrigajo.ui.shared.ejercicios.FotoEjercicio
 import com.example.nutrigajo.ui.shared.ejercicios.FotoOMarcador
 import com.example.nutrigajo.ui.shared.ejercicios.GrupoOpciones
+import com.example.nutrigajo.ui.shared.ejercicios.MediaEjercicio
+import com.example.nutrigajo.ui.shared.ejercicios.ReproductorBucle
 import com.example.nutrigajo.ui.shared.ejercicios.mensaje
 import com.example.nutrigajo.ui.shared.ejercicios.titulo
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
 
@@ -77,7 +85,7 @@ fun EditorEjercicio(
     inicial: Ejercicio,
     guardando: Boolean,
     @StringRes error: Int?,
-    onGuardar: (ejercicio: Ejercicio, enviarARevision: Boolean, foto: Uri?) -> Unit,
+    onGuardar: (ejercicio: Ejercicio, enviarARevision: Boolean, foto: Uri?, clip: Uri?) -> Unit,
     onVolver: () -> Unit,
 ) {
     BackHandler(onBack = onVolver)
@@ -100,6 +108,21 @@ fun EditorEjercicio(
 
     val elegirFoto = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri -> if (uri != null) foto = uri }
     val vistaPrevia = rememberVistaPrevia(foto)
+
+    // el clip animado (opcional): se comprueba al elegirlo, para no subir nada que el Worker o las reglas vayan a rechazar
+    var clip by remember { mutableStateOf<Uri?>(null) }
+    var problemaClip by remember { mutableStateOf<ProblemaClip?>(null) }
+    val resolver = LocalContext.current.contentResolver
+    val alcance = rememberCoroutineScope()
+    val elegirClip = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+        if (uri != null) {
+            alcance.launch {
+                val problema = problemaDelClip(resolver, uri)
+                problemaClip = problema
+                if (problema == null) clip = uri
+            }
+        }
+    }
 
     // lo escrito tal cual, para comprobar si ya se puede mandar a revisión (la foto elegida cuenta aunque aún no se haya subido)
     val escrito = inicial.copy(
@@ -141,6 +164,28 @@ fun EditorEjercicio(
                 ) {
                     Text(stringResource(if (foto != null || inicial.fotoVersion != null) R.string.ejercicio_cambiar_foto else R.string.ejercicio_elegir_foto))
                 }
+            }
+            Column(Modifier.padding(horizontal = ANILLO_FOCO), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(stringResource(R.string.ejercicio_animacion), style = MaterialTheme.typography.titleSmall, color = colores.onBackground)
+                Text(stringResource(R.string.ejercicio_animacion_ayuda), style = MaterialTheme.typography.bodySmall, color = colores.onSurfaceVariant)
+                val forma = RoundedCornerShape(24.dp)
+                val elegido = clip
+                when {
+                    elegido != null -> ReproductorBucle(elegido, Modifier.fillMaxWidth().aspectRatio(16f / 10f), forma, pausa = { FotoOMarcador(vistaPrevia, Modifier.fillMaxSize(), forma) })
+                    inicial.clipVersion != null -> MediaEjercicio(inicial, Modifier.fillMaxWidth().aspectRatio(16f / 10f), forma)
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(
+                        onClick = { elegirClip.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.VideoOnly)) },
+                        shape = RoundedCornerShape(21.dp),
+                    ) {
+                        Text(stringResource(if (clip != null || inicial.clipVersion != null) R.string.ejercicio_cambiar_animacion else R.string.ejercicio_elegir_animacion))
+                    }
+                    if (clip != null) {
+                        TextButton(onClick = { clip = null }) { Text(stringResource(R.string.ejercicio_quitar_animacion)) }
+                    }
+                }
+                problemaClip?.let { Text(stringResource(it.mensaje()), style = MaterialTheme.typography.bodySmall, color = colores.error) }
             }
             CampoTexto(
                 etiqueta = stringResource(R.string.ejercicio_titulo),
@@ -232,7 +277,7 @@ fun EditorEjercicio(
                 texto = stringResource(R.string.ejercicio_enviar_revision),
                 onClick = {
                     enviando = true
-                    onGuardar(escrito.paraGuardar(), true, foto)
+                    onGuardar(escrito.paraGuardar(), true, foto, clip)
                 },
                 modifier = Modifier.fillMaxWidth(),
                 enabled = problema == null && !guardando,
@@ -241,7 +286,7 @@ fun EditorEjercicio(
             OutlinedButton(
                 onClick = {
                     enviando = false
-                    onGuardar(escrito.paraGuardar(), false, foto)
+                    onGuardar(escrito.paraGuardar(), false, foto, clip)
                 },
                 modifier = Modifier.fillMaxWidth(),
                 enabled = escrito.puedeGuardarseComoBorrador() && !guardando,
@@ -256,6 +301,35 @@ private fun Ejercicio.paraGuardar(): Ejercicio = copy(
     duracionMin = if (duracionMin in Ejercicio.MIN_DURACION..Ejercicio.MAX_DURACION) duracionMin else if (duracionMin > 0) Ejercicio.MAX_DURACION else DURACION_POR_DEFECTO,
     kcal = kcal.coerceIn(0, Ejercicio.MAX_KCAL),
 )
+
+// Lo primero que impide subir ese video como clip (tipo, duración y peso), o null si sirve. Lee la duración con MediaMetadataRetriever y,
+// si el proveedor no dice el peso, lo cuenta leyendo hasta pasarse del tope.
+private suspend fun problemaDelClip(resolver: ContentResolver, uri: Uri): ProblemaClip? = withContext(Dispatchers.IO) {
+    val mime = resolver.getType(uri)
+    val duracion = runCatching {
+        MediaMetadataRetriever().use { lector ->
+            resolver.openFileDescriptor(uri, "r")?.use { lector.setDataSource(it.fileDescriptor) }
+            lector.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull()
+        }
+    }.getOrNull()
+    val declarado = runCatching { resolver.openAssetFileDescriptor(uri, "r")?.use { it.length } }.getOrNull() ?: -1L
+    val bytes = if (declarado >= 0) declarado else runCatching { contarBytes(resolver, uri, Ejercicio.MAX_CLIP_BYTES + 1) }.getOrDefault(Long.MAX_VALUE)
+    validarClip(duracion, bytes, mime)
+}
+
+// Cuántos bytes tiene el contenido, sin leer más de `tope` (basta para saber si se pasa).
+private fun contarBytes(resolver: ContentResolver, uri: Uri, tope: Long): Long {
+    val buffer = ByteArray(64 * 1024)
+    var total = 0L
+    resolver.openInputStream(uri)?.use { entrada ->
+        while (total < tope) {
+            val leidos = entrada.read(buffer)
+            if (leidos < 0) break
+            total += leidos
+        }
+    }
+    return total
+}
 
 // La foto elegida, reducida para verla antes de subirla; null mientras se lee o si no se pudo. La usa también el editor de platillos.
 @Composable

@@ -7,6 +7,7 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.example.nutrigajo.R
+import com.example.nutrigajo.ui.shared.ajustes.VinculosAnterioresScreen
 import com.example.nutrigajo.domain.model.EstadoVerificacion
 import com.example.nutrigajo.domain.model.Perfil
 import com.example.nutrigajo.ui.components.ALTO_BARRA_INFERIOR
@@ -59,6 +60,8 @@ fun TabPerfil(
         modifier = modifier,
         espacioInferior = ALTO_BARRA_INFERIOR,
         transicion = transicion,
+        // los pacientes que ya no están (se fueron o se les dio de baja), solo para leer
+        anteriores = { volver -> VinculosAnterioresScreen(comoPaciente = false, onVolver = volver, espacioInferior = ALTO_BARRA_INFERIOR) },
         datosExtra = { TarjetaVerificacion(verificacion, onVerificar, Modifier.padding(horizontal = 16.dp), onActualizar = onActualizar) },
     )
 }

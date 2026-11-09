@@ -81,6 +81,12 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.nutrigajo.R
 import com.example.nutrigajo.data.pdf.GeneradorPlanPdf
 import com.example.nutrigajo.data.repository.AvisoPlan
+import com.example.nutrigajo.domain.model.Ejercicio
+import androidx.compose.foundation.layout.width
+import com.example.nutrigajo.domain.model.sinOpcion
+import com.example.nutrigajo.domain.model.opcionDelDia
+import com.example.nutrigajo.domain.model.conMenuDelDia
+import com.example.nutrigajo.domain.model.conDuracion
 import com.example.nutrigajo.domain.model.Equivalentes
 import com.example.nutrigajo.domain.model.GrupoAlimento
 import com.example.nutrigajo.domain.model.ItemBanco
@@ -232,6 +238,7 @@ private fun Editor(
     val acceso = remember(bancoVm) {
         AccesoBanco(
             abrir = { tipo, momento, elegir -> destino = DestinoBanco(tipo, momento) { item -> destino = null; elegir(item) } },
+            asignar = { elegir -> destino = DestinoBanco(TipoBanco.EJERCICIO, onElegirEjercicio = { ejercicio -> destino = null; elegir(ejercicio) }) },
             guardar = { item, fin ->
                 bancoVm.guardar(item) { bien ->
                     Toast.makeText(contexto, if (bien) R.string.banco_guardado else R.string.banco_error_guardar, Toast.LENGTH_SHORT).show()
@@ -286,6 +293,8 @@ private fun Editor(
 private class AccesoBanco(
     val abrir: (TipoBanco, MomentoComida?, (ItemBanco) -> Unit) -> Unit,
     val guardar: (ItemBanco, (Boolean) -> Unit) -> Unit,
+    // abrir los ejercicios globales para asignar uno concreto (no un texto para una sesión)
+    val asignar: ((Ejercicio) -> Unit) -> Unit,
 )
 
 @Composable
@@ -458,6 +467,39 @@ private fun DetalleSeccion(
                     etiquetaAgregar = stringResource(R.string.plan_meta_agregar),
                     modifier = Modifier.padding(horizontal = ANILLO_FOCO),
                 )
+                SeccionPlan.PERIODO -> {
+                    FlowRow(
+                        modifier = Modifier.padding(horizontal = ANILLO_FOCO),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        // «Semana» es el plan de siempre (lunes a domingo); los demás fijan cuántos días dura
+                        val opciones = listOf<Int?>(null, 7, 14, 21, 30)
+                        opciones.forEach { dias ->
+                            val elegido = plan.duracionDias == dias
+                            Text(
+                                text = if (dias == null) stringResource(R.string.plan_periodo_semana) else stringResource(R.string.plan_periodo_n, dias),
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(if (elegido) colores.primary else colores.surfaceVariant)
+                                    .selectable(selected = elegido, role = Role.RadioButton, onClick = { editar { it.conDuracion(dias) } })
+                                    .padding(horizontal = 14.dp, vertical = 10.dp),
+                                style = MaterialTheme.typography.labelLarge,
+                                color = if (elegido) colores.onPrimary else colores.onBackground,
+                            )
+                        }
+                    }
+                    if (plan.duracionDias != null) {
+                        // cualquier otro número de días; borrar el campo no cambia la duración
+                        CampoEntero(R.string.plan_periodo_campo, plan.duracionDias) { v -> if (v != null && v > 0) editar { it.conDuracion(v) } }
+                    }
+                    Text(
+                        text = stringResource(if (plan.duracionDias != null) R.string.plan_periodo_nota else R.string.plan_periodo_nota_semana),
+                        modifier = Modifier.padding(horizontal = ANILLO_FOCO),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = colores.onSurfaceVariant,
+                    )
+                }
                 SeccionPlan.ALIMENTACION -> {
                     CampoEntero(R.string.plan_calorias, plan.calorias) { v -> editar { it.copy(calorias = v) } }
                     GrupoAlimento.entries.forEach { grupo ->
@@ -472,7 +514,7 @@ private fun DetalleSeccion(
                             numero = i + 1,
                             opcion = opcion,
                             onCambio = { nueva -> editar { it.copy(opciones = it.opciones.mapIndexed { j, o -> if (j == i) nueva else o }) } },
-                            onQuitar = { editar { it.copy(opciones = it.opciones.filterIndexed { j, _ -> j != i }) } },
+                            onQuitar = { editar { it.sinOpcion(i) } },
                             onUsarBanco = { momento ->
                                 banco.abrir(TipoBanco.COMIDA, momento) { item ->
                                     editar { p ->
@@ -495,6 +537,11 @@ private fun DetalleSeccion(
                     if (plan.opciones.size < PlanContenido.MAX_OPCIONES) {
                         Agregar(R.string.plan_agregar_opcion) { editar { it.copy(opciones = it.opciones + OpcionMenu()) } }
                     }
+                    // con duración, cada día del plan elige una de las opciones
+                    val dias = plan.duracionDias
+                    if (dias != null && plan.opciones.isNotEmpty()) {
+                        MenuPorDia(plan, dias) { dia, opcion -> editar { it.conMenuDelDia(dia, opcion) } }
+                    }
                 }
                 SeccionPlan.EJERCICIO -> {
                     CampoTexto(
@@ -508,6 +555,7 @@ private fun DetalleSeccion(
                         TarjetaSesion(
                             numero = i + 1,
                             sesion = sesion,
+                            diasPlan = plan.duracionDias,
                             onCambio = { nueva -> editar { it.copy(sesiones = it.sesiones.mapIndexed { j, s -> if (j == i) nueva else s }) } },
                             onQuitar = { editar { it.copy(sesiones = it.sesiones.filterIndexed { j, _ -> j != i }) } },
                             onUsarBanco = {
@@ -529,8 +577,37 @@ private fun DetalleSeccion(
                             },
                         )
                     }
-                    if (plan.sesiones.size < PlanContenido.MAX_SESIONES) {
+                    if (plan.sesiones.size < (if (plan.duracionDias != null) PlanContenido.MAX_SESIONES_PERIODO else PlanContenido.MAX_SESIONES)) {
                         Agregar(R.string.plan_agregar_sesion) { editar { it.copy(sesiones = it.sesiones + SesionEjercicio()) } }
+                    }
+                    // ejercicios concretos del banco global, por día: el paciente los ve con foto y los entrena
+                    Text(
+                        text = stringResource(R.string.plan_asignados),
+                        modifier = Modifier.padding(horizontal = ANILLO_FOCO),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = colores.onBackground,
+                    )
+                    if (plan.ejerciciosAsignados.isNotEmpty()) {
+                        Box(Modifier.padding(horizontal = ANILLO_FOCO)) {
+                            val semana = stringArrayResource(R.array.plan_dias).toList()
+                            val nombresDias = plan.duracionDias?.let { n -> List(n) { stringResource(R.string.plan_dia_n, it + 1) } } ?: semana
+                            ListaAsignados(plan.ejerciciosAsignados, nombresDias, onQuitar = { quitar -> editar { it.copy(ejerciciosAsignados = it.ejerciciosAsignados - quitar) } })
+                        }
+                    }
+                    var porAsignar by remember { mutableStateOf<Ejercicio?>(null) }
+                    if (plan.ejerciciosAsignados.size < plan.maxAsignados) {
+                        Agregar(R.string.plan_asignar_ejercicio) { banco.asignar { elegido -> porAsignar = elegido } }
+                    }
+                    porAsignar?.let { elegido ->
+                        AsignarEjercicioSheet(
+                            ejercicio = elegido,
+                            plan = plan,
+                            onAsignar = { nuevos ->
+                                editar { it.copy(ejerciciosAsignados = it.ejerciciosAsignados + nuevos) }
+                                porAsignar = null
+                            },
+                            onCerrar = { porAsignar = null },
+                        )
                     }
                 }
                 SeccionPlan.NOTAS -> CampoTexto(
@@ -788,6 +865,8 @@ private fun PildoraAccion(@StringRes texto: Int, onClick: () -> Unit) {
 private fun TarjetaSesion(
     numero: Int,
     sesion: SesionEjercicio,
+    // los días del plan (1…N) si tiene duración; null = lunes a domingo
+    diasPlan: Int?,
     onCambio: (SesionEjercicio) -> Unit,
     onQuitar: () -> Unit,
     // elegir una rutina del banco; guardar en él el enfoque y el detalle escritos (con su aviso de si salió bien)
@@ -802,7 +881,8 @@ private fun TarjetaSesion(
         }
         Text(stringResource(R.string.plan_dia), style = MaterialTheme.typography.titleSmall, color = colores.onBackground)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            stringArrayResource(R.array.plan_dias).forEach { dia ->
+            val dias = diasPlan?.let { n -> List(n) { stringResource(R.string.plan_dia_n, it + 1) } } ?: stringArrayResource(R.array.plan_dias).toList()
+            dias.forEach { dia ->
                 val elegido = dia == sesion.dia
                 Text(
                     text = dia,
@@ -820,6 +900,41 @@ private fun TarjetaSesion(
         CampoTexto(stringResource(R.string.plan_enfoque), sesion.enfoque, { onCambio(sesion.copy(enfoque = it.take(80))) }, modifier = Modifier.fillMaxWidth())
         CampoTexto(stringResource(R.string.plan_detalle), sesion.detalle, { onCambio(sesion.copy(detalle = it.take(PlanContenido.MAX_MENU))) }, modifier = Modifier.fillMaxWidth(), lineas = 4)
         AccionesBanco(sesion.detalle, onUsar = onUsarBanco, onGuardar = { fin -> onGuardarBanco(sesion.enfoque, sesion.detalle, fin) })
+    }
+}
+
+// El menú de cada día de un plan con duración: una fila por día con las opciones numeradas y «Sin menú»; tocar la elegida la quita.
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun MenuPorDia(plan: PlanContenido, dias: Int, onElegir: (dia: Int, opcion: Int?) -> Unit) {
+    val colores = MaterialTheme.colorScheme
+    Column(Modifier.padding(horizontal = ANILLO_FOCO), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Text(stringResource(R.string.plan_menu_por_dia), style = MaterialTheme.typography.titleMedium, color = colores.onBackground)
+        Text(stringResource(R.string.plan_menu_por_dia_ayuda), style = MaterialTheme.typography.bodySmall, color = colores.onSurfaceVariant)
+        (1..dias).forEach { dia ->
+            val elegida = plan.opcionDelDia(dia)
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(stringResource(R.string.plan_dia_n, dia), Modifier.width(64.dp), style = MaterialTheme.typography.titleSmall, color = colores.onBackground)
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    plan.opciones.indices.forEach { i ->
+                        val activa = elegida == i
+                        Text(
+                            text = (i + 1).toString(),
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(if (activa) colores.primary else colores.surfaceVariant)
+                                .selectable(selected = activa, role = Role.RadioButton, onClick = { onElegir(dia, if (activa) null else i) })
+                                .padding(horizontal = 14.dp, vertical = 8.dp),
+                            style = MaterialTheme.typography.labelLarge,
+                            color = if (activa) colores.onPrimary else colores.onBackground,
+                        )
+                    }
+                    if (elegida == null) {
+                        Text(stringResource(R.string.plan_menu_sin_opcion), Modifier.padding(vertical = 8.dp), style = MaterialTheme.typography.bodySmall, color = colores.outline)
+                    }
+                }
+            }
+        }
     }
 }
 

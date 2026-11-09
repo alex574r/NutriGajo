@@ -34,6 +34,8 @@ import com.example.nutrigajo.data.local.AjustesApp
 import com.example.nutrigajo.data.local.Biometria
 import com.example.nutrigajo.data.push.Avisos
 import com.example.nutrigajo.domain.model.Rol
+import com.example.nutrigajo.ui.actualizacion.ActualizacionHost
+import com.example.nutrigajo.ui.actualizacion.ActualizacionViewModel
 import com.example.nutrigajo.ui.admin.inicio.InicioAdminScreen
 import com.example.nutrigajo.ui.components.PantallaCarga
 import com.example.nutrigajo.ui.entrenador.inicio.InicioEntrenadorScreen
@@ -79,6 +81,11 @@ class MainActivity : FragmentActivity() {
 
     private fun Intent?.esAvisoDePlan() = this?.getStringExtra("tipo") == Avisos.TIPO_PLAN_NUEVO
 
+    // se tocó el aviso de una cita (confirmada, agendada o cancelada): el inicio del paciente abre «Mis citas»
+    private var abrirCitas by mutableStateOf(false)
+
+    private fun Intent?.esAvisoDeCita() = this?.getStringExtra("tipo")?.startsWith(Avisos.PREFIJO_TIPO_CITA) == true
+
     // se tocó el aviso de un mensaje nuevo: el inicio abre ese chat (el id del paciente de la conversación)
     private var abrirChat by mutableStateOf<String?>(null)
 
@@ -89,6 +96,7 @@ class MainActivity : FragmentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         if (intent.esAvisoDePlan()) abrirPlan = true
+        if (intent.esAvisoDeCita()) abrirCitas = true
         intent.chatDelAviso()?.let { abrirChat = it }
     }
 
@@ -132,6 +140,7 @@ class MainActivity : FragmentActivity() {
         AjustesApp.iniciar(this)
         // al girar la pantalla la intención es la misma de antes: solo cuenta la de un arranque nuevo
         if (savedInstanceState == null && intent.esAvisoDePlan()) abrirPlan = true
+        if (savedInstanceState == null && intent.esAvisoDeCita()) abrirCitas = true
         if (savedInstanceState == null) intent.chatDelAviso()?.let { abrirChat = it }
         enableEdgeToEdge()
         // CameraUpdateFactory (usado antes de que el mapa exista) falla si el SDK de Maps no está inicializado
@@ -245,10 +254,17 @@ class MainActivity : FragmentActivity() {
                                 onPlanConsumido = { abrirPlan = false },
                                 abrirChat = abrirChat,
                                 onChatConsumido = { abrirChat = null },
+                                abrirCitas = abrirCitas,
+                                onCitasConsumido = { abrirCitas = false },
                             )
                             // ADMIN
                             else -> InicioAdminScreen(perfil, cerrarSesion)
                         }
+                        // las actualizaciones de la app: se busca al entrar a la sesión (como mucho cada 12 horas) y la hoja, o la pantalla
+                        // obligatoria, va encima del inicio
+                        val actualizacion: ActualizacionViewModel = viewModel()
+                        LaunchedEffect(Unit) { actualizacion.verificar(manual = false) }
+                        ActualizacionHost(actualizacion, onCerrarApp = { finish() })
                     }
                 }
                 // con el bloqueo puesto, la ventana de huella sale sola y esta pantalla tapa la app hasta desbloquear

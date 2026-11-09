@@ -1,10 +1,15 @@
 package com.example.nutrigajo.ui.paciente.carrera
 
-import android.Manifest
-import android.content.pm.PackageManager
 import android.location.LocationManager
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
+import com.example.nutrigajo.ui.permisos.rememberPermiso
+import com.example.nutrigajo.ui.permisos.PermisoUi
+import com.example.nutrigajo.ui.permisos.PanelPermiso
+import com.example.nutrigajo.domain.PermisoApp
+import com.example.nutrigajo.domain.EstadoPermiso
+import androidx.lifecycle.compose.LifecycleEventEffect
+import androidx.lifecycle.Lifecycle
+import android.provider.Settings
+import android.content.Intent
 import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -37,7 +42,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
-import androidx.core.content.ContextCompat
 import com.example.nutrigajo.R
 import com.example.nutrigajo.data.carrera.Fase
 import com.example.nutrigajo.data.carrera.RastreoRuta
@@ -102,46 +106,66 @@ private fun CarreraInicio(
         Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             SelectorPestanas(listOf(R.string.carrera_pestana_actividad, R.string.carrera_pestana_planes), pestana, { pestana = it })
             datos.error?.let { AlertaError(stringResource(it)) }
-            arranque.aviso?.let { AlertaError(stringResource(it)) }
+            if (arranque.esperaPermiso) {
+                PanelPermiso(
+                    permiso = PermisoApp.UBICACION_CARRERA,
+                    estado = arranque.permiso.estado,
+                    onAccion = { if (arranque.permiso.estado == EstadoPermiso.BLOQUEADO) arranque.permiso.abrirAjustes() else arranque.permiso.pedir() },
+                )
+            }
+            if (arranque.gpsApagado) {
+                AlertaError(stringResource(R.string.carrera_gps_apagado))
+                BotonPrimario(texto = stringResource(R.string.carrera_gps_encender), onClick = arranque.encenderGps, modifier = Modifier.fillMaxWidth(), altura = 48.dp)
+            }
             if (pestana == 0) PestanaActividad(datos, arranque.empezar, onAbrir) else PestanaPlanes(arranque.empezar)
         }
     }
 }
 
-// Lo que hace falta antes de salir: el servicio en primer plano de ubicación exige el permiso preciso y el GPS del teléfono tiene que
-// estar encendido. `empezar` lo comprueba (y pide el permiso si falta) y solo entonces llama a `onComenzar`; si algo falla, `aviso` dice qué.
-private class Arranque(val empezar: (TipoActividad, List<Tramo>) -> Unit, @get:StringRes val aviso: Int?)
+// Lo que hace falta antes de salir: el servicio en primer plano de ubicación exige el permiso preciso (obligatorio de Modo carrera, ver
+// PermisoApp.UBICACION_CARRERA) y el GPS del teléfono tiene que estar encendido. `empezar` lo comprueba y solo entonces llama a `onComenzar`.
+// Sin el permiso no lanza el cuadro de golpe: `esperaPermiso` hace que la pantalla muestre el panel que lo explica, y la actividad que se iba a
+// empezar sigue sola en cuanto se concede (con el cuadro o desde los ajustes). Con el GPS apagado, `gpsApagado` muestra el aviso con su botón.
+private class Arranque(
+    val empezar: (TipoActividad, List<Tramo>) -> Unit,
+    val permiso: PermisoUi,
+    val esperaPermiso: Boolean,
+    val gpsApagado: Boolean,
+    val encenderGps: () -> Unit,
+)
 
 @Composable
 private fun rememberArranque(onComenzar: (TipoActividad, List<Tramo>) -> Unit): Arranque {
     val contexto = LocalContext.current
-    @StringRes var aviso by remember { mutableStateOf<Int?>(null) }
-    // lo que se quería empezar cuando se pidió el permiso, para seguir con ello si lo conceden
+    var gpsApagado by remember { mutableStateOf(false) }
+    // lo que se quería empezar cuando faltaba el permiso, para seguir con ello en cuanto se concede
     var pendiente by remember { mutableStateOf<Pair<TipoActividad, List<Tramo>>?>(null) }
+    val permiso = rememberPermiso(PermisoApp.UBICACION_CARRERA)
 
+    fun gpsEncendido() = contexto.getSystemService(LocationManager::class.java)?.isProviderEnabled(LocationManager.GPS_PROVIDER) == true
     fun salir(tipo: TipoActividad, intervalos: List<Tramo>) {
-        val gps = contexto.getSystemService(LocationManager::class.java)?.isProviderEnabled(LocationManager.GPS_PROVIDER) == true
-        if (gps) {
-            aviso = null
+        if (gpsEncendido()) {
+            gpsApagado = false
             onComenzar(tipo, intervalos)
         } else {
-            aviso = R.string.carrera_gps_apagado
+            gpsApagado = true
         }
     }
-    val pedir = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { concedidos ->
-        val (tipo, intervalos) = pendiente ?: return@rememberLauncherForActivityResult
-        if (concedidos[Manifest.permission.ACCESS_FINE_LOCATION] == true) salir(tipo, intervalos) else aviso = R.string.carrera_permiso
+    LaunchedEffect(permiso.estado, pendiente) {
+        val actividad = pendiente
+        if (permiso.estado == EstadoPermiso.CONCEDIDO && actividad != null) {
+            pendiente = null
+            salir(actividad.first, actividad.second)
+        }
     }
+    // al volver de los ajustes de ubicación el aviso se quita si ya se encendió
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { if (gpsApagado && gpsEncendido()) gpsApagado = false }
     return Arranque(
-        empezar = { tipo, intervalos ->
-            if (ContextCompat.checkSelfPermission(contexto, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-                salir(tipo, intervalos)
-            } else {
-                pendiente = tipo to intervalos
-                pedir.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))
-            }
-        },
-        aviso = aviso,
+        empezar = { tipo, intervalos -> if (permiso.estado == EstadoPermiso.CONCEDIDO) salir(tipo, intervalos) else pendiente = tipo to intervalos },
+        permiso = permiso,
+        esperaPermiso = pendiente != null && permiso.estado != EstadoPermiso.CONCEDIDO,
+        gpsApagado = gpsApagado,
+        encenderGps = { contexto.startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) },
     )
 }
 

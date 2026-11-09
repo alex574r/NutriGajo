@@ -1,5 +1,6 @@
 package com.example.nutrigajo.data.repository
 
+import com.example.nutrigajo.domain.model.EjercicioAsignado
 import com.example.nutrigajo.domain.model.Equivalentes
 import com.example.nutrigajo.domain.model.GrupoAlimento
 import com.example.nutrigajo.domain.model.OpcionMenu
@@ -32,6 +33,57 @@ class PlanMapaTest {
     @Test
     fun el_plan_ida_y_vuelta_por_el_mapa_de_firestore_queda_igual() {
         assertEquals(plan, plan.aMapa().aPlanContenido())
+    }
+
+    @Test
+    fun la_duracion_y_el_menu_por_dia_van_y_vuelven_por_el_mapa() {
+        val periodo = plan.copy(duracionDias = 14, menuDias = listOf(0, -1, 0))
+        val mapa = periodo.aMapa()
+        assertEquals(14, mapa["duracionDias"])
+        assertEquals(listOf(0, -1, 0), mapa["menuDias"])
+        assertEquals(periodo, mapa.aPlanContenido())
+    }
+
+    @Test
+    fun un_plan_semanal_no_escribe_duracion_ni_menu_y_uno_viejo_se_lee_sin_ellos() {
+        val mapa = plan.aMapa()
+        assertTrue("duracionDias" !in mapa && "menuDias" !in mapa)
+        val leido = mapa.aPlanContenido()
+        assertNull(leido.duracionDias)
+        assertEquals(emptyList<Int>(), leido.menuDias)
+    }
+
+    @Test
+    fun los_ejercicios_asignados_van_y_vuelven_por_el_mapa() {
+        val asignados = listOf(
+            EjercicioAsignado(dia = 1, id = "e1", titulo = "Sentadilla", series = 3, repeticiones = 10, nota = "con calma"),
+            EjercicioAsignado(dia = 7, id = "e2", titulo = "Caminata", minutos = 20),
+        )
+        val mapa = plan.copy(ejerciciosAsignados = asignados).aMapa()
+        assertEquals(asignados, mapa.aPlanContenido().ejerciciosAsignados)
+        // lo que no se llenó no se escribe
+        val sinNada = (mapa["ejerciciosAsignados"] as List<*>)[1] as Map<*, *>
+        assertTrue("series" !in sinNada && "repeticiones" !in sinNada && "nota" !in sinNada)
+    }
+
+    @Test
+    fun un_plan_de_antes_de_los_asignados_se_lee_con_lista_vacia() {
+        assertEquals(emptyList<EjercicioAsignado>(), plan.aMapa().aPlanContenido().ejerciciosAsignados)
+        assertTrue("ejerciciosAsignados" !in plan.aMapa())
+    }
+
+    @Test
+    fun un_asignado_ajeno_o_incompleto_se_descarta_sin_romper_el_resto() {
+        val bueno = mapOf("dia" to 2L, "fuente" to "BANCO", "id" to "e1", "titulo" to "Remo")
+        val mapa = mapOf(
+            "ejerciciosAsignados" to listOf(
+                bueno,
+                mapOf("dia" to 2L, "fuente" to "FUTURA", "id" to "e2", "titulo" to "X"),
+                mapOf("dia" to 2L, "fuente" to "BANCO", "titulo" to "sin id"),
+                "no soy un mapa",
+            ),
+        )
+        assertEquals(listOf(EjercicioAsignado(dia = 2, id = "e1", titulo = "Remo")), mapa.aPlanContenido().ejerciciosAsignados)
     }
 
     @Test

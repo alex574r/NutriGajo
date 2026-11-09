@@ -1,6 +1,9 @@
 package com.example.nutrigajo.widgets
 
 import android.content.Context
+import android.content.SharedPreferences
+import com.example.nutrigajo.domain.model.unirDiasRacha
+import com.google.firebase.auth.FirebaseAuth
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -134,18 +137,45 @@ object AlmacenWidget {
         prefs(contexto).edit().putString(PERFIL, j.toString()).apply()
     }
 
-    // Los días (toEpochDay) en que se guardó una caminata o carrera o se terminó una rutina; se van sumando y nunca se quitan (borrar una actividad no
-    // rompe una racha ya ganada).
-    fun diasCarrera(contexto: Context): Set<Long> =
-        prefs(contexto).getStringSet(DIAS_CARRERA, emptySet()).orEmpty().mapNotNull { it.toLongOrNull() }.toSet()
+    // Quién es: la sesión de Firebase o, si ya se cerró (al borrar), el perfil que quedó guardado.
+    private fun uidActual(contexto: Context): String? =
+        (try { FirebaseAuth.getInstance().currentUser?.uid } catch (_: Exception) { null }) ?: leerPerfil(contexto)?.uid
 
-    fun agregarDiasCarrera(contexto: Context, dias: Collection<Long>) {
-        val todos = (diasCarrera(contexto) + dias).sortedDescending().take(DIAS_GUARDADOS)
-        prefs(contexto).edit().putStringSet(DIAS_CARRERA, todos.map { it.toString() }.toSet()).apply()
+    private fun claveDias(uid: String) = "$DIAS_CARRERA.$uid"
+
+    private fun leerDias(p: SharedPreferences, clave: String): Set<Long> =
+        p.getStringSet(clave, emptySet()).orEmpty().mapNotNull { it.toLongOrNull() }.toSet()
+
+    // Antes los días eran de «quien tuviera abierta la sesión» y se borraban al salir: los de esa clave vieja pasan a la cuenta que los pida.
+    private fun adoptarDiasViejos(contexto: Context, uid: String) {
+        val p = prefs(contexto)
+        if (!p.contains(DIAS_CARRERA)) return
+        val unidos = unirDiasRacha(leerDias(p, claveDias(uid)), leerDias(p, DIAS_CARRERA), DIAS_GUARDADOS)
+        p.edit().putStringSet(claveDias(uid), unidos.map { it.toString() }.toSet()).remove(DIAS_CARRERA).apply()
     }
 
-    // Al cerrar sesión: los widgets no deben seguir enseñando la salud ni el nombre de quien salió.
+    // Los días (toEpochDay) en que se cumplió algo (pasos, caminata, carrera o rutina) de esa cuenta; se van sumando y nunca se quitan (borrar una
+    // actividad o subir la meta no rompe una racha ya ganada). Van por cuenta y sobreviven a cerrar sesión: solo son fechas.
+    fun diasCarrera(contexto: Context, uid: String? = uidActual(contexto)): Set<Long> {
+        if (uid == null) return emptySet()
+        adoptarDiasViejos(contexto, uid)
+        return leerDias(prefs(contexto), claveDias(uid))
+    }
+
+    fun agregarDiasCarrera(contexto: Context, dias: Collection<Long>, uid: String? = uidActual(contexto)) {
+        if (uid == null) return
+        val todos = unirDiasRacha(diasCarrera(contexto, uid), dias, DIAS_GUARDADOS)
+        prefs(contexto).edit().putStringSet(claveDias(uid), todos.map { it.toString() }.toSet()).apply()
+    }
+
+    // Al cerrar sesión: los widgets no deben seguir enseñando la salud ni el nombre de quien salió. Los días de la racha se conservan (por cuenta):
+    // si no, cerrar sesión o cambiar de cuenta dejaba la racha en cero.
     fun borrar(contexto: Context) {
-        prefs(contexto).edit().clear().apply()
+        val p = prefs(contexto)
+        leerPerfil(contexto)?.uid?.let { adoptarDiasViejos(contexto, it) }
+        val dias = p.all.filterKeys { it.startsWith("$DIAS_CARRERA.") }
+        val editor = p.edit().clear()
+        dias.forEach { (clave, valor) -> (valor as? Set<*>)?.let { editor.putStringSet(clave, it.filterIsInstance<String>().toSet()) } }
+        editor.apply()
     }
 }

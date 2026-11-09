@@ -35,13 +35,16 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -56,9 +59,13 @@ import com.example.nutrigajo.R
 import com.example.nutrigajo.data.repository.PlatillosRepository
 import com.example.nutrigajo.domain.model.EstadoPlatillo
 import com.example.nutrigajo.domain.model.EtiquetaPlatillo
+import com.example.nutrigajo.domain.model.GrupoAlimento
 import com.example.nutrigajo.domain.model.Platillo
 import com.example.nutrigajo.domain.model.ProblemaPlatillo
 import com.example.nutrigajo.domain.model.Rol
+import com.example.nutrigajo.domain.model.grupoParaFoto
+import com.example.nutrigajo.ui.theme.alineacionFoto
+import com.example.nutrigajo.ui.theme.foto
 import com.example.nutrigajo.ui.components.BarraEstadoClara
 import com.example.nutrigajo.ui.components.Etiqueta
 import com.example.nutrigajo.ui.components.alPulsar
@@ -130,6 +137,31 @@ fun rememberFotoPlatillo(platillo: Platillo): ImageBitmap? {
     return imagen
 }
 
+// La foto del platillo; sin foto propia (los platillos sembrados), una de las que ya trae la app según su alimento (el marcador gris
+// queda para el editor, donde sí hay que elegir una).
+@Composable
+fun FotoPlatillo(platillo: Platillo, modifier: Modifier = Modifier, forma: Shape = RoundedCornerShape(24.dp)) {
+    val imagen = rememberFotoPlatillo(platillo)
+    // con foto propia pendiente de llegar se ve el marcador; sin ella, la de su grupo
+    if (imagen == null && platillo.fotoVersion == null) {
+        val grupo = platillo.grupoParaFoto()
+        Image(
+            painter = painterResource(grupo?.foto ?: R.drawable.inicio_comida),
+            contentDescription = null,
+            modifier = modifier.clip(forma),
+            contentScale = ContentScale.Crop,
+            alignment = grupo?.alineacionDelPlato ?: Alignment.Center,
+        )
+    } else {
+        FotoOMarcador(imagen, modifier, forma)
+    }
+}
+
+// En el círculo, la fila y la cabecera la foto se recorta más que en la franja del plan: la de verduras se encuadra a la derecha para
+// que no salga el letrero del puesto (en inglés); las demás, como en el plan.
+private val GrupoAlimento.alineacionDelPlato: Alignment
+    get() = if (this == GrupoAlimento.VERDURAS) BiasAlignment(1f, 0f) else alineacionFoto
+
 // ---- piezas
 
 @Composable
@@ -156,9 +188,8 @@ fun EtiquetaEstadoPlatillo(estado: EstadoPlatillo, modifier: Modifier = Modifier
 fun TarjetaPlatillo(platillo: Platillo, onClick: () -> Unit, modifier: Modifier = Modifier, mostrarEstado: Boolean = false) {
     val colores = MaterialTheme.colorScheme
     val tipos = MaterialTheme.typography
-    val foto = rememberFotoPlatillo(platillo)
     Box(modifier.size(283.dp, 233.dp).alPulsar(onClick, minimo = 0.97f).clip(RoundedCornerShape(28.dp)).background(colores.surfaceVariant)) {
-        FotoOMarcador(foto, Modifier.align(Alignment.TopEnd).offset(x = 48.dp, y = (-48.dp)).size(212.dp), CircleShape)
+        FotoPlatillo(platillo, Modifier.align(Alignment.TopEnd).offset(x = 48.dp, y = (-48.dp)).size(212.dp), CircleShape)
         Column(Modifier.align(Alignment.TopStart).padding(start = 22.dp, top = 28.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             if (mostrarEstado) {
                 EtiquetaEstadoPlatillo(platillo.estado)
@@ -204,7 +235,6 @@ private fun ChipMacro(valor: String, nombre: String) {
 fun FilaPlatillo(platillo: Platillo, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val colores = MaterialTheme.colorScheme
     val forma = RoundedCornerShape(34.dp)
-    val foto = rememberFotoPlatillo(platillo)
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -217,7 +247,7 @@ fun FilaPlatillo(platillo: Platillo, onClick: () -> Unit, modifier: Modifier = M
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        FotoOMarcador(foto, Modifier.size(79.dp, 80.dp), RoundedCornerShape(24.dp))
+        FotoPlatillo(platillo, Modifier.size(79.dp, 80.dp), RoundedCornerShape(24.dp))
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(
                 text = platillo.nombre,
@@ -265,11 +295,10 @@ fun DetallePlatillo(
     val colores = MaterialTheme.colorScheme
     BackHandler(onBack = onVolver)
     BarraEstadoClara()
-    val foto = rememberFotoPlatillo(platillo)
     val pasosEstado = rememberPasosEstado(platillo.pasos.size)
     Box(modifier.fillMaxSize().background(colores.background)) {
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-            CabeceraOscura(alto = 320.dp, foto = { FotoOMarcador(foto, Modifier.matchParentSize(), RectangleShape) }) {
+            CabeceraOscura(alto = 320.dp, foto = { FotoPlatillo(platillo, Modifier.matchParentSize(), RectangleShape) }) {
                 Etiqueta(stringResource(platillo.momento.titulo()).uppercase())
                 Text(
                     text = platillo.nombre,

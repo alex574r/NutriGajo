@@ -27,4 +27,13 @@ fun racha(hoy: LocalDate, pasosPorDia: Map<Long, Int>, diasCarrera: Set<Long>, m
 internal fun diaCumplido(dia: Long, pasosPorDia: Map<Long, Int>, diasCarrera: Set<Long>, metaPasos: Int): Boolean =
     (metaPasos > 0 && (pasosPorDia[dia] ?: 0) >= metaPasos) || dia in diasCarrera
 
+// Los días (toEpochDay) en que se llegó a la meta de pasos. Se anotan al ganarse: una racha ya ganada no debe cambiar porque el nutriólogo
+// suba después la meta. Con una meta de 0 pasos no hay nada que anotar.
+fun diasDePasos(pasosPorDia: Map<Long, Int>, metaPasos: Int): Set<Long> =
+    if (metaPasos <= 0) emptySet() else pasosPorDia.filterValues { it >= metaPasos }.keys
+
+// Lo guardado más lo nuevo, sin repetir, y solo los `tope` días más recientes (de la racha importa el pasado cercano).
+fun unirDiasRacha(guardados: Set<Long>, nuevos: Collection<Long>, tope: Int): Set<Long> =
+    (guardados + nuevos).sortedDescending().take(tope).toSet()
+
 private const val MAX_RACHA = 3650

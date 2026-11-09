@@ -28,6 +28,12 @@ fun horaCorta(inicio: Long): String = HORA.format(inicio.aFecha())
 // «Miércoles 4 de noviembre · 11:00»
 fun diaYHora(inicio: Long): String = "${diaLargo(inicio.aFecha().toLocalDate())} · ${horaCorta(inicio)}"
 
+// «Vie 6 nov · 10:00»: lo que cabe en una línea de una fila (el formato largo se cortaba y la hora no se veía)
+fun diaYHoraCorto(inicio: Long): String {
+    val dia = inicio.aFecha().toLocalDate()
+    return "${diaCorto(dia).replaceFirstChar { it.uppercase(ES) }} ${DIA_Y_MES.format(dia)} · ${horaCorta(inicio)}"
+}
+
 // El día de calendario (en la zona del teléfono) en que empieza una cita.
 fun Long.aDia(): LocalDate = aFecha().toLocalDate()
 

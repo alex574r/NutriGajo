@@ -53,13 +53,15 @@ import com.example.nutrigajo.domain.model.MetasDiarias
 import com.example.nutrigajo.ui.components.AccionAbanico
 import com.example.nutrigajo.ui.components.BotonConAbanico
 import com.example.nutrigajo.ui.components.BotonPrimario
-import com.example.nutrigajo.ui.components.FilaAjuste
+import com.example.nutrigajo.ui.components.Esqueleto
 import com.example.nutrigajo.ui.components.alPulsar
 import com.example.nutrigajo.ui.components.rememberAgua
 import com.example.nutrigajo.ui.theme.color
 import kotlinx.coroutines.launch
 import java.time.DayOfWeek
+import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneId
 import java.time.format.TextStyle
 import java.util.Locale
 import kotlin.math.atan2
@@ -67,9 +69,9 @@ import kotlin.math.atan2
 // Lo que abre cada tarjeta de «Métricas fitness»; las estadísticas se abren desde las calorías.
 enum class Metrica { SCORE, HIDRATACION, CALORIAS, ESTADISTICAS, IMC, PASOS }
 
-// ponytail: las seis pantallas son de muestra (DatosMuestra.kt) salvo las metas, que son las del paciente (las fija su nutriólogo y
-// él puede ajustarlas), y el agua, que sube con el + y vive en el inicio para que la tarjeta la refleje. Las mediciones reales
-// reemplazan lo demás cuando existan.
+// ponytail: las pantallas son de muestra (DatosMuestra.kt) salvo las metas, que son las del paciente (las fija su nutriólogo y
+// él puede ajustarlas), el agua, que sube con el + y vive en el inicio para que la tarjeta la refleje, los pasos (los del reloj) y las
+// calorías (reloj + app, CaloriasSerie.kt). Las mediciones reales reemplazan lo demás cuando existan.
 @Composable
 fun MetricaScreen(
     metrica: Metrica,
@@ -84,8 +86,8 @@ fun MetricaScreen(
     when (metrica) {
         Metrica.SCORE -> ScoreScreen(onVolver)
         Metrica.HIDRATACION -> HidratacionScreen(resumen.hidratacionMl, metas.aguaMl, onAgregarAgua, onAjustes, onVolver)
-        Metrica.CALORIAS -> CaloriasScreen(resumen.calorias, metas.kcal, onEstadisticas = { onAbrir(Metrica.ESTADISTICAS) }, onAjustes = onAjustes, onVolver = onVolver)
-        // las estadísticas cuelgan de las calorías: se vuelve a ellas, no al inicio
+        Metrica.CALORIAS -> CaloriasScreen(resumen.calorias, metas.kcal, onAjustes = onAjustes, onVolver = onVolver)
+        // las estadísticas colgaban de las calorías: se volvía a ellas, no al inicio (hoy nada las abre)
         Metrica.ESTADISTICAS -> EstadisticasScreen(onVolver = { onAbrir(Metrica.CALORIAS) })
         Metrica.IMC -> ImcScreen(onVolver)
         Metrica.PASOS -> PasosScreen(metas, onAjustes, onVolver)
@@ -158,29 +160,39 @@ private fun HidratacionScreen(actualMl: Int, metaMl: Int, onAgregar: (Int) -> Un
 
 // ---- Calorías y sus estadísticas
 
+// Las calorías que se gastaron hoy (las del reloj y las de la app, `LocalCalorias`) contra la meta del paciente, y la gráfica del rango.
+// ponytail: la fila «Estadísticas de calorías» (macros del mes) se quitó porque no hay registro de lo que se come; `EstadisticasScreen`
+// sigue abajo, sin entrada, para cuando exista.
 @Composable
-private fun CaloriasScreen(calorias: Int, metaKcal: Int, onEstadisticas: () -> Unit, onAjustes: () -> Unit, onVolver: () -> Unit) {
+private fun CaloriasScreen(calorias: Int, metaKcal: Int, onAjustes: () -> Unit, onVolver: () -> Unit) {
     val colores = MaterialTheme.colorScheme
+    val estado = LocalCalorias.current
     var rango by rememberSaveable { mutableStateOf(Rango.DIA) }
-    val serie = seriesActividad.getValue(rango)
-    // al cambiar de rango la selección vuelve a un punto intermedio
-    var seleccion by remember(rango) { mutableIntStateOf((serie.valores.size * 0.7f).toInt()) }
+    val serie = remember(rango, estado.datos) { serieKcal(rango, estado.datos, Instant.now(), ZoneId.systemDefault()) }
+    // al cambiar de rango, o al llegar los datos, la burbuja va al punto más reciente
+    var seleccion by remember(rango, serie.valores.size) { mutableIntStateOf((serie.valores.size - 1).coerceAtLeast(0)) }
     val faltan = (metaKcal - calorias).coerceAtLeast(0)
     PantallaMetrica(stringResource(R.string.metrica_calorias), onVolver, onAjustes = onAjustes) {
-        CifraMetrica(
-            icono = R.drawable.ic_llama_solida,
-            colorIcono = colores.primary,
-            valor = String.format(Locale.getDefault(), "%,d", calorias),
-            unidad = "kcal",
-            subtitulo = if (faltan > 0) stringResource(R.string.calorias_restantes, faltan) else stringResource(R.string.calorias_meta_cumplida),
-        )
+        if (estado.cargando) {
+            // la forma de la cifra mientras se lee
+            Column(Modifier.padding(vertical = 24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Esqueleto(Modifier.size(width = 170.dp, height = 54.dp), RoundedCornerShape(12.dp))
+                Esqueleto(Modifier.size(width = 200.dp, height = 18.dp), RoundedCornerShape(8.dp))
+            }
+        } else {
+            CifraMetrica(
+                icono = R.drawable.ic_llama_solida,
+                colorIcono = colores.primary,
+                valor = String.format(Locale.getDefault(), "%,d", calorias),
+                unidad = "kcal",
+                subtitulo = if (faltan > 0) stringResource(R.string.calorias_restantes, String.format(Locale.getDefault(), "%,d", faltan)) else stringResource(R.string.calorias_meta_cumplida),
+            )
+        }
         PanelMetrica {
-            GraficaKcal(serie.valores, seleccion, onSeleccion = { seleccion = it })
+            GraficaDelRango(serie, estado, seleccion, onSeleccion = { seleccion = it })
             Spacer(Modifier.height(16.dp))
             SelectorRango(rango, onRango = { rango = it })
         }
-        Spacer(Modifier.height(12.dp))
-        FilaAjuste(icono = R.drawable.ic_llama, titulo = stringResource(R.string.calorias_estadisticas), onClick = onEstadisticas)
     }
 }
 

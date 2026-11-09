@@ -35,4 +35,21 @@ object AjustesApp {
         prefs(contexto).edit().putBoolean(CLAVE_BLOQUEO, valor).apply()
         bloqueo.value = valor
     }
+
+    // El «ya lo pidió» de cada permiso (por su `grupo`, ver PermisoApp): la app ya mostró su cuadro alguna vez. Android no dice si un permiso
+    // quedó bloqueado; con esto y lo que contesta el sistema se deduce (ver estadoDePermiso). Es del teléfono, no de la cuenta.
+    fun yaSePidio(contexto: Context, grupo: String): Boolean = prefs(contexto).getBoolean("pedido_$grupo", false)
+
+    fun marcarPedido(contexto: Context, grupo: String) {
+        prefs(contexto).edit().putBoolean("pedido_$grupo", true).apply()
+    }
+
+    // El «ya se ofreció» de cada permiso: la app ya se lo propuso solo a la persona una vez (con la hoja que lo explica o con el cuadro), para no
+    // volver a hacerlo al abrir la pantalla. No es lo mismo que `yaSePidio`: una hoja cerrada con «Ahora no» ya se ofreció, pero el cuadro del
+    // sistema no se mostró y el permiso no está bloqueado.
+    fun yaSeOfrecio(contexto: Context, grupo: String): Boolean = prefs(contexto).getBoolean("ofrecido_$grupo", false)
+
+    fun marcarOfrecido(contexto: Context, grupo: String) {
+        prefs(contexto).edit().putBoolean("ofrecido_$grupo", true).apply()
+    }
 }

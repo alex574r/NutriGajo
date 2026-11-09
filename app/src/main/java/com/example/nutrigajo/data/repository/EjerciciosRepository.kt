@@ -46,15 +46,24 @@ class EjerciciosRepository(
     // ---- entrenador
 
     // Guarda como borrador o lo manda a revisión; si hay foto nueva la sube antes y apunta su versión. Devuelve el guardado.
-    suspend fun guardar(ejercicio: Ejercicio, autorNombre: String, enviarARevision: Boolean, foto: ByteArray?, cache: File): Ejercicio {
+    suspend fun guardar(
+        ejercicio: Ejercicio,
+        autorNombre: String,
+        enviarARevision: Boolean,
+        foto: ByteArray?,
+        cache: File,
+        clip: ByteArray? = null,
+    ): Ejercicio {
         val referencia = if (ejercicio.id.isEmpty()) coleccion().document() else coleccion().document(ejercicio.id)
         val version = foto?.let { fotos.subir(RUTA_FOTOS, referencia.id, it, cache) } ?: ejercicio.fotoVersion
+        val versionClip = clip?.let { fotos.subirClip(referencia.id, it, cache) } ?: ejercicio.clipVersion
         val ahora = System.currentTimeMillis()
         val nuevo = ejercicio.limpio().copy(
             id = referencia.id,
             autorId = uid,
             autorNombre = autorNombre,
             fotoVersion = version,
+            clipVersion = versionClip,
             estado = if (enviarARevision) EstadoEjercicio.EN_REVISION else EstadoEjercicio.BORRADOR,
             motivoRechazo = null,
             creadoEn = if (ejercicio.creadoEn == 0L) ahora else ejercicio.creadoEn,
@@ -111,6 +120,10 @@ class EjerciciosRepository(
     suspend fun foto(ejercicio: Ejercicio, cache: File): Bitmap? =
         ejercicio.fotoVersion?.let { fotos.bajar(RUTA_FOTOS, ejercicio.autorId, ejercicio.id, it, cache) }
 
+    // El clip animado de ese ejercicio en su versión: de la caché o descargado del Worker; null si no tiene o no se pudo bajar.
+    suspend fun clip(ejercicio: Ejercicio, cache: File): File? =
+        ejercicio.clipVersion?.let { fotos.bajarClip(ejercicio.autorId, ejercicio.id, it, cache) }
+
     private companion object {
         const val RUTA_FOTOS = "ejercicio"
     }
@@ -132,6 +145,7 @@ internal fun Ejercicio.aMapa(): Map<String, Any> = buildMap {
     put("contraindicaciones", contraindicaciones)
     put("kcal", kcal)
     fotoVersion?.let { put("fotoVersion", it) }
+    clipVersion?.let { put("clipVersion", it) }
     put("estado", estado.name)
     put("creadoEn", creadoEn)
     put("actualizadoEn", actualizadoEn)
@@ -157,6 +171,7 @@ internal fun ejercicioDeMapa(id: String, d: Map<String, Any?>): Ejercicio? {
         contraindicaciones = d["contraindicaciones"] as? String ?: "",
         kcal = (d["kcal"] as? Number)?.toInt() ?: 0,
         fotoVersion = (d["fotoVersion"] as? Number)?.toLong(),
+        clipVersion = (d["clipVersion"] as? Number)?.toLong(),
         estado = estado,
         motivoRechazo = d["motivoRechazo"] as? String,
         creadoEn = (d["creadoEn"] as? Number)?.toLong() ?: 0L,

@@ -51,10 +51,12 @@ import com.example.nutrigajo.R
 import com.example.nutrigajo.data.local.AjustesApp
 import com.example.nutrigajo.data.repository.FotoPerfil
 import com.example.nutrigajo.domain.model.Perfil
+import com.example.nutrigajo.domain.model.Rol
 import com.example.nutrigajo.ui.components.AccionPerfil
 import com.example.nutrigajo.ui.components.TransicionPerfil
 import com.example.nutrigajo.ui.components.AlertaError
 import com.example.nutrigajo.ui.components.FilaAjuste
+import com.example.nutrigajo.ui.components.TarjetaAjustes
 import com.example.nutrigajo.ui.components.PerfilCabecera
 import com.example.nutrigajo.ui.components.SelectorPestanas
 import com.example.nutrigajo.ui.shared.ajustes.Ajuste
@@ -123,6 +125,10 @@ fun PerfilScreen(
     transicion: TransicionPerfil? = null,
     // clave propia: el uid ya la usan otros ViewModels del mismo usuario
     vm: PerfilViewModel = viewModel(key = "perfil-${perfil.uid}"),
+    // solo el paciente: la pantalla «Mi nutriólogo» (cambiar de nutriólogo o desvincularse); recibe cómo volver al perfil
+    miNutriologo: (@Composable (onVolver: () -> Unit) -> Unit)? = null,
+    // paciente y nutriólogo: sus vínculos ya cerrados, solo para leer; recibe cómo volver al perfil
+    anteriores: (@Composable (onVolver: () -> Unit) -> Unit)? = null,
     datosExtra: @Composable () -> Unit = {},
 ) {
     val colores = MaterialTheme.colorScheme
@@ -145,6 +151,8 @@ fun PerfilScreen(
     var cambiandoContrasena by rememberSaveable { mutableStateOf(false) }
     // la pantalla de ajustes abierta desde Configuración; cubre el perfil sin perder su pestaña ni su desplazamiento
     var ajuste by rememberSaveable { mutableStateOf<Ajuste?>(null) }
+    var enMiNutriologo by rememberSaveable { mutableStateOf(false) }
+    var enAnteriores by rememberSaveable { mutableStateOf(false) }
     val version = remember { runCatching { contexto.packageManager.getPackageInfo(contexto.packageName, 0).versionName }.getOrNull().orEmpty() }
 
     Box(modifier.fillMaxSize()) {
@@ -205,7 +213,15 @@ fun PerfilScreen(
                             }
                             Aparece(datos.size, huboCambio) { datosExtra() }
                         } else {
-                            Configuracion(huboCambio, onAjuste = { ajuste = it }, onCerrarSesion = onCerrarSesion)
+                            Configuracion(
+                                huboCambio,
+                                onAjuste = { ajuste = it },
+                                onCerrarSesion = onCerrarSesion,
+                                onMiNutriologo = if (miNutriologo != null) ({ enMiNutriologo = true }) else null,
+                                onAnteriores = if (anteriores != null) ({ enAnteriores = true }) else null,
+                                // la cuenta de administrador no se borra desde la app
+                                puedeEliminar = perfil.rol != Rol.ADMIN,
+                            )
                         }
                     }
                 }
@@ -219,8 +235,11 @@ fun PerfilScreen(
                 onCambiarContrasena = { cambiandoContrasena = true },
                 onVolver = { ajuste = null },
                 espacioInferior = espacioInferior,
+                onCuentaEliminada = onCerrarSesion,
             )
         }
+        if (enMiNutriologo) miNutriologo?.invoke { enMiNutriologo = false }
+        if (enAnteriores) anteriores?.invoke { enAnteriores = false }
     }
 
     if (cambiandoContrasena) {
@@ -259,7 +278,14 @@ fun PerfilScreen(
 // La pestaña Configuración en grupos, como el diseño: General, Seguridad y privacidad, Ayuda y soporte y la sesión. Las filas con
 // flecha abren su pantalla; las de interruptor cambian al tocarlas.
 @Composable
-private fun Configuracion(animar: Boolean, onAjuste: (Ajuste) -> Unit, onCerrarSesion: () -> Unit) {
+private fun Configuracion(
+    animar: Boolean,
+    onAjuste: (Ajuste) -> Unit,
+    onCerrarSesion: () -> Unit,
+    onMiNutriologo: (() -> Unit)? = null,
+    onAnteriores: (() -> Unit)? = null,
+    puedeEliminar: Boolean = false,
+) {
     val contexto = LocalContext.current
     val oscuro by AjustesApp.oscuro
     val bloqueo by AjustesApp.bloqueo
@@ -267,51 +293,51 @@ private fun Configuracion(animar: Boolean, onAjuste: (Ajuste) -> Unit, onCerrarS
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         GrupoAjustes(stringResource(R.string.ajustes_general), margen)
         Aparece(0, animar) {
-            FilaAjuste(R.drawable.ic_campana, stringResource(R.string.inicio_notificaciones), margen, onClick = { onAjuste(Ajuste.NOTIFICACIONES) })
-        }
-        Aparece(1, animar) {
-            FilaAjuste(R.drawable.ic_person, stringResource(R.string.ajustes_info_personal), margen, onClick = { onAjuste(Ajuste.INFORMACION) })
-        }
-        Aparece(2, animar) {
-            FilaAjuste(
-                R.drawable.ic_luna,
-                stringResource(R.string.ajustes_modo_oscuro),
-                margen,
-                activa = oscuro,
-                onActivaChange = { AjustesApp.cambiarOscuro(contexto, it) },
-            )
+            TarjetaAjustes(margen) {
+                FilaAjuste(icono = R.drawable.ic_campana, titulo = stringResource(R.string.inicio_notificaciones), plana = true, onClick = { onAjuste(Ajuste.NOTIFICACIONES) })
+                FilaAjuste(icono = R.drawable.ic_person, titulo = stringResource(R.string.ajustes_info_personal), plana = true, onClick = { onAjuste(Ajuste.INFORMACION) })
+                FilaAjuste(
+                    icono = R.drawable.ic_luna,
+                    titulo = stringResource(R.string.ajustes_modo_oscuro),
+                    plana = true,
+                    activa = oscuro,
+                    onActivaChange = { AjustesApp.cambiarOscuro(contexto, it) },
+                )
+                // el paciente cambia de nutriólogo o se desvincula desde aquí
+                onMiNutriologo?.let { abrir -> FilaAjuste(icono = R.drawable.ic_pacientes, titulo = stringResource(R.string.ajustes_mi_nutriologo), plana = true, onClick = abrir) }
+                onAnteriores?.let { abrir -> FilaAjuste(icono = R.drawable.ic_documento, titulo = stringResource(R.string.ajustes_vinculos_anteriores), plana = true, onClick = abrir) }
+            }
         }
         GrupoAjustes(stringResource(R.string.ajustes_seguridad_grupo), margen)
-        Aparece(3, animar) {
-            FilaAjuste(R.drawable.ic_lock, stringResource(R.string.ajustes_seguridad), margen, onClick = { onAjuste(Ajuste.SEGURIDAD) })
-        }
-        Aparece(4, animar) {
-            FilaAjuste(
-                R.drawable.ic_verificado,
-                stringResource(R.string.ajustes_biometria),
-                margen,
-                activa = bloqueo,
-                onActivaChange = { alternarBloqueo(contexto, it) },
-            )
+        Aparece(1, animar) {
+            TarjetaAjustes(margen) {
+                FilaAjuste(icono = R.drawable.ic_lock, titulo = stringResource(R.string.ajustes_seguridad), plana = true, onClick = { onAjuste(Ajuste.SEGURIDAD) })
+                FilaAjuste(
+                    icono = R.drawable.ic_verificado,
+                    titulo = stringResource(R.string.ajustes_biometria),
+                    plana = true,
+                    activa = bloqueo,
+                    onActivaChange = { alternarBloqueo(contexto, it) },
+                )
+                FilaAjuste(icono = R.drawable.ic_ajustes, titulo = stringResource(R.string.ajustes_permisos), plana = true, onClick = { onAjuste(Ajuste.PERMISOS) })
+            }
         }
         GrupoAjustes(stringResource(R.string.ajustes_ayuda_grupo), margen)
-        Aparece(5, animar) {
-            FilaAjuste(R.drawable.ic_informacion, stringResource(R.string.ajustes_acerca), margen, onClick = { onAjuste(Ajuste.ACERCA) })
+        Aparece(2, animar) {
+            TarjetaAjustes(margen) {
+                FilaAjuste(icono = R.drawable.ic_informacion, titulo = stringResource(R.string.ajustes_acerca), plana = true, onClick = { onAjuste(Ajuste.ACERCA) })
+                FilaAjuste(icono = R.drawable.ic_bombilla, titulo = stringResource(R.string.ajustes_centro_ayuda), plana = true, onClick = { onAjuste(Ajuste.AYUDA) })
+                FilaAjuste(icono = R.drawable.ic_mensaje, titulo = stringResource(R.string.ajustes_comentarios), plana = true, onClick = { onAjuste(Ajuste.COMENTARIOS) })
+            }
         }
-        Aparece(6, animar) {
-            FilaAjuste(R.drawable.ic_bombilla, stringResource(R.string.ajustes_centro_ayuda), margen, onClick = { onAjuste(Ajuste.AYUDA) })
-        }
-        Aparece(7, animar) {
-            FilaAjuste(R.drawable.ic_mensaje, stringResource(R.string.ajustes_comentarios), margen, onClick = { onAjuste(Ajuste.COMENTARIOS) })
-        }
-        Aparece(8, animar) {
-            FilaAjuste(
-                icono = R.drawable.ic_flecha_atras,
-                titulo = stringResource(R.string.inicio_cerrar_sesion),
-                modifier = margen.padding(top = 8.dp),
-                destructiva = true,
-                onClick = onCerrarSesion,
-            )
+        // salir y borrar la cuenta, en su propia tarjeta roja
+        Aparece(3, animar) {
+            TarjetaAjustes(margen.padding(top = 8.dp), destructiva = true) {
+                FilaAjuste(icono = R.drawable.ic_flecha_atras, titulo = stringResource(R.string.inicio_cerrar_sesion), plana = true, destructiva = true, onClick = onCerrarSesion)
+                if (puedeEliminar) {
+                    FilaAjuste(icono = R.drawable.ic_lock, titulo = stringResource(R.string.ajustes_eliminar_cuenta), plana = true, destructiva = true, onClick = { onAjuste(Ajuste.ELIMINAR_CUENTA) })
+                }
+            }
         }
     }
 }

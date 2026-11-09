@@ -31,4 +31,13 @@ class AgendaTest {
         assertTrue(dias.none { it.dayOfWeek == DayOfWeek.SUNDAY })
         assertFalse(hoy in Agenda.dias(emptySet(), a(hoy, 18), zona))
     }
+
+    @Test
+    fun el_nutriologo_ve_una_ventana_de_30_dias() {
+        val dias = Agenda.dias(emptySet(), a(hoy, 10), zona, Agenda.DIAS_NUTRIOLOGO)
+        assertEquals(26, dias.size) // 30 días menos los cuatro domingos
+        assertEquals(hoy, dias.first())
+        assertEquals(LocalDate.of(2026, 12, 3), dias.last())
+        assertEquals(14L, Agenda.DIAS_PACIENTE)
+    }
 }

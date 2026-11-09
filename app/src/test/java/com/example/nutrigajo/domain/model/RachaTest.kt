@@ -48,4 +48,28 @@ class RachaTest {
     fun con_una_meta_de_cero_pasos_los_pasos_no_cuentan_y_no_se_cicla() {
         assertEquals(Racha(0, false), racha(hoy, mapOf(dia(0) to 5000), emptySet(), 0))
     }
+
+    @Test
+    fun solo_los_dias_que_llegan_a_la_meta_de_pasos_se_anotan() {
+        val pasos = mapOf(dia(0) to 8200, dia(1) to 7999, dia(2) to 8000)
+        assertEquals(setOf(dia(0), dia(2)), diasDePasos(pasos, 8000))
+        // con una meta de 0 pasos no hay nada que anotar (si no, todos los días contarían)
+        assertEquals(emptySet<Long>(), diasDePasos(pasos, 0))
+    }
+
+    @Test
+    fun un_dia_ya_ganado_no_se_pierde_aunque_despues_suba_la_meta() {
+        val ganados = diasDePasos(mapOf(dia(0) to 9000, dia(1) to 9500), 8000)
+        // el nutriólogo sube la meta a 20 000: los días ya anotados siguen contando
+        assertEquals(Racha(2, true), racha(hoy, mapOf(dia(0) to 9000, dia(1) to 9500), ganados, 20000))
+    }
+
+    @Test
+    fun unir_dias_no_repite_y_conserva_los_mas_recientes() {
+        assertEquals(setOf(1L, 2L, 3L), unirDiasRacha(setOf(1L, 2L), listOf(2L, 3L), tope = 10))
+        // con tope 2 se quedan los dos más recientes
+        assertEquals(setOf(5L, 4L), unirDiasRacha(setOf(1L, 4L), listOf(5L, 2L), tope = 2))
+        // lo ya guardado no se pierde mientras quepa
+        assertEquals(setOf(1L, 2L), unirDiasRacha(setOf(1L, 2L), emptyList(), tope = 5))
+    }
 }

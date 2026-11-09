@@ -3,6 +3,7 @@ package com.example.nutrigajo.ui.paciente.inicio
 import com.example.nutrigajo.ui.shared.platillos.TarjetaPlatillo
 import com.example.nutrigajo.ui.shared.platillos.PlatillosEstado
 import com.example.nutrigajo.ui.components.FilaAjuste
+import com.example.nutrigajo.domain.model.OpcionMenu
 import com.example.nutrigajo.domain.model.Platillo
 import com.example.nutrigajo.ui.shared.ejercicios.titulo
 import com.example.nutrigajo.ui.shared.ejercicios.intensidad
@@ -31,7 +32,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -55,7 +62,16 @@ internal val SOMBRA_TEXTO = Shadow(Color.Black.copy(alpha = 0.35f), Offset(0f, 3
 // ahora» y «Historial» abre lo ya entrenado. Mientras se lee el banco se ve un esqueleto; sin ejercicios publicados no hay rutina y la sección no aparece.
 // ponytail: el botón de la comida sigue sin abrir nada; el detalle llega con los planes.
 @Composable
-fun RutinaDeHoy(rutina: RutinaDelDia?, cargando: Boolean, onIniciar: () -> Unit, onHistorial: () -> Unit, modifier: Modifier = Modifier) {
+fun RutinaDeHoy(
+    rutina: RutinaDelDia?,
+    cargando: Boolean,
+    onIniciar: () -> Unit,
+    onHistorial: () -> Unit,
+    modifier: Modifier = Modifier,
+    // los ejercicios que el nutriólogo le asignó van como apartado de esta sección, bajo la rutina
+    asignados: Int = 0,
+    onAsignados: () -> Unit = {},
+) {
     val tipos = MaterialTheme.typography
     if (rutina == null) {
         if (cargando) {
@@ -64,13 +80,15 @@ fun RutinaDeHoy(rutina: RutinaDelDia?, cargando: Boolean, onIniciar: () -> Unit,
                 Spacer(Modifier.height(12.dp))
                 Esqueleto(Modifier.padding(horizontal = 16.dp).fillMaxWidth().height(234.dp), RoundedCornerShape(31.dp))
             }
+        } else if (asignados > 0) {
+            FilaAsignados(asignados, onAsignados, modifier)
         }
         return
     }
     Column(modifier) {
         EncabezadoSeccion(
             titulo = stringResource(R.string.inicio_rutinas),
-            contador = "(${rutina.ejercicios.size})",
+            contador = "(${rutina.ejercicios.size})" + if (rutina.asignada) " · ${stringResource(R.string.rutina_asignada)}" else "",
             verTodas = true,
             etiquetaVerTodas = R.string.rutina_historial,
             onVerTodas = onHistorial,
@@ -87,7 +105,8 @@ fun RutinaDeHoy(rutina: RutinaDelDia?, cargando: Boolean, onIniciar: () -> Unit,
             FotoEjercicio(rutina.ejercicios.first(), Modifier.matchParentSize(), RoundedCornerShape(0.dp))
             Box(
                 Modifier.matchParentSize().background(
-                    Brush.verticalGradient(0f to Color.Black.copy(alpha = 0.3f), 0.35f to Color.Transparent, 1f to Color.Black.copy(alpha = 0.6f)),
+                    // el velo de arriba es más fuerte que antes: las ilustraciones del catálogo son de fondo blanco y «6 min · 30 kcal» no se leía
+                    Brush.verticalGradient(0f to Color.Black.copy(alpha = 0.55f), 0.4f to Color.Transparent, 1f to Color.Black.copy(alpha = 0.6f)),
                 ),
             )
             Row(Modifier.padding(start = 15.dp, top = 19.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -140,6 +159,73 @@ fun RutinaDeHoy(rutina: RutinaDelDia?, cargando: Boolean, onIniciar: () -> Unit,
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(painterResource(R.drawable.ic_play), contentDescription = stringResource(R.string.rutina_iniciar), tint = Color.White)
+            }
+        }
+        if (asignados > 0) {
+            Spacer(Modifier.height(10.dp))
+            FilaAsignados(asignados, onAsignados)
+        }
+    }
+}
+
+// La entrada a «Mis ejercicios asignados» con cuántos van.
+@Composable
+private fun FilaAsignados(total: Int, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    FilaAjuste(
+        icono = R.drawable.ic_calendario,
+        titulo = stringResource(R.string.asignados_entrada),
+        modifier = modifier.padding(horizontal = 16.dp),
+        etiqueta = pluralStringResource(R.plurals.asignados_total, total, total),
+        onClick = onClick,
+    )
+}
+
+// La opción de menú que toca hoy en un plan con duración: el día del plan (`dia` de `total`), el número de la opción y sus tres comidas.
+data class MenuDeHoy(val dia: Int, val total: Int, val numero: Int, val opcion: OpcionMenu)
+
+// Desplegable: cerrada solo dice qué día y opción toca; al tocarla se ven las tres comidas.
+@Composable
+fun TarjetaMenuDeHoy(menu: MenuDeHoy, modifier: Modifier = Modifier) {
+    val colores = MaterialTheme.colorScheme
+    var abierta by rememberSaveable { mutableStateOf(false) }
+    Column(
+        modifier = modifier
+            .padding(horizontal = 16.dp)
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(24.dp))
+            .background(colores.surfaceVariant)
+            .clickable(
+                role = Role.Button,
+                onClickLabel = stringResource(if (abierta) R.string.menu_hoy_ocultar else R.string.menu_hoy_ver),
+                onClick = { abierta = !abierta },
+            )
+            .padding(16.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(stringResource(R.string.menu_hoy_titulo), style = MaterialTheme.typography.titleMedium, color = colores.onBackground)
+                Text(stringResource(R.string.menu_hoy_dia, menu.dia, menu.total, menu.numero), style = MaterialTheme.typography.labelLarge, color = colores.primary)
+            }
+            // la flecha apunta abajo (ver) o arriba (ocultar)
+            Icon(
+                painter = painterResource(R.drawable.ic_flecha_adelante),
+                contentDescription = null,
+                modifier = Modifier.rotate(if (abierta) -90f else 90f),
+                tint = colores.onSurfaceVariant,
+            )
+        }
+        AnimatedVisibility(abierta) {
+            Column(Modifier.padding(top = 10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                listOf(
+                    R.string.pdf_col_desayuno to menu.opcion.desayuno,
+                    R.string.pdf_col_comida to menu.opcion.comida,
+                    R.string.pdf_col_cena to menu.opcion.cena,
+                ).filter { it.second.isNotBlank() }.forEach { (titulo, texto) ->
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text(stringResource(titulo), style = MaterialTheme.typography.bodySmall, color = colores.onSurfaceVariant)
+                        Text(texto, style = MaterialTheme.typography.bodyMedium, color = colores.onBackground)
+                    }
+                }
             }
         }
     }

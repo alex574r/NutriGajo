@@ -44,10 +44,13 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.PermissionController
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import com.example.nutrigajo.R
+import com.example.nutrigajo.data.local.AjustesApp
+import com.example.nutrigajo.domain.PermisoApp
 import com.example.nutrigajo.domain.model.ActividadHoy
 import com.example.nutrigajo.domain.model.Barra
 import com.example.nutrigajo.domain.model.NocheSueno
@@ -75,7 +78,14 @@ private const val HEALTH_CONNECT = "com.google.android.apps.healthdata"
 fun RelojScreen(onVolver: () -> Unit, vm: RelojViewModel) {
     val estado by vm.estado.collectAsState()
     val contexto = LocalContext.current
-    val pedir = rememberLauncherForActivityResult(PermissionController.createRequestPermissionResultContract()) { vm.cargar() }
+    // si ya se mostró el cuadro de Health Connect y sigue sin permiso, además de «conectar» se ofrece abrir sus ajustes (tras dos negativas el
+    // sistema ya no muestra el cuadro y solo se arregla allí); Health Connect no avisa cuándo pasa, por eso se ofrecen los dos
+    var yaSePidio by remember { mutableStateOf(AjustesApp.yaSePidio(contexto, PermisoApp.RELOJ.grupo)) }
+    val pedir = rememberLauncherForActivityResult(PermissionController.createRequestPermissionResultContract()) {
+        AjustesApp.marcarPedido(contexto, PermisoApp.RELOJ.grupo)
+        yaSePidio = true
+        vm.cargar()
+    }
     // al abrir y al volver de instalar Health Connect o de sus ajustes se vuelve a ver en qué punto está
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { vm.cargar() }
 
@@ -85,7 +95,14 @@ fun RelojScreen(onVolver: () -> Unit, vm: RelojViewModel) {
                 Esqueleto(Modifier.fillMaxWidth().height(150.dp), RoundedCornerShape(34.dp))
                 Esqueleto(Modifier.fillMaxWidth().height(300.dp), RoundedCornerShape(34.dp))
             } else {
-                TarjetaConexion(estado, onInstalar = { abrirTienda(contexto) }, onConectar = { pedir.launch(vm.permisos) }, onActualizar = vm::cargar)
+                TarjetaConexion(
+                    estado,
+                    yaSePidio = yaSePidio,
+                    onInstalar = { abrirTienda(contexto) },
+                    onConectar = { pedir.launch(vm.permisos) },
+                    onAjustes = { abrirAjustesDeHealthConnect(contexto) },
+                    onActualizar = vm::cargar,
+                )
                 if (estado.fase == FaseReloj.CONECTADO) {
                     val resumen = estado.resumen
                     if (resumen?.faltanPermisos == true) PermisosFaltantes(onPermitir = { pedir.launch(vm.permisos) })
@@ -104,7 +121,14 @@ fun RelojScreen(onVolver: () -> Unit, vm: RelojViewModel) {
 
 // La tarjeta oscura del reloj: de qué app vienen los datos, cuándo se sincronizaron y, si falta algo, el botón que sigue.
 @Composable
-private fun TarjetaConexion(estado: RelojEstado, onInstalar: () -> Unit, onConectar: () -> Unit, onActualizar: () -> Unit) {
+private fun TarjetaConexion(
+    estado: RelojEstado,
+    yaSePidio: Boolean,
+    onInstalar: () -> Unit,
+    onConectar: () -> Unit,
+    onAjustes: () -> Unit,
+    onActualizar: () -> Unit,
+) {
     val colores = MaterialTheme.colorScheme
     val tenue = colores.background.copy(alpha = 0.7f)
     val conectado = estado.fase == FaseReloj.CONECTADO
@@ -149,7 +173,14 @@ private fun TarjetaConexion(estado: RelojEstado, onInstalar: () -> Unit, onConec
         }
         when (estado.fase) {
             FaseReloj.INSTALAR -> BotonPrimario(stringResource(R.string.reloj_boton_instalar), onInstalar, Modifier.fillMaxWidth(), altura = 48.dp)
-            FaseReloj.PERMISO -> BotonPrimario(stringResource(R.string.reloj_boton_conectar), onConectar, Modifier.fillMaxWidth(), altura = 48.dp)
+            FaseReloj.PERMISO -> {
+                BotonPrimario(stringResource(R.string.reloj_boton_conectar), onConectar, Modifier.fillMaxWidth(), altura = 48.dp)
+                if (yaSePidio) {
+                    TextButton(onClick = onAjustes, modifier = Modifier.fillMaxWidth()) {
+                        Text(stringResource(R.string.reloj_boton_ajustes), style = MaterialTheme.typography.titleMedium, color = tenue)
+                    }
+                }
+            }
             FaseReloj.ERROR -> BotonPrimario(stringResource(R.string.reloj_boton_reintentar), onActualizar, Modifier.fillMaxWidth(), altura = 48.dp)
             FaseReloj.CONECTADO ->
                 TextButton(onClick = onActualizar, modifier = Modifier.fillMaxWidth()) {
@@ -419,7 +450,7 @@ private fun PasosConexion() {
 }
 
 // Health Connect antes de Android 14 es una app de la tienda; si no hay tienda se abre su página web.
-private fun abrirTienda(contexto: Context) {
+internal fun abrirTienda(contexto: Context) {
     val tienda = Intent(Intent.ACTION_VIEW).apply {
         setPackage("com.android.vending")
         data = Uri.parse("market://details?id=$HEALTH_CONNECT&url=healthconnect%3A%2F%2Fonboarding")
@@ -431,4 +462,9 @@ private fun abrirTienda(contexto: Context) {
     } catch (_: ActivityNotFoundException) {
         runCatching { contexto.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=$HEALTH_CONNECT"))) }
     }
+}
+
+// Los ajustes de Health Connect, donde se da el permiso cuando el sistema ya no muestra su cuadro. Si el teléfono no los abre, no pasa nada.
+internal fun abrirAjustesDeHealthConnect(contexto: Context) {
+    runCatching { contexto.startActivity(Intent(HealthConnectClient.ACTION_HEALTH_CONNECT_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
 }

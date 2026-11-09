@@ -50,7 +50,7 @@ fun GuiaEjercicioScreen(ejercicio: Ejercicio, inicio: Int, onSalir: () -> Unit) 
             modifier = Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = MARGEN),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            FotoEjercicio(ejercicio, Modifier.fillMaxWidth().aspectRatio(16f / 10f), RoundedCornerShape(28.dp))
+            MediaEjercicio(ejercicio, Modifier.fillMaxWidth().aspectRatio(16f / 10f), RoundedCornerShape(28.dp))
             PasosPager(
                 pasos = ejercicio.pasos,
                 estado = estado,

@@ -48,6 +48,7 @@ import com.example.nutrigajo.ui.shared.citas.CitasEstado
 import com.example.nutrigajo.ui.shared.citas.CitasScreen
 import com.example.nutrigajo.ui.shared.citas.DialogoCambio
 import com.example.nutrigajo.ui.shared.citas.EtiquetaEstado
+import com.example.nutrigajo.ui.shared.citas.OrigenYNota
 import com.example.nutrigajo.ui.shared.citas.aDia
 import com.example.nutrigajo.ui.shared.citas.diaLargo
 import com.example.nutrigajo.ui.shared.citas.horaCorta
@@ -67,6 +68,8 @@ fun AgendaScreen(
     onCambiar: (Cita, EstadoCita) -> Unit,
     onVolver: () -> Unit,
     onReagendar: ((Cita) -> Unit)? = null,
+    // solo el nutriólogo: el botón «+» junto a «Hoy» abre la hoja para agendar una cita a uno de sus pacientes
+    onNuevaCita: (() -> Unit)? = null,
 ) {
     BackHandler(onBack = onVolver)
     val colores = MaterialTheme.colorScheme
@@ -91,18 +94,27 @@ fun AgendaScreen(
                 style = MaterialTheme.typography.titleMedium,
                 color = colores.onBackground,
             )
-            // llevar el calendario a hoy
-            Text(
-                text = stringResource(R.string.agenda_hoy),
-                modifier = Modifier
-                    .align(Alignment.CenterEnd)
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(colores.surfaceVariant)
-                    .alPulsar({ diaElegido = hoy.toEpochDay() }, minimo = 0.94f)
-                    .padding(horizontal = 14.dp, vertical = 9.dp),
-                style = MaterialTheme.typography.labelLarge,
-                color = colores.onBackground,
-            )
+            Row(Modifier.align(Alignment.CenterEnd), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                if (onNuevaCita != null) {
+                    Box(
+                        modifier = Modifier.size(40.dp).clip(CircleShape).background(colores.primary).alPulsar(onNuevaCita),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(painterResource(R.drawable.ic_agregar), stringResource(R.string.nueva_cita_titulo), tint = colores.onPrimary)
+                    }
+                }
+                // llevar el calendario a hoy
+                Text(
+                    text = stringResource(R.string.agenda_hoy),
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(colores.surfaceVariant)
+                        .alPulsar({ diaElegido = hoy.toEpochDay() }, minimo = 0.94f)
+                        .padding(horizontal = 14.dp, vertical = 9.dp),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = colores.onBackground,
+                )
+            }
         }
         SelectorPestanas(VISTAS, vista, { vista = it }, Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
         estado.error?.let { AlertaError(stringResource(it), Modifier.padding(top = 8.dp)) }
@@ -174,6 +186,7 @@ private fun DetalleCita(
             }
             FilaAjuste(R.drawable.ic_calendario, titulo = diaLargo(cita.inicio.aDia()), etiqueta = stringResource(R.string.agenda_fecha))
             FilaAjuste(R.drawable.ic_reloj, titulo = "${horaCorta(cita.inicio)} – ${horaCorta(cita.inicio + UNA_HORA_MS)}", etiqueta = stringResource(R.string.agenda_hora))
+            OrigenYNota(cita, rol)
             if (vigente) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 4.dp)) {
                     if (rol == Rol.NUTRIOLOGO && cita.estado == EstadoCita.PENDIENTE) {

@@ -59,10 +59,59 @@ fun ResumenScreen(
     chatSinLeer: Boolean = false,
     // solo el nutriólogo: fija las metas diarias de este paciente (agua, pasos, calorías y minutos de movimiento)
     onMetas: (() -> Unit)? = null,
+    // solo el nutriólogo: abre la hoja para agendarle una cita a este paciente
+    onCita: (() -> Unit)? = null,
+    // solo el nutriólogo: da de baja a este paciente (cierra el vínculo; la confirmación la pide quien lo llama)
+    onDarDeBaja: (() -> Unit)? = null,
+    // solo el nutriólogo: false muestra el menú general del paciente y true su expediente; el estado vive afuera para que sobreviva al asistente
+    enExpediente: Boolean = true,
+    onEnExpediente: (Boolean) -> Unit = {},
 ) {
-    BackHandler(onBack = onVolver)
+    val esNutriologo = onPlan != null || onChat != null || onMetas != null || onCita != null || onDarDeBaja != null
+    // en el expediente del nutriólogo, atrás vuelve al menú; desde el menú (o para el paciente) sale
+    BackHandler { if (esNutriologo && enExpediente) onEnExpediente(false) else onVolver() }
     val colores = MaterialTheme.colorScheme
     val respondidos = expediente.respondidos()
+
+    if (esNutriologo && !enExpediente) {
+        val primerNombre = nombrePaciente.substringBefore(' ')
+        Column(
+            modifier = modifier
+                .fillMaxSize()
+                .background(colores.background)
+                .statusBarsPadding()
+                .navigationBarsPadding(),
+        ) {
+            Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                TextButton(onClick = onVolver) { Text(stringResource(R.string.mapa_volver)) }
+            }
+            Column(
+                modifier = Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Text(
+                    text = nombrePaciente,
+                    style = MaterialTheme.typography.headlineMedium.copy(lineHeight = 1.2.em),
+                    color = colores.onBackground,
+                )
+                MenuPaciente(
+                    nombrePaciente = nombrePaciente,
+                    resumenExpediente = stringResource(R.string.resumen_datos, respondidos, TOTAL_DATOS),
+                    onExpediente = { onEnExpediente(true) },
+                    modifier = Modifier.padding(bottom = 16.dp),
+                    resumenPlan = onPlan?.let { stringResource(if (planEnviado) R.string.plan_boton_editar else R.string.plan_boton_crear) },
+                    onPlan = onPlan,
+                    resumenChat = stringResource(if (chatSinLeer) R.string.menu_paciente_chat_nuevo else R.string.menu_paciente_chat_resumen, primerNombre),
+                    chatSinLeer = chatSinLeer,
+                    onChat = onChat,
+                    onMetas = onMetas,
+                    onCita = onCita,
+                    onDarDeBaja = onDarDeBaja,
+                )
+            }
+        }
+        return
+    }
 
     Column(
         modifier = modifier
@@ -123,33 +172,7 @@ fun ResumenScreen(
             CategoriasExpediente(expediente, Modifier.padding(bottom = 8.dp), onEditar = onEditarCategoria, resaltada = categoriaGuardada)
         }
         Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            if (onChat != null) {
-                Box {
-                    BotonPrimario(
-                        // solo el primer nombre: el botón es de una línea
-                        texto = stringResource(R.string.chat_boton, nombrePaciente.substringBefore(' ')),
-                        onClick = onChat,
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(containerColor = colores.surfaceVariant, contentColor = colores.onBackground),
-                    )
-                    if (chatSinLeer) PuntoNuevo(Modifier.align(Alignment.TopEnd).offset(x = (-6).dp, y = 6.dp))
-                }
-            }
-            if (onMetas != null) {
-                BotonPrimario(
-                    texto = stringResource(R.string.metas_boton, nombrePaciente.substringBefore(' ')),
-                    onClick = onMetas,
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(containerColor = colores.surfaceVariant, contentColor = colores.onBackground),
-                )
-            }
-            if (onPlan != null) {
-                BotonPrimario(
-                    texto = stringResource(if (planEnviado) R.string.plan_boton_editar else R.string.plan_boton_crear),
-                    onClick = onPlan,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
+            // el chat, las metas, la cita y el plan del nutriólogo están en el menú general del paciente (MenuPaciente), no bajo el expediente
             BotonPrimario(
                 texto = stringResource(if (expediente.completo) R.string.expediente_editar else R.string.expediente_completar),
                 onClick = onEditar,

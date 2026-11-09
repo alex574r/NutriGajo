@@ -11,11 +11,13 @@ import com.example.nutrigajo.data.repository.FotoPerfilRepository
 import com.example.nutrigajo.domain.model.Ejercicio
 import com.example.nutrigajo.ui.shared.mensajeDeFirestore
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.IOException
 
@@ -64,6 +66,7 @@ class EjerciciosViewModel(
         autorNombre: String,
         enviarARevision: Boolean,
         foto: Uri?,
+        clip: Uri?,
         resolver: ContentResolver,
         cache: File,
         alTerminar: (Boolean) -> Unit,
@@ -72,6 +75,16 @@ class EjerciciosViewModel(
         _estado.update { it.copy(guardando = true, error = null) }
         viewModelScope.launch {
             try {
+                // el clip ya se comprobó al elegirlo (≤ 2 MiB): aquí solo se lee entero para subirlo
+                val mp4 = clip?.let {
+                    try {
+                        withContext(Dispatchers.IO) { resolver.openInputStream(it)?.use { entrada -> entrada.readBytes() } ?: throw IOException("Sin clip") }
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        throw ErrorDeClip(e)
+                    }
+                }
                 val jpeg = foto?.let {
                     try {
                         fotos.preparar(resolver, it, LADO_FOTO, cuadrada = false)
@@ -81,7 +94,7 @@ class EjerciciosViewModel(
                         throw ErrorDeFoto(e)
                     }
                 }
-                val guardado = repo.guardar(ejercicio, autorNombre, enviarARevision, jpeg, cache)
+                val guardado = repo.guardar(ejercicio, autorNombre, enviarARevision, jpeg, cache, mp4)
                 _estado.update { estado ->
                     estado.copy(guardando = false, items = (listOf(guardado) + estado.items.filterNot { it.id == guardado.id }))
                 }
@@ -90,6 +103,9 @@ class EjerciciosViewModel(
                 throw e
             } catch (e: ErrorDeFoto) {
                 _estado.update { it.copy(guardando = false, error = R.string.ejercicio_error_foto) }
+                alTerminar(false)
+            } catch (e: ErrorDeClip) {
+                _estado.update { it.copy(guardando = false, error = R.string.ejercicio_error_clip) }
                 alTerminar(false)
             } catch (e: Exception) {
                 _estado.update { it.copy(guardando = false, error = mensajeDeFirestore(e)) }
@@ -129,6 +145,8 @@ class EjerciciosViewModel(
     fun limpiarError() = _estado.update { if (it.error == null) it else it.copy(error = null) }
 
     private class ErrorDeFoto(causa: Exception) : IOException(causa)
+
+    private class ErrorDeClip(causa: Exception) : IOException(causa)
 
     private companion object {
         const val LADO_FOTO = 1280

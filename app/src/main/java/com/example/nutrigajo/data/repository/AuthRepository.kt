@@ -3,6 +3,9 @@ package com.example.nutrigajo.data.repository
 import com.example.nutrigajo.data.remote.firebase.firestore.FirestorePaths
 import com.example.nutrigajo.domain.model.Perfil
 import com.example.nutrigajo.domain.model.Rol
+import com.google.firebase.FirebaseApp
+import com.google.firebase.auth.ActionCodeSettings
+import com.google.firebase.auth.EmailAuthProvider
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
@@ -85,5 +88,30 @@ class AuthRepository(
         auth.sendPasswordResetEmail(correo).await()
     }
 
+    // Para una acción delicada (borrar la cuenta) Firebase manda al correo de la cuenta un enlace de confirmación. No es un código: Firebase solo
+    // manda enlaces. Requiere «Enlace de correo» activado en Authentication.
+    // ponytail: sin enlaces de la app (App Links) todavía: la persona abre el correo, copia el enlace y lo pega en la app; si la prueba con el
+    // proyecto real muestra que los enlaces de Hosting abren la app, aquí se agrega el `linkDomain` y el filtro del manifiesto.
+    suspend fun enviarEnlaceDeConfirmacion() {
+        val correo = auth.currentUser?.email ?: error("Sin sesión")
+        val ajustes = ActionCodeSettings.newBuilder()
+            .setUrl("https://${FirebaseApp.getInstance().options.projectId}.firebaseapp.com/confirmar")
+            .setHandleCodeInApp(true)
+            .build()
+        auth.sendSignInLinkToEmail(correo, ajustes).await()
+    }
+
+    // Vuelve a confirmar la identidad con el enlace del correo: sube la hora de confirmación de la sesión (`auth_time`) y el Worker acepta el
+    // borrado. Lanza `EnlaceInvalidoException` si el texto no es un enlace de Firebase y la de Firebase si es de otra cuenta o ya venció.
+    suspend fun confirmarConEnlace(enlace: String) {
+        val usuario = auth.currentUser ?: error("Sin sesión")
+        val correo = usuario.email ?: error("Sin correo")
+        if (!auth.isSignInWithEmailLink(enlace)) throw EnlaceInvalidoException()
+        usuario.reauthenticate(EmailAuthProvider.getCredentialWithLink(correo, enlace)).await()
+    }
+
     fun cerrarSesion() = auth.signOut()
 }
+
+// Lo que se pegó no es un enlace de confirmación de Firebase.
+class EnlaceInvalidoException : Exception("El enlace no es de Firebase")

@@ -1,6 +1,8 @@
 package com.example.nutrigajo.data.repository
 
+import com.example.nutrigajo.domain.model.EjercicioAsignado
 import com.example.nutrigajo.domain.model.Equivalentes
+import com.example.nutrigajo.domain.model.FuenteEjercicio
 import com.example.nutrigajo.domain.model.GrupoAlimento
 import com.example.nutrigajo.domain.model.OpcionMenu
 import com.example.nutrigajo.domain.model.PlanContenido
@@ -28,6 +30,25 @@ internal fun PlanContenido.aMapa(): Map<String, Any> = buildMap {
     if (sesiones.isNotEmpty()) {
         put("sesiones", sesiones.map { mapOf("dia" to it.dia, "enfoque" to it.enfoque, "detalle" to it.detalle) })
     }
+    if (ejerciciosAsignados.isNotEmpty()) {
+        put(
+            "ejerciciosAsignados",
+            ejerciciosAsignados.map { a ->
+                buildMap<String, Any> {
+                    put("dia", a.dia)
+                    put("fuente", a.fuente.name)
+                    put("id", a.id)
+                    put("titulo", a.titulo)
+                    a.series?.let { put("series", it) }
+                    a.repeticiones?.let { put("repeticiones", it) }
+                    a.minutos?.let { put("minutos", it) }
+                    if (a.nota.isNotBlank()) put("nota", a.nota)
+                }
+            },
+        )
+    }
+    duracionDias?.let { put("duracionDias", it) }
+    if (menuDias.isNotEmpty()) put("menuDias", menuDias)
     if (notas.isNotBlank()) put("notas", notas)
 }
 
@@ -59,6 +80,25 @@ internal fun Map<*, *>.aPlanContenido(): PlanContenido {
         sesiones = (this["sesiones"] as? List<*>).orEmpty().filterIsInstance<Map<*, *>>().map {
             SesionEjercicio(it["dia"] as? String ?: "", it["enfoque"] as? String ?: "", it["detalle"] as? String ?: "")
         },
+        ejerciciosAsignados = (this["ejerciciosAsignados"] as? List<*>).orEmpty().filterIsInstance<Map<*, *>>().mapNotNull { it.aAsignado() },
+        duracionDias = (this["duracionDias"] as? Number)?.toInt(),
+        menuDias = (this["menuDias"] as? List<*>).orEmpty().map { (it as? Number)?.toInt() ?: -1 },
         notas = this["notas"] as? String ?: "",
+    )
+}
+
+// null si falta el id o la fuente no se reconoce (un plan de una versión futura de la app): se descarta solo ese ejercicio.
+private fun Map<*, *>.aAsignado(): EjercicioAsignado? {
+    val fuente = FuenteEjercicio.entries.firstOrNull { it.name == this["fuente"] } ?: return null
+    val id = (this["id"] as? String)?.takeIf { it.isNotBlank() } ?: return null
+    return EjercicioAsignado(
+        dia = (this["dia"] as? Number)?.toInt() ?: return null,
+        fuente = fuente,
+        id = id,
+        titulo = this["titulo"] as? String ?: "",
+        series = (this["series"] as? Number)?.toInt(),
+        repeticiones = (this["repeticiones"] as? Number)?.toInt(),
+        minutos = (this["minutos"] as? Number)?.toInt(),
+        nota = this["nota"] as? String ?: "",
     )
 }

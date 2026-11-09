@@ -5,6 +5,19 @@ import com.example.nutrigajo.ui.shared.platillos.PlatillosEstado
 import com.example.nutrigajo.ui.shared.platillos.FilaPlatillo
 import com.example.nutrigajo.domain.model.comoItemDelBanco
 import com.example.nutrigajo.domain.model.Platillo
+import com.example.nutrigajo.domain.model.Ejercicio
+import com.example.nutrigajo.domain.model.NivelEjercicio
+import com.example.nutrigajo.domain.model.TipoEjercicio
+import com.example.nutrigajo.domain.model.ZonaCuerpo
+import com.example.nutrigajo.domain.model.coincide
+import com.example.nutrigajo.domain.model.aEjercicio
+import com.example.nutrigajo.domain.model.buscar
+import com.example.nutrigajo.ui.shared.ejercicios.CatalogoEstado
+import com.example.nutrigajo.ui.shared.ejercicios.CatalogoViewModel
+import com.example.nutrigajo.ui.shared.ejercicios.EjerciciosEstado
+import com.example.nutrigajo.ui.shared.ejercicios.EjerciciosViewModel
+import com.example.nutrigajo.ui.shared.ejercicios.FilaEjercicio
+import com.example.nutrigajo.ui.shared.ejercicios.titulo
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.activity.compose.BackHandler
 import androidx.annotation.StringRes
@@ -75,9 +88,13 @@ private val MARGEN = 16.dp
 
 // Qué se le pide al banco: de qué tipo y, para una comida, de qué tiempo. Con `onElegir` es un selector (tocar un elemento lo
 // pone en el plan); sin él, el banco se administra: tocar un elemento lo edita.
+// Con `onElegirEjercicio` (solo ejercicios) se está asignando: el banco muestra solo los «Globales» y tocar uno entrega el ejercicio entero,
+// no un texto para la sesión.
 internal class DestinoBanco(
     val tipo: TipoBanco,
     val momento: MomentoComida? = null,
+    val onElegirEjercicio: ((Ejercicio) -> Unit)? = null,
+    // al final para que quien lo pasa como lambda final (`DestinoBanco(tipo, momento) { item -> … }`) siga eligiendo un elemento del banco
     val onElegir: ((ItemBanco) -> Unit)? = null,
 )
 
@@ -97,16 +114,31 @@ internal fun BancoScreen(
     vm: BancoViewModel,
     onSalir: () -> Unit,
     globales: PlatillosViewModel = viewModel(key = "banco-globales"),
+    globalesEjercicios: EjerciciosViewModel = viewModel(key = "banco-globales-ejercicios"),
+    catalogo: CatalogoViewModel = viewModel(key = "banco-catalogo"),
 ) {
     val colores = MaterialTheme.colorScheme
     val estado by vm.estado.collectAsState()
     LaunchedEffect(Unit) { vm.cargar() }
     val elegir = destino.onElegir
     val platillos by globales.estado.collectAsState()
+    val ejerciciosGlobales by globalesEjercicios.estado.collectAsState()
+    val catalogoEstado by catalogo.estado.collectAsState()
     var verGlobales by remember { mutableStateOf(false) }
-    // la pestaña «Globales» solo existe al elegir una comida; administrando el banco propio no hay
-    val enGlobales = verGlobales && elegir != null && destino.tipo == TipoBanco.COMIDA
-    LaunchedEffect(enGlobales) { if (enGlobales) globales.cargarPublicados() }
+    // asignando: se abrió para elegir un ejercicio concreto (el banco propio es de textos y no se puede asignar)
+    val asignando = destino.onElegirEjercicio != null
+    val seleccionando = elegir != null || asignando
+    // la pestaña «Globales» solo existe al elegir (una comida o un ejercicio); administrando el banco propio no hay
+    val enGlobales = seleccionando && (asignando || verGlobales)
+    val enGlobalesComida = enGlobales && destino.tipo == TipoBanco.COMIDA
+    val enGlobalesEjercicio = enGlobales && destino.tipo == TipoBanco.EJERCICIO
+    LaunchedEffect(enGlobalesComida) { if (enGlobalesComida) globales.cargarPublicados() }
+    LaunchedEffect(enGlobalesEjercicio) {
+        if (enGlobalesEjercicio) {
+            globalesEjercicios.cargarPublicados()
+            catalogo.cargarIndice()
+        }
+    }
     var tipo by remember { mutableStateOf(destino.tipo) }
     var filtro by remember { mutableStateOf(destino.momento) }
     var formulario by remember { mutableStateOf<ItemBanco?>(null) }
@@ -130,6 +162,7 @@ internal fun BancoScreen(
         BarraSuperior(
             titulo = stringResource(
                 when {
+                    asignando -> R.string.banco_titulo_asignar
                     elegir == null -> R.string.banco_titulo
                     tipo == TipoBanco.COMIDA -> R.string.banco_titulo_comidas
                     else -> R.string.banco_titulo_ejercicios
@@ -138,7 +171,7 @@ internal fun BancoScreen(
             onVolver = onSalir,
         )
         // administrando se pasa de comidas a ejercicios; eligiendo, el tipo ya lo decidió el campo desde el que se abrió
-        if (elegir == null) {
+        if (!seleccionando) {
             SelectorPestanas(
                 titulos = listOf(R.string.banco_comidas, R.string.banco_ejercicios),
                 seleccionada = tipo.ordinal,
@@ -149,9 +182,9 @@ internal fun BancoScreen(
                 modifier = Modifier.padding(horizontal = MARGEN, vertical = 4.dp),
             )
         }
-        if (elegir != null && tipo == TipoBanco.COMIDA) {
+        if (elegir != null && !asignando) {
             SelectorPestanas(
-                titulos = listOf(R.string.banco_mis_comidas, R.string.banco_globales),
+                titulos = listOf(if (tipo == TipoBanco.COMIDA) R.string.banco_mis_comidas else R.string.banco_mis_ejercicios, R.string.banco_globales),
                 seleccionada = if (verGlobales) 1 else 0,
                 onSeleccionar = { verGlobales = it == 1 },
                 modifier = Modifier.padding(horizontal = MARGEN, vertical = 4.dp),
@@ -168,7 +201,11 @@ internal fun BancoScreen(
         }
         Box(Modifier.weight(1f).fillMaxWidth()) {
             when {
-                enGlobales -> ListaGlobales(platillos, filtro) { elegir?.invoke(it.comoItemDelBanco()) }
+                enGlobalesComida -> ListaGlobales(platillos, filtro) { elegir?.invoke(it.comoItemDelBanco()) }
+                // asignando entrega el ejercicio; en la sesión de texto libre, su texto para el plan
+                enGlobalesEjercicio -> ListaGlobalesEjercicios(ejerciciosGlobales, catalogoEstado) { ejercicio ->
+                    destino.onElegirEjercicio?.invoke(ejercicio) ?: elegir?.invoke(ejercicio.comoItemDelBanco())
+                }
                 estado.cargando -> Column(Modifier.padding(horizontal = MARGEN, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     val descripcion = stringResource(R.string.cargando)
                     repeat(3) {
@@ -214,6 +251,85 @@ internal fun BancoScreen(
                 modifier = Modifier.fillMaxWidth(),
             )
         }
+    }
+}
+
+// Los ejercicios publicados del banco global, con búsqueda y los filtros de Explorar (zona, tipo y nivel): tocar uno lo elige. Primero van los
+// de los entrenadores y debajo los del catálogo en la nube (hasta CATALOGO_VISIBLES; el resto se encuentra buscando). El catálogo no tiene
+// niveles: todo es de principiante, así que otro nivel no lo muestra.
+@Composable
+private fun ListaGlobalesEjercicios(estado: EjerciciosEstado, catalogo: CatalogoEstado, onElegir: (Ejercicio) -> Unit) {
+    val colores = MaterialTheme.colorScheme
+    var busqueda by remember { mutableStateOf("") }
+    var zona by remember { mutableStateOf<ZonaCuerpo?>(null) }
+    var tipo by remember { mutableStateOf<TipoEjercicio?>(null) }
+    var nivel by remember { mutableStateOf<NivelEjercicio?>(null) }
+    val visibles = estado.items.filter { it.coincide(busqueda, zona, tipo, nivel) }
+    val delCatalogo = remember(catalogo.indice, busqueda, zona, tipo, nivel) {
+        if (nivel != null && nivel != NivelEjercicio.PRINCIPIANTE) emptyList()
+        else catalogo.indice.buscar(busqueda, zona, tipo, CATALOGO_VISIBLES).map { it.aEjercicio() }
+    }
+    Column(Modifier.fillMaxSize()) {
+        CampoTexto(
+            etiqueta = stringResource(R.string.explorar_buscar),
+            valor = busqueda,
+            onValorChange = { busqueda = it.take(60) },
+            modifier = Modifier.fillMaxWidth().padding(horizontal = MARGEN, vertical = 4.dp),
+        )
+        FiltroEjercicio(ZonaCuerpo.entries, zona, { zona = it }) { stringResource(it.titulo()) }
+        FiltroEjercicio(TipoEjercicio.entries, tipo, { tipo = it }) { stringResource(it.titulo()) }
+        FiltroEjercicio(NivelEjercicio.entries, nivel, { nivel = it }) { stringResource(it.titulo()) }
+        when {
+            visibles.isEmpty() && delCatalogo.isEmpty() && (estado.cargando || catalogo.cargando) -> Column(Modifier.padding(horizontal = MARGEN, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                repeat(3) { Esqueleto(Modifier.fillMaxWidth().height(107.dp), RoundedCornerShape(34.dp)) }
+            }
+            visibles.isEmpty() && delCatalogo.isEmpty() -> Column(
+                modifier = Modifier.fillMaxSize().padding(horizontal = MARGEN * 2),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+            ) {
+                estado.error?.let { AlertaError(stringResource(it), Modifier.padding(bottom = 16.dp)) }
+                Text(
+                    text = stringResource(R.string.banco_vacio_globales_ejercicios),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = colores.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                )
+            }
+            else -> LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(horizontal = MARGEN, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                // las ids de los entrenadores (Firestore) y las del catálogo (cuatro o cinco dígitos) no se mezclan: cada lista lleva su prefijo
+                items(visibles, key = { "banco-${it.id}" }) { ejercicio -> FilaEjercicio(ejercicio, onClick = { onElegir(ejercicio) }) }
+                items(delCatalogo, key = { "catalogo-${it.id}" }) { ejercicio -> FilaEjercicio(ejercicio, onClick = { onElegir(ejercicio) }) }
+                if (delCatalogo.size >= CATALOGO_VISIBLES) item(key = "catalogo-mas") {
+                    Text(
+                        text = stringResource(R.string.banco_catalogo_mas),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = colores.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                    )
+                }
+            }
+        }
+    }
+}
+
+// Cuántos ejercicios del catálogo muestra la lista de una vez; son miles y se llega al resto buscando o filtrando.
+private const val CATALOGO_VISIBLES = 60
+
+// Una fila de chips con «Todas» y cada opción de un filtro; tocar la elegida la quita.
+@Composable
+private fun <T> FiltroEjercicio(opciones: List<T>, elegida: T?, onElegir: (T?) -> Unit, etiqueta: @Composable (T) -> String) {
+    Row(
+        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = MARGEN, vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        OpcionChip(stringResource(R.string.banco_todas), elegida == null) { onElegir(null) }
+        opciones.forEach { opcion -> OpcionChip(etiqueta(opcion), elegida == opcion) { onElegir(if (elegida == opcion) null else opcion) } }
     }
 }
 

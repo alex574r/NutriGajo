@@ -56,6 +56,7 @@ internal enum class SeccionPlan(
     DATOS(R.string.plan_sec_datos, R.string.plan_datos_ayuda, R.drawable.onboarding_medidas, BiasAlignment(0f, 0.25f)),
     MENSAJE(R.string.plan_sec_mensaje, R.string.plan_mensaje_ayuda, R.drawable.rol_nutriologo, BiasAlignment(0f, -0.55f)),
     METAS(R.string.plan_sec_metas, R.string.plan_metas_ayuda, R.drawable.onboarding_planes, BiasAlignment(0f, -0.1f)),
+    PERIODO(R.string.plan_sec_periodo, R.string.plan_periodo_ayuda, R.drawable.ej_senderismo),
     ALIMENTACION(R.string.plan_sec_alimentacion, R.string.plan_alimentacion_ayuda, R.drawable.onboarding_alimentacion, BiasAlignment(0f, 0.5f)),
     MENU(R.string.plan_sec_menu, R.string.plan_menu_ayuda, R.drawable.inicio_comida, recorte = true),
     EJERCICIO(R.string.plan_sec_ejercicio, R.string.plan_ejercicio_ayuda, R.drawable.ej_pesas),
@@ -153,6 +154,7 @@ internal fun resumen(seccion: SeccionPlan, plan: PlanContenido): String? = when 
     ).joinToString(" · ").ifEmpty { null }
     SeccionPlan.MENSAJE -> plan.mensaje.trim().ifEmpty { null }
     SeccionPlan.METAS -> plan.metas.size.takeIf { it > 0 }?.let { pluralStringResource(R.plurals.plan_resumen_metas, it, it) }
+    SeccionPlan.PERIODO -> plan.duracionDias?.let { pluralStringResource(R.plurals.plan_resumen_periodo, it, it) } ?: stringResource(R.string.plan_resumen_semanal)
     SeccionPlan.ALIMENTACION -> {
         val equivalentes = plan.equivalentes.values.sumOf { it.total }
         listOfNotNull(
@@ -161,8 +163,10 @@ internal fun resumen(seccion: SeccionPlan, plan: PlanContenido): String? = when 
         ).joinToString(" · ").ifEmpty { null }
     }
     SeccionPlan.MENU -> plan.opciones.size.takeIf { it > 0 }?.let { pluralStringResource(R.plurals.plan_resumen_opciones, it, it) }
-    SeccionPlan.EJERCICIO -> plan.sesiones.size.takeIf { it > 0 }?.let { pluralStringResource(R.plurals.plan_resumen_sesiones, it, it) }
-        ?: plan.ejercicioNotas.trim().ifEmpty { null }
+    SeccionPlan.EJERCICIO -> listOfNotNull(
+        plan.sesiones.size.takeIf { it > 0 }?.let { pluralStringResource(R.plurals.plan_resumen_sesiones, it, it) },
+        plan.ejerciciosAsignados.size.takeIf { it > 0 }?.let { pluralStringResource(R.plurals.plan_resumen_asignados, it, it) },
+    ).joinToString(" · ").ifEmpty { plan.ejercicioNotas.trim().ifEmpty { null } }
     SeccionPlan.NOTAS -> plan.notas.trim().ifEmpty { null }
 }
 

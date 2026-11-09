@@ -85,7 +85,23 @@ class RelojRepository(private val contexto: Context) {
             oxigeno = if (permisoOxigeno in concedidos) leer { oxigeno(ahora) } else null,
             faltanPermisos = !concedidos.containsAll(permisos),
             pasosPorDia = if (permisoPasos in concedidos) leer { pasosPorDia() }.orEmpty() else emptyMap(),
+            kcalPorDia = if (permisoCalorias in concedidos) leer { kcalPorDia() }.orEmpty() else emptyMap(),
         )
+    }
+
+    // Las calorías activas de cada uno de los últimos 366 días (el de hoy, parcial), por día de calendario.
+    // ponytail: Health Connect solo guarda lo que su app de reloj le mandó (y sin el permiso de historial, desde 30 días antes de dar el
+    // permiso), así que lo más viejo suele venir vacío; los rangos largos se completan con lo que anotó la app.
+    private suspend fun kcalPorDia(): Map<Long, Int> {
+        val zona = ZoneId.systemDefault()
+        val primero = LocalDate.now(zona).minusDays(365)
+        return cliente.aggregateGroupByPeriod(
+            AggregateGroupByPeriodRequest(
+                setOf(ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL),
+                TimeRangeFilter.between(primero.atStartOfDay(), LocalDateTime.now(zona)),
+                Period.ofDays(1),
+            ),
+        ).associate { it.startTime.toLocalDate().toEpochDay() to (it.result[ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL]?.inKilocalories ?: 0.0).toInt() }
     }
 
     // Los pasos de cada uno de los últimos 60 días (el de hoy, parcial), por día de calendario.
@@ -140,7 +156,15 @@ class RelojRepository(private val contexto: Context) {
             minutos = (r[ExerciseSessionRecord.EXERCISE_DURATION_TOTAL]?.toMinutes() ?: 0L).toInt(),
             pasosAyer = ayer,
             pasosPorHora = if (conPasos) leer { pasosPorHora(inicio, ahora, zona) }.orEmpty() else emptyList(),
+            kcalPorHora = if (permisoCalorias in concedidos) leer { kcalPorHora(inicio, ahora, zona) }.orEmpty() else emptyList(),
         )
+    }
+
+    private suspend fun kcalPorHora(inicio: Instant, ahora: Instant, zona: ZoneId): List<Int> {
+        val porHora = cliente.aggregateGroupByDuration(
+            AggregateGroupByDurationRequest(setOf(ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL), TimeRangeFilter.between(inicio, ahora), Duration.ofHours(1)),
+        ).associate { ZonedDateTime.ofInstant(it.startTime, zona).hour to (it.result[ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL]?.inKilocalories ?: 0.0).toInt() }
+        return (0..23).map { porHora[it] ?: 0 }
     }
 
     private suspend fun pasosPorHora(inicio: Instant, ahora: Instant, zona: ZoneId): List<Int> {

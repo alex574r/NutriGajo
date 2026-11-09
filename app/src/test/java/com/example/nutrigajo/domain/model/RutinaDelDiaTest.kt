@@ -1,6 +1,7 @@
 package com.example.nutrigajo.domain.model
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -89,5 +90,69 @@ class RutinaDelDiaTest {
         assertEquals(150, rutina.kcal)
         // media de 0 y 2 = 1
         assertEquals(NivelEjercicio.INTERMEDIO, rutina.nivel)
+    }
+
+    private fun asig(dia: Int, e: Ejercicio, minutos: Int? = null, series: Int? = 3) =
+        EjercicioAsignado(dia = dia, id = e.id, titulo = e.titulo, series = series, minutos = minutos)
+
+    private fun resolver(vararg lista: Ejercicio): (EjercicioAsignado) -> Ejercicio? {
+        val porId = lista.associateBy { it.id }
+        return { porId[it.id] }
+    }
+
+    @Test
+    fun un_asignado_del_dia_arma_la_rutina_y_el_dia_sin_asignados_no() {
+        val a = ej(ZonaCuerpo.PIERNAS, TipoEjercicio.FUERZA)
+        val asignados = listOf(asig(1, a))
+        val rutina = rutinaAsignada(lunes, asignados, resolver(a))!!
+        assertTrue(rutina.asignada)
+        assertEquals(EnfoqueDia.de(DayOfWeek.MONDAY), rutina.enfoque)
+        assertEquals(listOf(a.id), rutina.ejercicios.map { it.id })
+        assertNull(rutinaAsignada(lunes.plusDays(1), asignados, resolver(a)))
+    }
+
+    @Test
+    fun el_domingo_es_el_dia_siete_y_no_se_mezcla_con_el_lunes() {
+        val a = ej(ZonaCuerpo.PIERNAS, TipoEjercicio.FUERZA)
+        val b = ej(ZonaCuerpo.PECHO, TipoEjercicio.FUERZA)
+        val asignados = listOf(asig(7, a), asig(1, b))
+        val domingo = lunes.plusDays(6)
+        assertEquals(listOf(a.id), rutinaAsignada(domingo, asignados, resolver(a, b))!!.ejercicios.map { it.id })
+        assertEquals(listOf(b.id), rutinaAsignada(lunes, asignados, resolver(a, b))!!.ejercicios.map { it.id })
+    }
+
+    @Test
+    fun un_asignado_que_ya_no_se_resuelve_se_salta_y_sin_ninguno_no_hay_rutina() {
+        val a = ej(ZonaCuerpo.PIERNAS, TipoEjercicio.FUERZA)
+        val retirado = ej(ZonaCuerpo.PECHO, TipoEjercicio.FUERZA)
+        val asignados = listOf(asig(1, retirado), asig(1, a))
+        assertEquals(listOf(a.id), rutinaAsignada(lunes, asignados, resolver(a))!!.ejercicios.map { it.id })
+        assertNull(rutinaAsignada(lunes, listOf(asig(1, retirado)), resolver(a)))
+    }
+
+    @Test
+    fun la_rutina_asignada_conserva_el_orden_del_plan() {
+        val a = ej(ZonaCuerpo.PIERNAS, TipoEjercicio.FUERZA)
+        val b = ej(ZonaCuerpo.PECHO, TipoEjercicio.FUERZA)
+        val c = ej(ZonaCuerpo.ESPALDA, TipoEjercicio.FUERZA)
+        val rutina = rutinaAsignada(lunes, listOf(asig(1, c), asig(1, a), asig(1, b)), resolver(a, b, c))!!
+        assertEquals(listOf(c.id, a.id, b.id), rutina.ejercicios.map { it.id })
+    }
+
+    @Test
+    fun los_minutos_asignados_reemplazan_la_duracion_y_escalan_las_kcal() {
+        // 10 min y 50 kcal en el banco; asignado 20 min: 100 kcal
+        val a = ej(ZonaCuerpo.PIERNAS, TipoEjercicio.FUERZA, minutos = 10)
+        val rutina = rutinaAsignada(lunes, listOf(asig(1, a, minutos = 20)), resolver(a))!!
+        assertEquals(20, rutina.ejercicios.single().duracionMin)
+        assertEquals(100, rutina.ejercicios.single().kcal)
+        // sin minutos, 2 por serie: 3 series = 6 min
+        val porSeries = rutinaAsignada(lunes, listOf(asig(1, a, series = 3)), resolver(a))!!
+        assertEquals(6, porSeries.ejercicios.single().duracionMin)
+    }
+
+    @Test
+    fun la_rutina_al_azar_no_se_marca_como_asignada() {
+        assertFalse(rutinaDelDia(lunes, banco)!!.asignada)
     }
 }

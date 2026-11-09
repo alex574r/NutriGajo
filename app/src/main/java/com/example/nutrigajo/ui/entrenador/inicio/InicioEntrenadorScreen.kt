@@ -138,8 +138,8 @@ fun InicioEntrenadorScreen(
             inicial = enEdicion,
             guardando = ejercicios.guardando,
             error = ejercicios.error,
-            onGuardar = { ejercicio, enviar, foto ->
-                vm.guardar(ejercicio, perfil.nombre, enviar, foto, contexto.contentResolver, contexto.cacheDir) { bien ->
+            onGuardar = { ejercicio, enviar, foto, clip ->
+                vm.guardar(ejercicio, perfil.nombre, enviar, foto, clip, contexto.contentResolver, contexto.cacheDir) { bien ->
                     if (bien) {
                         editando = null
                         abiertoId = null

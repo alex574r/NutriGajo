@@ -12,6 +12,7 @@ import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -41,6 +42,8 @@ import com.example.nutrigajo.R
 // con el icono en un cuadro gris); con `onClick` es un ajuste (icono en un cuadro naranja suave, flecha en un círculo y un
 // resorte que la encoge al pulsarla), y `destructiva` la tiñe de rojo como la acción de borrar del diseño. Con `activa` es un
 // interruptor: tocar la fila lo cambia y, en vez de la flecha, lleva el Switch. `descripcion` va bajo el título.
+// `plana` es para las filas que van dentro de una TarjetaAjustes: sin fondo ni contorno propios (el contenedor es la tarjeta), con el icono en un
+// cuadro blanco, la flecha sola y sin el resorte de pulsación.
 @Composable
 fun FilaAjuste(
     @DrawableRes icono: Int,
@@ -52,19 +55,20 @@ fun FilaAjuste(
     activa: Boolean? = null,
     onActivaChange: ((Boolean) -> Unit)? = null,
     onClick: (() -> Unit)? = null,
+    plana: Boolean = false,
 ) {
     val colores = MaterialTheme.colorScheme
     val accion = onClick ?: if (activa != null && onActivaChange != null) ({ onActivaChange(!activa) }) else null
-    val forma = RoundedCornerShape(22.dp)
+    val forma = RoundedCornerShape(if (plana) 18.dp else 22.dp)
     val interaccion = remember { MutableInteractionSource() }
     val pulsada by interaccion.collectIsPressedAsState()
     val escala by animateFloatAsState(
-        targetValue = if (pulsada) 0.97f else 1f,
+        targetValue = if (pulsada && !plana) 0.97f else 1f,
         animationSpec = spring(dampingRatio = 0.6f, stiffness = 500f),
         label = "pulsacion",
     )
     val fondoIcono = when {
-        destructiva -> colores.background
+        destructiva || plana -> colores.background
         accion != null -> colores.primaryContainer
         else -> colores.surfaceVariant
     }
@@ -81,8 +85,15 @@ fun FilaAjuste(
                 scaleY = escala
             }
             .clip(forma)
-            .background(if (destructiva) colores.errorContainer else colores.background)
-            .border(1.dp, if (destructiva) colores.error.copy(alpha = 0.35f) else colores.outlineVariant, forma)
+            .then(
+                if (plana) {
+                    Modifier
+                } else {
+                    Modifier
+                        .background(if (destructiva) colores.errorContainer else colores.background)
+                        .border(1.dp, if (destructiva) colores.error.copy(alpha = 0.35f) else colores.outlineVariant, forma)
+                },
+            )
             .then(
                 if (accion != null) {
                     Modifier.clickable(
@@ -95,7 +106,7 @@ fun FilaAjuste(
                     Modifier
                 },
             )
-            .padding(horizontal = 14.dp, vertical = 12.dp),
+            .padding(horizontal = if (plana) 10.dp else 14.dp, vertical = if (plana) 8.dp else 12.dp),
         horizontalArrangement = Arrangement.spacedBy(14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -124,15 +135,36 @@ fun FilaAjuste(
                 colors = SwitchDefaults.colors(
                     checkedTrackColor = colores.primary,
                     checkedThumbColor = Color.White,
-                    uncheckedTrackColor = colores.surfaceVariant,
+                    uncheckedTrackColor = if (plana) colores.background else colores.surfaceVariant,
                     uncheckedThumbColor = colores.outline,
                     uncheckedBorderColor = colores.outline,
                 ),
             )
         } else if (onClick != null && !destructiva) {
-            Box(Modifier.size(32.dp).clip(CircleShape).background(colores.surfaceVariant), contentAlignment = Alignment.Center) {
-                Icon(painterResource(R.drawable.ic_arrow_forward), contentDescription = null, modifier = Modifier.size(16.dp), tint = colores.onBackground)
+            if (plana) {
+                // dentro de la tarjeta la flecha va sola, sin círculo
+                Icon(painterResource(R.drawable.ic_arrow_forward), contentDescription = null, modifier = Modifier.size(16.dp), tint = colores.onSurfaceVariant)
+            } else {
+                Box(Modifier.size(32.dp).clip(CircleShape).background(colores.surfaceVariant), contentAlignment = Alignment.Center) {
+                    Icon(painterResource(R.drawable.ic_arrow_forward), contentDescription = null, modifier = Modifier.size(16.dp), tint = colores.onBackground)
+                }
             }
         }
     }
+}
+
+// Un grupo de opciones en una sola tarjeta gris, sin contorno: las filas (`FilaAjuste(plana = true)`) van una tras otra dentro de ella, como en los
+// ajustes de iOS. `destructiva` la tiñe de rojo para las acciones de salir y borrar.
+@Composable
+fun TarjetaAjustes(modifier: Modifier = Modifier, destructiva: Boolean = false, contenido: @Composable ColumnScope.() -> Unit) {
+    val colores = MaterialTheme.colorScheme
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(28.dp))
+            .background(if (destructiva) colores.errorContainer else colores.surfaceVariant)
+            .padding(6.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp),
+        content = contenido,
+    )
 }

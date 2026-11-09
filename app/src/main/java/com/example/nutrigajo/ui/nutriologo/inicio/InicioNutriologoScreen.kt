@@ -10,6 +10,10 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.Text
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -40,6 +44,8 @@ import com.example.nutrigajo.ui.nutriologo.plan.PlanScreen
 import com.example.nutrigajo.ui.nutriologo.ubicacion.UbicacionScreen
 import com.example.nutrigajo.ui.nutriologo.verificacion.VerificacionScreen
 import com.example.nutrigajo.ui.nutriologo.verificacion.VerificacionViewModel
+import com.example.nutrigajo.ui.nutriologo.citas.NuevaCitaSheet
+import com.example.nutrigajo.ui.nutriologo.citas.NuevaCitaViewModel
 import com.example.nutrigajo.ui.shared.agenda.AgendaScreen
 import com.example.nutrigajo.ui.shared.citas.CitasViewModel
 import com.example.nutrigajo.ui.shared.chat.ChatScreen
@@ -63,6 +69,7 @@ fun InicioNutriologoScreen(
     // clave propia: dos ViewModels con la misma clave se pisarían
     verificacionVm: VerificacionViewModel = viewModel(key = "verificacion-${perfil.uid}"),
     citasVm: CitasViewModel = viewModel(key = "citas-${perfil.uid}"),
+    nuevaCitaVm: NuevaCitaViewModel = viewModel(key = "nueva-cita-${perfil.uid}"),
     // se tocó el aviso de un mensaje nuevo (el id del paciente de la conversación): se abre ese chat
     abrirChat: String? = null,
     onChatConsumido: () -> Unit = {},
@@ -71,6 +78,7 @@ fun InicioNutriologoScreen(
     val estado by vm.estado.collectAsState()
     val metasEstado by metasVm.estado.collectAsState()
     val citas by citasVm.estado.collectAsState()
+    val nuevaCita by nuevaCitaVm.estado.collectAsState()
     val fotosPacientes by vm.fotosPacientes.collectAsState()
     val pacientesConPlan by vm.pacientesConPlan.collectAsState()
     // las fotos de los pacientes se piden cada vez que la lista cambia (al abrir y al actualizar)
@@ -90,6 +98,8 @@ fun InicioNutriologoScreen(
     var chatAbierto by rememberSaveable { mutableStateOf(false) }
     // las metas diarias del paciente abierto, también desde su expediente
     var metasAbiertas by rememberSaveable { mutableStateOf(false) }
+    // la confirmación de dar de baja al paciente abierto
+    var confirmandoBaja by rememberSaveable { mutableStateOf(false) }
     // sube al volver del chat para que los puntos de «sin leer» se calculen de nuevo
     var chatVersion by remember { mutableIntStateOf(0) }
     val contexto = LocalContext.current
@@ -151,6 +161,7 @@ fun InicioNutriologoScreen(
                 onActualizar = { citasVm.cargar(Rol.NUTRIOLOGO) },
                 onCambiar = citasVm::cambiarEstado,
                 onVolver = { enCitas = false },
+                onNuevaCita = if (aprobada) ({ nuevaCitaVm.abrir(perfil, null) }) else null,
             )
         }
         // el chat con el paciente; al volver se leen otra vez los pacientes, que traen su último mensaje
@@ -198,6 +209,11 @@ fun InicioNutriologoScreen(
             onMetas = {
                 metasVm.limpiar()
                 metasAbiertas = true
+            },
+            onCita = if (aprobada) ({ nuevaCitaVm.abrir(perfil, abierto) }) else null,
+            onDarDeBaja = {
+                vm.limpiarErrorBaja()
+                confirmandoBaja = true
             },
             chatSinLeer = chatVersion.let { abierto.ultimoMensaje.sinLeer(perfil.uid, chatVistoHasta(contexto, perfil.uid, abierto.id)) },
         )
@@ -294,4 +310,50 @@ fun InicioNutriologoScreen(
             }
         }
     }
+
+    // dar de baja a un paciente cierra su vínculo (no lo borra); pide confirmación y dice qué pasa con sus datos
+    if (confirmandoBaja && abierto != null) {
+        val rojo = MaterialTheme.colorScheme.error
+        AlertDialog(
+            onDismissRequest = { if (!estado.dandoDeBaja) confirmandoBaja = false },
+            title = { Text(stringResource(R.string.baja_paciente_dialogo_titulo, abierto.nombre)) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(stringResource(R.string.baja_paciente_dialogo_texto, abierto.nombre.substringBefore(' ')))
+                    estado.errorBaja?.let { Text(stringResource(it), color = rojo) }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        vm.darDeBaja(abierto, perfil.uid) {
+                            confirmandoBaja = false
+                            pacienteAbierto = null
+                        }
+                    },
+                    enabled = !estado.dandoDeBaja,
+                ) { Text(stringResource(R.string.baja_paciente_confirmar), color = rojo) }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmandoBaja = false }, enabled = !estado.dandoDeBaja) { Text(stringResource(R.string.verificacion_cancelar)) }
+            },
+        )
+    }
+
+    // la hoja para agendar una cita a un paciente: se abre desde su expediente o desde la agenda y va encima de lo que haya; al cerrarla
+    // la agenda vuelve a leer las citas
+    NuevaCitaSheet(
+        estado = nuevaCita,
+        pacientes = estado.pacientes,
+        onPaciente = nuevaCitaVm::elegirPaciente,
+        onDia = nuevaCitaVm::elegirDia,
+        onHora = nuevaCitaVm::elegirHora,
+        onNota = nuevaCitaVm::escribirNota,
+        onAgendar = nuevaCitaVm::agendar,
+        onCerrar = {
+            val agendada = nuevaCita.agendada
+            nuevaCitaVm.cerrar()
+            if (agendada) citasVm.cargar(Rol.NUTRIOLOGO)
+        },
+    )
 }

@@ -154,6 +154,29 @@ fun List<Platillo>.paraPaciente(alergias: List<String>, dieta: Dieta?, expedient
     return if (preferidas.isEmpty()) visibles else visibles.sortedBy { p -> if (p.etiquetas.any { it in preferidas }) 0 else 1 }
 }
 
+// El grupo de alimentos cuya foto (de las que ya trae la app) se le pone a un platillo sin foto propia: el del primer alimento que
+// nombra su nombre o, si el nombre no nombra ninguno, el de su primer ingrediente que se reconoce; null si no se reconoce ninguno.
+// ponytail: coincidencia por palabra con unas cuantas palabras por grupo (el orden del nombre decide: «Avena con fruta» es cereal); lo que
+// no se reconoce se ve con la foto genérica de comida. Si algún platillo cae en un grupo raro, se añade su palabra aquí.
+fun Platillo.grupoParaFoto(): GrupoAlimento? = grupoDelTexto(nombre) ?: grupoDelTexto(ingredientes.joinToString(" "))
+
+private val ALIMENTOS_POR_GRUPO: Map<GrupoAlimento, Set<String>> = mapOf(
+    GrupoAlimento.ANIMAL to setOf("pollo", "pechuga", "pescado", "huevo", "carne", "res", "cerdo", "atun", "salmon", "jamon", "pavo", "tilapia", "filete", "bistec", "camaron", "marisco"),
+    GrupoAlimento.VERDURAS to setOf("ensalada", "verdura", "lechuga", "espinaca", "brocoli", "calabacita", "calabaza", "zanahoria", "jitomate", "tomate", "pepino", "nopal", "apio", "cebolla", "pimiento", "coliflor", "champinon", "ejote", "chayote", "acelga", "col"),
+    GrupoAlimento.FRUTAS to setOf("fruta", "manzana", "platano", "naranja", "fresa", "papaya", "mango", "sandia", "melon", "pina", "uva", "pera", "durazno", "limon", "kiwi", "granada", "guayaba", "mandarina", "arandano"),
+    GrupoAlimento.CEREALES to setOf("avena", "arroz", "pan", "tortilla", "pasta", "cereal", "tostada", "galleta", "granola", "quinoa", "amaranto", "elote", "papa", "camote", "sandwich"),
+    GrupoAlimento.LEGUMINOSAS to setOf("frijol", "lenteja", "garbanzo", "haba", "soya", "edamame", "hummus"),
+    GrupoAlimento.LACTEOS to setOf("leche", "queso", "yogur", "yogurt", "requeson", "kefir"),
+    GrupoAlimento.GRASAS_PROTEINA to setOf("nuez", "almendra", "cacahuate", "semilla", "pistache", "pistacho", "chia"),
+    GrupoAlimento.GRASAS to setOf("aguacate", "aceite", "mantequilla", "aceituna"),
+)
+
+private fun grupoDelTexto(texto: String): GrupoAlimento? =
+    texto.sinAcentos().split(NO_LETRAS).filter { it.isNotEmpty() }.firstNotNullOfOrNull { palabra ->
+        val formas = variantes(palabra)
+        ALIMENTOS_POR_GRUPO.entries.firstOrNull { (_, claves) -> claves.any { it in formas } }?.key
+    }
+
 private val MARCAS = Regex("\\p{Mn}+")
 private val NO_LETRAS = Regex("[^a-z0-9ñ]+")
 
@@ -196,4 +219,4 @@ private fun terminosDe(alergia: String): List<String> {
 private fun nombra(texto: String, formas: List<Set<String>>, termino: String): Boolean =
     if (' ' in termino) termino in texto else variantes(termino).let { v -> formas.any { it.any(v::contains) } }
 
-private fun String.sinAcentos(): String = Normalizer.normalize(this, Normalizer.Form.NFD).replace(MARCAS, "").lowercase()
+internal fun String.sinAcentos(): String = Normalizer.normalize(this, Normalizer.Form.NFD).replace(MARCAS, "").lowercase()

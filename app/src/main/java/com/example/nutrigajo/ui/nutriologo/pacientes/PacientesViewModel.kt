@@ -4,11 +4,16 @@ import android.graphics.Bitmap
 import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.nutrigajo.data.repository.AvisoVinculoRepository
+import com.example.nutrigajo.data.repository.CitasRepository
 import com.example.nutrigajo.data.repository.FotoPerfilRepository
 import com.example.nutrigajo.data.repository.PlanesRepository
 import com.example.nutrigajo.data.repository.VinculacionRepository
+import com.example.nutrigajo.domain.model.CerradoPor
 import com.example.nutrigajo.domain.model.CodigoVinculacion
 import com.example.nutrigajo.domain.model.PacienteResumen
+import com.example.nutrigajo.domain.model.Rol
+import com.example.nutrigajo.domain.model.citasVigentesEntre
 import com.example.nutrigajo.ui.shared.mensajeDeFirestore
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -24,6 +29,9 @@ data class PacientesEstado(
     val codigo: CodigoVinculacion? = null,
     val pacientes: List<PacienteResumen> = emptyList(),
     @param:StringRes val error: Int? = null,
+    // se está dando de baja a un paciente (cerrando su vínculo) y, si falló, por qué
+    val dandoDeBaja: Boolean = false,
+    @param:StringRes val errorBaja: Int? = null,
 )
 
 // ponytail: repositorios por defecto en el constructor; pasan a inyección (Hilt) cuando haya más ViewModels.
@@ -31,6 +39,8 @@ class PacientesViewModel(
     private val repo: VinculacionRepository = VinculacionRepository(),
     private val fotos: FotoPerfilRepository = FotoPerfilRepository(),
     private val planes: PlanesRepository = PlanesRepository(),
+    private val citas: CitasRepository = CitasRepository(),
+    private val aviso: AvisoVinculoRepository = AvisoVinculoRepository(),
 ) : ViewModel() {
     private val _estado = MutableStateFlow(PacientesEstado())
     val estado: StateFlow<PacientesEstado> = _estado.asStateFlow()
@@ -86,6 +96,34 @@ class PacientesViewModel(
             }
         }
     }
+
+    // Da de baja a un paciente: cierra su vínculo (no lo borra: el registro queda cerrado, solo para leer) junto con las citas vigentes entre
+    // los dos, en un lote, y le avisa. Sale de la lista y `onListo` deja que la pantalla cierre su expediente. Si falla, sigue en la lista.
+    fun darDeBaja(paciente: PacienteResumen, nutriologoId: String, onListo: () -> Unit) {
+        if (_estado.value.dandoDeBaja) return
+        _estado.update { it.copy(dandoDeBaja = true, errorBaja = null) }
+        viewModelScope.launch {
+            try {
+                val vigentes = citasVigentesEntre(citas.citas(Rol.NUTRIOLOGO), nutriologoId, paciente.usuarioId, System.currentTimeMillis())
+                repo.cerrarVinculo(paciente.id, CerradoPor.NUTRIOLOGO, vigentes)
+                // el aviso es de cortesía: si no sale, el vínculo ya quedó cerrado
+                try {
+                    aviso.avisar(paciente.id)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (_: Exception) {
+                }
+                _estado.update { it.copy(dandoDeBaja = false, pacientes = it.pacientes.filter { p -> p.id != paciente.id }) }
+                onListo()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _estado.update { it.copy(dandoDeBaja = false, errorBaja = mensajeDeFirestore(e)) }
+            }
+        }
+    }
+
+    fun limpiarErrorBaja() = _estado.update { if (it.errorBaja == null) it else it.copy(errorBaja = null) }
 
     fun generarCodigo(nutriologoNombre: String) {
         if (_estado.value.generando) return

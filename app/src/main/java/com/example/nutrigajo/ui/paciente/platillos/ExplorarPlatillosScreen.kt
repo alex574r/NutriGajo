@@ -44,6 +44,8 @@ import com.example.nutrigajo.ui.components.CampoTexto
 import com.example.nutrigajo.ui.components.Esqueleto
 import com.example.nutrigajo.ui.nutriologo.plan.BarraSuperior
 import com.example.nutrigajo.ui.nutriologo.plan.titulo
+import com.example.nutrigajo.ui.paciente.inicio.MenuDeHoy
+import com.example.nutrigajo.ui.paciente.inicio.TarjetaMenuDeHoy
 import com.example.nutrigajo.ui.shared.ejercicios.GrupoOpciones
 import com.example.nutrigajo.ui.shared.platillos.DetallePlatillo
 import com.example.nutrigajo.ui.shared.platillos.FilaPlatillo
@@ -68,6 +70,8 @@ fun ExplorarPlatillosScreen(
     expedienteListo: Boolean = true,
     expedienteCargando: Boolean = false,
     onActualizarExpediente: () -> Unit = {},
+    // en un plan con duración, el menú que toca hoy: va arriba de todo, antes de la búsqueda
+    menuDeHoy: MenuDeHoy? = null,
     // clave propia: la lista de publicados es de cualquiera, no del usuario
     vm: PlatillosViewModel = viewModel(key = "explorar-platillos"),
 ) {
@@ -109,6 +113,7 @@ fun ExplorarPlatillosScreen(
                 contentPadding = PaddingValues(bottom = 24.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
+                menuDeHoy?.let { menu -> item { TarjetaMenuDeHoy(menu) } }
                 item {
                     Column(Modifier.padding(horizontal = MARGEN - ANILLO_FOCO), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         CampoTexto(

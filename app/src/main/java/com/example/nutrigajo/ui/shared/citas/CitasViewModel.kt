@@ -57,7 +57,8 @@ class CitasViewModel(
         viewModelScope.launch {
             val error = try {
                 repo.cambiarEstado(cita, estado)
-                if (estado == EstadoCita.CONFIRMADA) avisarAlPaciente(cita)
+                // al paciente se le avisa de lo que decide su nutriólogo: la confirmación y la cancelación (si cancela el paciente, no)
+                if (estado == EstadoCita.CONFIRMADA || (estado == EstadoCita.CANCELADA && rol == Rol.NUTRIOLOGO)) avisarAlPaciente(cita)
                 null
             } catch (e: CancellationException) {
                 throw e
@@ -76,12 +77,12 @@ class CitasViewModel(
         }
     }
 
-    // El push al paciente va aparte de la confirmación: no hace esperar al nutriólogo y, si el Worker falla, la cita queda confirmada igual.
+    // El push al paciente va aparte del cambio: no hace esperar al nutriólogo y, si el Worker falla, la cita queda como quedó.
     // ponytail: sin reintento; el paciente la verá en «Mis citas» aunque no le llegue el aviso.
     private fun avisarAlPaciente(cita: Cita) {
         viewModelScope.launch {
             try {
-                avisos.confirmada(cita.id)
+                avisos.avisar(cita.id)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
