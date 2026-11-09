@@ -79,8 +79,8 @@ service cloud.firestore {
     // ponytail: las reglas no recorren una lista, así que el largo de cada paso lo comprueba la app (tope práctico: 1 MiB por documento).
     function ejercicioValido(d) {
       return d.keys().hasOnly(['autorId', 'autorNombre', 'titulo', 'descripcion', 'zona', 'tipo', 'nivel', 'equipo', 'duracionMin', 'pasos',
-                               'consejos', 'contraindicaciones', 'kcal', 'fotoVersion', 'estado', 'motivoRechazo', 'creadoEn', 'actualizadoEn',
-                               'publicadoEn', 'revisadoPor', 'revisadoEn'])
+                               'consejos', 'contraindicaciones', 'kcal', 'fotoVersion', 'clipVersion', 'estado', 'motivoRechazo', 'creadoEn',
+                               'actualizadoEn', 'publicadoEn', 'revisadoPor', 'revisadoEn'])
         && d.keys().hasAll(['autorId', 'autorNombre', 'titulo', 'descripcion', 'zona', 'tipo', 'nivel', 'equipo', 'duracionMin', 'pasos',
                             'consejos', 'contraindicaciones', 'kcal', 'estado', 'creadoEn', 'actualizadoEn'])
         && d.autorNombre is string && d.autorNombre.size() >= 1 && d.autorNombre.size() <= 120
@@ -96,6 +96,7 @@ service cloud.firestore {
         && d.contraindicaciones is string && d.contraindicaciones.size() <= 400
         && d.kcal is int && d.kcal >= 0 && d.kcal <= 2000
         && (!('fotoVersion' in d.keys()) || d.fotoVersion is int)
+        && (!('clipVersion' in d.keys()) || d.clipVersion is int)
         && d.estado in ['BORRADOR', 'EN_REVISION', 'PUBLICADO', 'RECHAZADO', 'RETIRADO']
         && d.creadoEn is int
         && d.actualizadoEn is int
@@ -528,7 +529,7 @@ service cloud.firestore {
     }
 
     // Hora ya pedida a un nutriólogo (el id es el inicio en milisegundos). La ve cualquier sesión para no ofrecerla;
-    // no lleva datos del paciente. La crea el paciente en el mismo lote que su cita y, al ser el id el inicio, dos
+    // no lleva datos del paciente. La crea el paciente en el mismo lote que su cita (o el nutriólogo, con la que agenda) y, al ser el id el inicio, dos
     // pacientes no pueden tomar la misma hora: la segunda creación sería una actualización y se rechaza.
     // La libera el lote que rechaza o cancela la cita, o el que la cambia a otra hora (reagendar).
     match /directorio/{nutriologoId}/ocupados/{inicio} {
@@ -544,9 +545,17 @@ service cloud.firestore {
         && (!exists(citaRef(request.resource.data.citaId))
             || get(citaRef(request.resource.data.citaId)).data.inicio != request.resource.data.inicio)
         && getAfter(citaRef(request.resource.data.citaId)).data.nutriologoId == nutriologoId
-        && getAfter(citaRef(request.resource.data.citaId)).data.usuarioId == request.auth.uid
         && getAfter(citaRef(request.resource.data.citaId)).data.inicio == request.resource.data.inicio
-        && getAfter(citaRef(request.resource.data.citaId)).data.estado == 'PENDIENTE';
+        && (
+          // la pide el paciente: la cita queda pendiente
+          (getAfter(citaRef(request.resource.data.citaId)).data.usuarioId == request.auth.uid
+            && getAfter(citaRef(request.resource.data.citaId)).data.estado == 'PENDIENTE')
+          // la agenda el nutriólogo: es suya, nueva, de origen NUTRIOLOGO y ya confirmada
+          || (nutriologoId == request.auth.uid
+            && rolDe(request.auth.uid) == 'NUTRIOLOGO'
+            && !exists(citaRef(request.resource.data.citaId))
+            && getAfter(citaRef(request.resource.data.citaId)).data.origen == 'NUTRIOLOGO'
+            && getAfter(citaRef(request.resource.data.citaId)).data.estado == 'CONFIRMADA'));
 
       allow update: if false;
 
@@ -582,7 +591,7 @@ service cloud.firestore {
                 || get(citaRef(resource.data.citaId)).data.inicio < request.time.toMillis()));
     }
 
-    // Cita que un paciente pide a un nutriólogo del directorio. La ven los dos. El paciente la crea pendiente, con su
+    // Cita entre un paciente y un nutriólogo del directorio. La ven los dos. El paciente la pide: la crea pendiente, con su
     // nombre y el del consultorio tal como están registrados; el nutriólogo confirma o rechaza lo pendiente y cancela lo
     // confirmado; el paciente cancela la suya o la reagenda a otra hora. Solo puede tener una vigente (citasActivas/{uid}).
     match /citas/{citaId} {
@@ -609,6 +618,33 @@ service cloud.firestore {
         // una sola cita vigente: sin candado (o con uno vencido) y poniendo el de esta cita en el mismo lote
         && candadoLibre(request.auth.uid)
         && getAfter(candadoRef(request.auth.uid)).data.citaId == citaId;
+
+      // La cita que agenda el nutriólogo a un paciente suyo: nace confirmada y con su origen, el registro del paciente (que tiene que ser
+      // suyo y de esa cuenta), el nombre tal como está registrado y, si quiere, una nota de hasta 120 caracteres. No usa el candado
+      // citasActivas (que frena a los pacientes que piden horas sin parar) y la hora se reserva en el mismo lote.
+      allow create: if request.auth != null
+        && rolDe(request.auth.uid) == 'NUTRIOLOGO'
+        && request.resource.data.keys().hasOnly(['nutriologoId', 'nutriologoNombre', 'usuarioId', 'pacienteNombre', 'pacienteId',
+                                                  'inicio', 'estado', 'origen', 'creadaEn', 'actualizadaEn', 'nota'])
+        && request.resource.data.keys().hasAll(['nutriologoId', 'nutriologoNombre', 'usuarioId', 'pacienteNombre', 'pacienteId',
+                                                 'inicio', 'estado', 'origen', 'creadaEn', 'actualizadaEn'])
+        && request.resource.data.nutriologoId == request.auth.uid
+        && request.resource.data.nutriologoNombre == get(directorioRef(request.auth.uid)).data.nombre
+        && request.resource.data.pacienteId is string
+        && get(/databases/$(database)/documents/pacientes/$(request.resource.data.pacienteId)).data.nutriologoId == request.auth.uid
+        && get(/databases/$(database)/documents/pacientes/$(request.resource.data.pacienteId)).data.usuarioId == request.resource.data.usuarioId
+        && get(/databases/$(database)/documents/pacientes/$(request.resource.data.pacienteId)).data.nombre == request.resource.data.pacienteNombre
+        && request.resource.data.estado == 'CONFIRMADA'
+        && request.resource.data.origen == 'NUTRIOLOGO'
+        && textoOpcional(request.resource.data, 'nota', 120)
+        && request.resource.data.inicio is int
+        && request.resource.data.inicio > request.time.toMillis()
+        && request.resource.data.inicio <= request.time.toMillis() + 5184000000
+        && request.resource.data.inicio % 900000 == 0
+        && request.resource.data.creadaEn is int
+        && request.resource.data.actualizadaEn is int
+        && existsAfter(/databases/$(database)/documents/directorio/$(request.auth.uid)/ocupados/$(string(request.resource.data.inicio)))
+        && getAfter(/databases/$(database)/documents/directorio/$(request.auth.uid)/ocupados/$(string(request.resource.data.inicio))).data.citaId == citaId;
 
       allow update: if request.auth != null
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['estado', 'actualizadaEn'])
@@ -678,17 +714,22 @@ service cloud.firestore {
         && rolDe(request.auth.uid) == 'PACIENTE'
         && request.resource.data.keys().hasOnly(['nutriologoId', 'nutriologoNombre', 'usuarioId', 'nombre',
                                                   'correoVinculacion', 'codigoVinculacion', 'activo',
-                                                  'fechaAlta', 'ultimaModificacion'])
+                                                  'fechaAlta', 'ultimaModificacion', 'expediente'])
         && request.resource.data.usuarioId == request.auth.uid
         && request.resource.data.correoVinculacion.lower() == request.auth.token.email.lower()
         && request.resource.data.activo == true
+        // al cambiar de nutriólogo el paciente puede traer su expediente (solo ese mapa), firmado por él
+        && (!request.resource.data.keys().hasAny(['expediente'])
+            || (expedienteValido(request.resource.data.expediente) && request.resource.data.expediente.actualizadoPor == 'PACIENTE'))
         && request.resource.data.nutriologoId == codigoAntes(request.resource.data.codigoVinculacion).nutriologoId
         && codigoAntes(request.resource.data.codigoVinculacion).usado == false
         && codigoDespues(request.resource.data.codigoVinculacion).usado == true
         && codigoDespues(request.resource.data.codigoVinculacion).canjeadoPor == request.auth.uid;
 
       // Expediente: lo escriben el paciente y su nutriólogo, cada uno firmando con su rol; no se toca nada más del registro.
+      // Un vínculo cerrado (activo == false) ya no se escribe: los registros de antes no traen `activo` y cuentan como activos.
       allow update: if request.auth != null
+        && resource.data.get('activo', true) == true
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['expediente', 'ultimaModificacion'])
         && expedienteValido(request.resource.data.expediente)
         && ((resource.data.usuarioId == request.auth.uid && request.resource.data.expediente.actualizadoPor == 'PACIENTE')
@@ -697,6 +738,7 @@ service cloud.firestore {
       // Chat: el último mensaje queda resumido en el registro (autor, hora y un trozo del texto) para pintar el punto de «sin leer» y
       // la vista previa sin leer la conversación. Lo escribe quien envía el mensaje, en el mismo lote que el mensaje; no abre nada más.
       allow update: if request.auth != null
+        && resource.data.get('activo', true) == true
         && (resource.data.nutriologoId == request.auth.uid || resource.data.usuarioId == request.auth.uid)
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['ultimoMensaje'])
         && request.resource.data.ultimoMensaje.keys().hasOnly(['autorId', 'enviadoEn', 'texto', 'foto'])
@@ -709,12 +751,23 @@ service cloud.firestore {
       // Metas diarias: las fija el nutriólogo del paciente y el propio paciente puede ajustarlas, cada uno firmando con su rol;
       // la última escritura manda y `por` dice de quién fue. No se toca nada más del registro.
       allow update: if request.auth != null
+        && resource.data.get('activo', true) == true
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['metas'])
         && metasValidas(request.resource.data.metas)
         && ((resource.data.usuarioId == request.auth.uid && request.resource.data.metas.por == 'PACIENTE')
             || (resource.data.nutriologoId == request.auth.uid && request.resource.data.metas.por == 'NUTRIOLOGO'));
 
-      // Sin baja por ahora (llega con el archivado).
+      // Cerrar el vínculo (archivarlo): lo hace el paciente (`PACIENTE`) o su nutriólogo (`NUTRIOLOGO`), firmando con su rol, y solo cambian
+      // estos campos; no se reabre. `CUENTA_ELIMINADA` lo escribe el Worker (que no pasa por las reglas).
+      allow update: if request.auth != null
+        && resource.data.get('activo', true) == true
+        && request.resource.data.activo == false
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['activo', 'cerradoEn', 'cerradoPor', 'ultimaModificacion'])
+        && request.resource.data.cerradoEn is int
+        && ((resource.data.usuarioId == request.auth.uid && request.resource.data.cerradoPor == 'PACIENTE')
+            || (resource.data.nutriologoId == request.auth.uid && request.resource.data.cerradoPor == 'NUTRIOLOGO'));
+
+      // Sin borrado: un vínculo se cierra, no se borra.
       allow delete: if false;
     }
 
@@ -729,6 +782,7 @@ service cloud.firestore {
       allow create: if request.auth != null
         && (get(/databases/$(database)/documents/pacientes/$(pacienteId)).data.nutriologoId == request.auth.uid
             || get(/databases/$(database)/documents/pacientes/$(pacienteId)).data.usuarioId == request.auth.uid)
+        && get(/databases/$(database)/documents/pacientes/$(pacienteId)).data.get('activo', true) == true
         && request.resource.data.keys().hasOnly(['autorId', 'texto', 'foto', 'enviadoEn'])
         && request.resource.data.keys().hasAll(['autorId', 'texto', 'enviadoEn'])
         && request.resource.data.autorId == request.auth.uid
@@ -750,6 +804,7 @@ service cloud.firestore {
 
       allow create: if request.auth != null
         && get(/databases/$(database)/documents/pacientes/$(pacienteId)).data.nutriologoId == request.auth.uid
+        && get(/databases/$(database)/documents/pacientes/$(pacienteId)).data.get('activo', true) == true
         && request.resource.data.keys().hasOnly(['enviadoPor', 'nutriologoNombre', 'enviadoEn', 'titulo', 'contenido'])
         && request.resource.data.keys().hasAll(['enviadoPor', 'nutriologoNombre', 'enviadoEn', 'titulo', 'contenido'])
         && request.resource.data.enviadoPor == request.auth.uid

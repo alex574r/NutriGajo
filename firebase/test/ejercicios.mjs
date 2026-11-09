@@ -118,6 +118,10 @@ assert.equal(await crear(entrenador, ejercicio(entrenador, { titulo: "ab" })), 4
 assert.equal(await crear(entrenador, ejercicio(entrenador, { titulo: "x".repeat(81) })), 403, "título muy largo");
 assert.equal(await crear(entrenador, ejercicio(entrenador, { descripcion: "x".repeat(601) })), 403, "descripción muy larga");
 assert.equal(await crear(entrenador, ejercicio(entrenador, { descripcion: "corta" })), 403, "a revisión pide descripción de 10 letras");
+assert.equal(await crear(entrenador, ejercicio(entrenador, { clipVersion: ahora })), 200, "con clip animado (la versión es un número) se acepta");
+assert.equal(await crear(entrenador, ejercicio(entrenador, { clipVersion: "x" })), 403, "la versión del clip tiene que ser un número");
+assert.equal(await crear(entrenador, ejercicio(entrenador, { estado: "BORRADOR", clipVersion: ahora, fotoVersion: undefined })), 200, "un borrador con clip y sin foto se guarda");
+assert.equal(await crear(entrenador, ejercicio(entrenador, { fotoVersion: undefined, clipVersion: ahora })), 403, "a revisión sigue pidiendo la foto aunque haya clip");
 assert.equal(await crear(entrenador, ejercicio(entrenador, { pasos: [] })), 403, "a revisión pide al menos un paso");
 assert.equal(await crear(entrenador, ejercicio(entrenador, { pasos: Array.from({ length: 11 }, () => "paso") })), 403, "más de 10 pasos");
 assert.equal(await crear(entrenador, ejercicio(entrenador, { pasos: "uno" })), 403, "los pasos son una lista");
