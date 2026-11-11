@@ -1,0 +1,14 @@
+# Copia este archivo a local.properties (queda fuera de git) y llena lo que uses.
+# Android Studio agrega solo la línea sdk.dir al abrir el proyecto.
+
+# Clave del SDK de Maps. Restríngela por paquete y SHA-1 en Google Cloud.
+MAPS_API_KEY=
+
+# Dirección del Worker (npm run dev en backend/ usa esta). Para el de producción, la de tu cuenta de Cloudflare.
+WORKER_URL=http://localhost:8787
+
+# Llave de firma del release (solo para ./gradlew :app:assembleRelease). Respalda el .jks.
+#KEYSTORE_FILE=C\:\\ruta\\a\\tu-llave.jks
+#KEYSTORE_PASSWORD=
+#KEY_ALIAS=
+#KEY_PASSWORD=

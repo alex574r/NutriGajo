@@ -67,7 +67,7 @@
 - Produces: `node scripts/importar-catalogo.mjs <repo openGym> <carpeta de salida> [--version N]` escribe en la salida `ficha/{id}.json`, `foto/{id}.webp`, `clip/{id}.mp4` (copiados), `indice-{N}.json` y, **al final**, `version.json` (`{ "version": N, "total": T }`); `N` por defecto = fecha `YYYYMMDD` como entero. Imprime cuántas fichas, fotos y clips escribió y la lista de ids saltados (sin foto o sin clip). Sale con código 1 si no escribió ninguna ficha o la carpeta de salida está dentro del repo de nutriGajo.
 
 - [ ] **Step 1: Write the CLI** (lee `catalogue/exercises/*.json`, `catalogue/i18n/es.json`, `catalogue/media/still` y `clip`; una ficha solo se escribe si existen su foto y su clip).
-- [ ] **Step 2: Run on the real repo**: `node backend/scripts/importar-catalogo.mjs "C:/Users/alex5/Desktop/openGym" "<scratchpad>/catalogo-salida" --version 20261107`; Expected: 5.632 fichas, 5.632 fotos, 5.632 clips, 0 saltados, un `indice-20261107.json` de unos 600 KB y `version.json` con `total: 5632`.
+- [ ] **Step 2: Run on the real repo**: `node backend/scripts/importar-catalogo.mjs "<ruta-a-openGym>" "<scratchpad>/catalogo-salida" --version 20261107`; Expected: 5.632 fichas, 5.632 fotos, 5.632 clips, 0 saltados, un `indice-20261107.json` de unos 600 KB y `version.json` con `total: 5632`.
 - [ ] **Step 3: Verify** con un script de una línea que cuenta archivos y comprueba que `ficha/0025.json` tiene `zona: "PECHO"`, `equipo: "BARRA"` y `tipo: "FUERZA"`; Expected: coincide.
 
 ### Task 3: Rutas del Worker para el catálogo
