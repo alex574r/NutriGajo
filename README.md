@@ -62,3 +62,7 @@ npm run deploy
 ```
 
 La clave de la cuenta de servicio, la llave de firma (`*.jks`) y `google-services.json` nunca se suben a git. Respalda el `.jks`: sin él no se pueden publicar actualizaciones de un APK ya compartido.
+
+## Licencia
+
+El código y la documentación están bajo la licencia [MIT](LICENSE). Las imágenes de la app, la fuente Inter y el catálogo de ejercicios (textos, fotos y animaciones, que no están en este repositorio) conservan la licencia de sus autores: ver [NOTICE.md](NOTICE.md).
