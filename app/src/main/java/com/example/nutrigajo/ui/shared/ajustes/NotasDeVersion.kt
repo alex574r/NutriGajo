@@ -10,6 +10,7 @@ data class VersionNotas(val version: String, @param:StringRes val fecha: Int?, @
 // De la versión más nueva a la más vieja. Se escribe a mano al publicar una versión: sus notas van en strings.xml (`notas_{versión}`) y son las
 // mismas que se mandan con `npm run publicar-apk -- … --notas "una;otra"` (esas salen en la hoja de «hay una versión nueva»).
 val NOTAS_DE_VERSION = listOf(
+    VersionNotas("1.5", R.string.notas_fecha_1_5, R.array.notas_1_5),
     VersionNotas("1.4", R.string.notas_fecha_1_4, R.array.notas_1_4),
     VersionNotas("1.3", R.string.notas_fecha_1_3, R.array.notas_1_3),
 )

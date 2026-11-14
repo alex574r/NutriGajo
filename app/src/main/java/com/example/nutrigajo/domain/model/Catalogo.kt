@@ -103,5 +103,24 @@ fun List<EntradaCatalogo>.buscar(busqueda: String, zona: ZonaCuerpo?, tipo: Tipo
         .toList()
 }
 
+// Lo que muestra una lista de ejercicios con la búsqueda y los filtros de Explorar, ya como ejercicios. El catálogo no trae niveles (todo es de
+// PRINCIPIANTE): pedir otro nivel no deja ninguno. Sin `limite` salen todos; la lista es perezosa y las fotos se bajan solo de las filas a la vista.
+fun List<EntradaCatalogo>.ejerciciosFiltrados(
+    busqueda: String,
+    zona: ZonaCuerpo?,
+    tipo: TipoEjercicio?,
+    nivel: NivelEjercicio?,
+    limite: Int = Int.MAX_VALUE,
+): List<Ejercicio> =
+    if (nivel != null && nivel != NivelEjercicio.PRINCIPIANTE) emptyList()
+    else buscar(busqueda, zona, tipo, limite).map { it.aEjercicio() }
+
+// El ejercicio que se abrió por su id: uno del banco de los entrenadores tal cual; uno del catálogo con su ficha si ya se bajó (trae los pasos) o,
+// mientras baja, con lo que dice el índice (sin pasos), para no dejar la pantalla en blanco. Null si la id no existe en ninguna parte.
+fun ejercicioAbierto(id: String?, banco: List<Ejercicio>, fichas: Map<String, Ejercicio>, indice: List<EntradaCatalogo>): Ejercicio? {
+    if (id == null) return null
+    return banco.firstOrNull { it.id == id } ?: fichas[id] ?: indice.firstOrNull { it.id == id }?.aEjercicio()
+}
+
 // El índice local solo se vuelve a bajar si el del servidor es de una versión más nueva (o no hay ninguno guardado).
 fun debeActualizarIndice(versionLocal: Int?, versionRemota: Int): Boolean = versionLocal == null || versionRemota > versionLocal

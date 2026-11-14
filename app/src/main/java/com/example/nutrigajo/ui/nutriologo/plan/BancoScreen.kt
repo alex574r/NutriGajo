@@ -10,8 +10,7 @@ import com.example.nutrigajo.domain.model.NivelEjercicio
 import com.example.nutrigajo.domain.model.TipoEjercicio
 import com.example.nutrigajo.domain.model.ZonaCuerpo
 import com.example.nutrigajo.domain.model.coincide
-import com.example.nutrigajo.domain.model.aEjercicio
-import com.example.nutrigajo.domain.model.buscar
+import com.example.nutrigajo.domain.model.ejerciciosFiltrados
 import com.example.nutrigajo.ui.shared.ejercicios.CatalogoEstado
 import com.example.nutrigajo.ui.shared.ejercicios.CatalogoViewModel
 import com.example.nutrigajo.ui.shared.ejercicios.EjerciciosEstado
@@ -266,8 +265,7 @@ private fun ListaGlobalesEjercicios(estado: EjerciciosEstado, catalogo: Catalogo
     var nivel by remember { mutableStateOf<NivelEjercicio?>(null) }
     val visibles = estado.items.filter { it.coincide(busqueda, zona, tipo, nivel) }
     val delCatalogo = remember(catalogo.indice, busqueda, zona, tipo, nivel) {
-        if (nivel != null && nivel != NivelEjercicio.PRINCIPIANTE) emptyList()
-        else catalogo.indice.buscar(busqueda, zona, tipo, CATALOGO_VISIBLES).map { it.aEjercicio() }
+        catalogo.indice.ejerciciosFiltrados(busqueda, zona, tipo, nivel, CATALOGO_VISIBLES)
     }
     Column(Modifier.fillMaxSize()) {
         CampoTexto(

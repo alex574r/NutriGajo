@@ -48,6 +48,8 @@ import com.example.nutrigajo.domain.model.NivelEjercicio
 import com.example.nutrigajo.domain.model.TipoEjercicio
 import com.example.nutrigajo.domain.model.ZonaCuerpo
 import com.example.nutrigajo.domain.model.coincide
+import com.example.nutrigajo.domain.model.ejercicioAbierto
+import com.example.nutrigajo.domain.model.ejerciciosFiltrados
 import com.example.nutrigajo.ui.components.ANILLO_FOCO
 import com.example.nutrigajo.ui.components.ActualizarAlDeslizar
 import com.example.nutrigajo.ui.components.AlertaError
@@ -56,6 +58,7 @@ import com.example.nutrigajo.ui.components.CampoTexto
 import com.example.nutrigajo.ui.components.Esqueleto
 import com.example.nutrigajo.ui.components.Etiqueta
 import com.example.nutrigajo.ui.shared.ejercicios.BotonVolverCristal
+import com.example.nutrigajo.ui.shared.ejercicios.CatalogoViewModel
 import com.example.nutrigajo.ui.shared.ejercicios.CabeceraOscura
 import com.example.nutrigajo.ui.shared.ejercicios.DetalleEjercicio
 import com.example.nutrigajo.ui.shared.ejercicios.EjerciciosViewModel
@@ -79,10 +82,16 @@ fun ExplorarEjerciciosScreen(
     abrirId: String? = null,
     // clave propia: la lista de publicados es de cualquiera, no del usuario
     vm: EjerciciosViewModel = viewModel(key = "explorar-ejercicios"),
+    // el catálogo en la nube: los miles de ejercicios que el nutriólogo ve en «Globales» y que no son de ningún entrenador
+    catalogoVm: CatalogoViewModel = viewModel(key = "explorar-catalogo"),
 ) {
     val colores = MaterialTheme.colorScheme
     val estado by vm.estado.collectAsState()
-    LaunchedEffect(Unit) { vm.cargarPublicados() }
+    val catalogo by catalogoVm.estado.collectAsState()
+    LaunchedEffect(Unit) {
+        vm.cargarPublicados()
+        catalogoVm.cargarIndice()
+    }
     var busqueda by rememberSaveable { mutableStateOf("") }
     var zona by rememberSaveable { mutableStateOf<ZonaCuerpo?>(null) }
     var tipo by rememberSaveable { mutableStateOf<TipoEjercicio?>(null) }
@@ -90,8 +99,10 @@ fun ExplorarEjerciciosScreen(
     var abiertoId by rememberSaveable { mutableStateOf(abrirId) }
     // el paso en que se abrió la guía del ejercicio abierto; null es el detalle
     var guiaPaso by rememberSaveable { mutableStateOf<Int?>(null) }
+    // los pasos de un ejercicio del catálogo vienen en su ficha, que se baja al abrirlo (una id de entrenador no es del catálogo y no hace nada)
+    LaunchedEffect(abiertoId) { abiertoId?.let { catalogoVm.cargarFichas(listOf(it)) } }
 
-    val abierto = estado.items.firstOrNull { it.id == abiertoId }
+    val abierto = ejercicioAbierto(abiertoId, estado.items, catalogo.fichas, catalogo.indice)
     if (abierto != null) {
         val paso = guiaPaso
         if (paso != null) {
@@ -101,7 +112,8 @@ fun ExplorarEjerciciosScreen(
                 ejercicio = abierto,
                 onVolver = { if (abrirId != null) onVolver() else abiertoId = null },
                 aviso = stringResource(R.string.explorar_aviso),
-                onEmpezar = { guiaPaso = it },
+                // sin pasos (la ficha del catálogo aún baja) no hay guía que empezar
+                onEmpezar = if (abierto.pasos.isNotEmpty()) ({ guiaPaso = it }) else null,
             )
         }
         return
@@ -110,9 +122,20 @@ fun ExplorarEjerciciosScreen(
     BarraEstadoClara()
 
     val visibles = estado.items.filter { it.coincide(busqueda, zona, tipo, nivel) }
+    // debajo de los de entrenadores, el catálogo con los mismos filtros; la lista es perezosa y solo baja la foto de las filas que se ven
+    val delCatalogo = remember(catalogo.indice, busqueda, zona, tipo, nivel) { catalogo.indice.ejerciciosFiltrados(busqueda, zona, tipo, nivel) }
+    val total = estado.items.size + catalogo.indice.size
     val ahora = remember { System.currentTimeMillis() }
     Box(Modifier.fillMaxSize().background(colores.background)) {
-        ActualizarAlDeslizar(refrescando = estado.cargando, onActualizar = vm::cargarPublicados, modifier = Modifier.fillMaxSize()) {
+        ActualizarAlDeslizar(
+            refrescando = estado.cargando,
+            onActualizar = {
+                vm.cargarPublicados()
+                // si el índice no pudo bajar, jalar vuelve a intentarlo (con uno ya cargado no hace nada)
+                catalogoVm.cargarIndice()
+            },
+            modifier = Modifier.fillMaxSize(),
+        ) {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(bottom = 24.dp),
@@ -131,7 +154,7 @@ fun ExplorarEjerciciosScreen(
                             )
                         },
                     ) {
-                        Etiqueta(pluralStringResource(R.plurals.explorar_en_total, estado.items.size, estado.items.size).uppercase())
+                        Etiqueta(pluralStringResource(R.plurals.explorar_en_total, total, total).uppercase())
                         Text(stringResource(R.string.explorar_titulo), style = MaterialTheme.typography.headlineLarge, color = Color.White)
                         Text(
                             text = stringResource(R.string.explorar_descripcion),
@@ -177,25 +200,31 @@ fun ExplorarEjerciciosScreen(
                 }
                 estado.error?.let { item { AlertaError(stringResource(it), Modifier.padding(horizontal = MARGEN)) } }
                 when {
-                    estado.cargando && estado.items.isEmpty() -> items(4) {
+                    (estado.cargando && estado.items.isEmpty()) || (catalogo.cargando && visibles.isEmpty() && delCatalogo.isEmpty()) -> items(4) {
                         Esqueleto(Modifier.fillMaxWidth().padding(horizontal = MARGEN).height(107.dp), RoundedCornerShape(34.dp))
                     }
-                    visibles.isEmpty() -> item {
+                    visibles.isEmpty() && delCatalogo.isEmpty() -> item {
                         Text(
-                            text = stringResource(if (estado.items.isEmpty()) R.string.explorar_sin_publicados else R.string.explorar_vacio),
+                            text = stringResource(if (total == 0) R.string.explorar_sin_publicados else R.string.explorar_vacio),
                             modifier = Modifier.fillMaxWidth().padding(horizontal = MARGEN * 2, vertical = 24.dp),
                             style = MaterialTheme.typography.bodyMedium,
                             color = colores.onSurfaceVariant,
                             textAlign = TextAlign.Center,
                         )
                     }
-                    else -> items(visibles, key = { it.id }) { ejercicio ->
-                        FilaEjercicio(
-                            ejercicio = ejercicio,
-                            onClick = { abiertoId = ejercicio.id },
-                            modifier = Modifier.padding(horizontal = MARGEN).animateItem(),
-                            nuevo = ejercicio.publicadoEn?.let { ahora - it < SEMANA_MS } == true,
-                        )
+                    else -> {
+                        // las ids de entrenadores (Firestore) y las del catálogo (cuatro o cinco dígitos) no se mezclan: cada lista lleva su prefijo
+                        items(visibles, key = { "banco-${it.id}" }) { ejercicio ->
+                            FilaEjercicio(
+                                ejercicio = ejercicio,
+                                onClick = { abiertoId = ejercicio.id },
+                                modifier = Modifier.padding(horizontal = MARGEN).animateItem(),
+                                nuevo = ejercicio.publicadoEn?.let { ahora - it < SEMANA_MS } == true,
+                            )
+                        }
+                        items(delCatalogo, key = { "catalogo-${it.id}" }) { ejercicio ->
+                            FilaEjercicio(ejercicio = ejercicio, onClick = { abiertoId = ejercicio.id }, modifier = Modifier.padding(horizontal = MARGEN))
+                        }
                     }
                 }
                 item {

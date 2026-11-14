@@ -91,6 +91,43 @@ class CatalogoTest {
     }
 
     @Test
+    fun la_lista_del_catalogo_aplica_los_filtros_y_un_nivel_distinto_de_principiante_no_deja_ninguno() {
+        val indice = parsearIndice(indiceJson)
+        val piernas = indice.ejerciciosFiltrados("", ZonaCuerpo.PIERNAS, null, null)
+        assertEquals(listOf("0100", "0200"), piernas.map { it.id })
+        assertTrue(piernas.all { it.fuente == FuenteEjercicio.CATALOGO })
+        assertEquals(listOf("0100", "0200"), indice.ejerciciosFiltrados("", ZonaCuerpo.PIERNAS, null, NivelEjercicio.PRINCIPIANTE).map { it.id })
+        // el catálogo no trae niveles: todo es de principiante
+        assertTrue(indice.ejerciciosFiltrados("", null, null, NivelEjercicio.INTERMEDIO).isEmpty())
+        assertTrue(indice.ejerciciosFiltrados("", null, null, NivelEjercicio.AVANZADO).isEmpty())
+    }
+
+    @Test
+    fun la_lista_del_catalogo_sin_limite_trae_todos_y_con_limite_solo_los_primeros() {
+        val indice = parsearIndice(indiceJson)
+        assertEquals(4, indice.ejerciciosFiltrados("", null, null, null).size)
+        assertEquals(listOf("0025", "0100"), indice.ejerciciosFiltrados("", null, null, null, limite = 2).map { it.id })
+    }
+
+    @Test
+    fun el_ejercicio_abierto_sale_del_banco_luego_de_la_ficha_y_luego_del_indice() {
+        val indice = parsearIndice(indiceJson)
+        val delBanco = EntradaCatalogo("A1", "De entrenador", ZonaCuerpo.BRAZOS, TipoEjercicio.FUERZA, EquipoEjercicio.SIN_EQUIPO).aEjercicio().copy(fuente = FuenteEjercicio.BANCO)
+        val ficha = fichaAEjercicio("""{"id":"0025","titulo":"Press de banca con barra","zona":"PECHO","tipo":"FUERZA","equipo":"BARRA","pasos":["Túmbate"]}""")!!
+        // un ejercicio de un entrenador se abre tal cual
+        assertEquals(delBanco, ejercicioAbierto("A1", listOf(delBanco), mapOf("0025" to ficha), indice))
+        // uno del catálogo con su ficha ya bajada: la ficha (trae los pasos)
+        assertEquals(listOf("Túmbate"), ejercicioAbierto("0025", listOf(delBanco), mapOf("0025" to ficha), indice)?.pasos)
+        // sin ficha todavía: lo que dice el índice, sin pasos, para no dejar la pantalla vacía mientras baja
+        val sinFicha = ejercicioAbierto("0100", listOf(delBanco), mapOf("0025" to ficha), indice)
+        assertEquals("Sentadilla búlgara", sinFicha?.titulo)
+        assertTrue(sinFicha!!.pasos.isEmpty())
+        // nada abierto, o una id que no existe
+        assertNull(ejercicioAbierto(null, listOf(delBanco), emptyMap(), indice))
+        assertNull(ejercicioAbierto("9999", listOf(delBanco), emptyMap(), indice))
+    }
+
+    @Test
     fun el_indice_solo_se_baja_si_hay_uno_mas_nuevo() {
         assertTrue(debeActualizarIndice(null, 1))
         assertTrue(debeActualizarIndice(3, 4))
